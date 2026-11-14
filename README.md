@@ -4,7 +4,8 @@ A bilingual portfolio for brand identity, 3D design, and visual work.
 
 ## Project structure
 
-- `Portfolio.html` — page markup and entry point.
+- `index.html` — redirects the site root to the portfolio page.
+- `Portfolio.html` — page markup.
 - `assets/css/styles.css` — custom styles and animations.
 - `assets/js/app.js` — portfolio data, page interactions, CMS, routing, and PDF export.
 
@@ -16,7 +17,7 @@ Serve the project directory with any static web server. For example:
 python3 -m http.server 8000
 ```
 
-Then open `http://localhost:8000/Portfolio.html`.
+Then open `http://localhost:8000/`.
 
 The page loads Tailwind CSS, IBM Plex fonts, and jsPDF from external CDNs, so those features require an internet connection.
 
