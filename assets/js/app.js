@@ -1,0 +1,2505 @@
+
+    let currentLang = "en";
+    let resumeCountryFilter = "ALL";
+    let partnersSectorFilter = "ALL";
+    let activeProjectId = 1;
+
+    // ==================== ADMIN CMS STATE & PERSISTENCE ====================
+    const CMS_STORAGE_KEY = "mk_studio_cms_state_v1";
+    let isAdminAuthenticated = false;
+
+    const defaultCmsConfig = {
+      passcode: "admin2026",
+      studioTagEn: "Mostafa Khaled Studio",
+      studioTagAr: "استوديو مصطفى خالد",
+      heroTitleEn: "Express Your Brand with\nOur Visual Craft",
+      heroTitleAr: "عبّر عن علامتك التجارية\nبإبداع بصري متقن",
+      heroSubEn: "Showcase your identity with strategic brand systems and photorealistic 3D product visuals crafted for impact.",
+      heroSubAr: "أبرز هوية مشروعك بأنظمة بصرية متكاملة وتصميمات منتجات ثلاثية الأبعاد عالية الواقعية.",
+      aboutBioEn: "Senior 2D & 3D Graphic Designer with extensive experience across the Egyptian and Saudi markets. Currently specializing as a 3D Designer, bringing strong creative vision and technical expertise to every brand and visual project.",
+      aboutBioAr: "مصمم جرافيك أول ثنائي وثلاثي الأبعاد (Senior 2D & 3D Graphic Designer) بخبرة واسعة في السوق المصري والسعودي. أتخصص حالياً في التصميم ثلاثي الأبعاد والـ CGI وبناء الهويات البصرية، وأجمع بين الرؤية الفنية والخبرة التقنية في كل مشروع أعمل عليه.",
+      waNumber: "201002779252",
+      waDisplay: "+20 100 277 9252",
+      email: "Mkalwayzy@gmail.com",
+      behanceUrl: "https://www.behance.net/Mkelwayzy",
+      socialHandle: "Behance & Socials (@MKELWAYZY)",
+      primaryColor: "#111214",
+      bgColor: "#D9DADB",
+      mutedColor: "#5A5C60",
+      customLogoDataUrl: "",
+      customLogoText: ""
+    };
+
+    let cmsConfig = { ...defaultCmsConfig };
+
+    function saveCmsState() {
+      try {
+        localStorage.setItem(CMS_STORAGE_KEY, JSON.stringify({
+          config: cmsConfig,
+          projects: portfolioProjects
+        }));
+      } catch (e) {}
+    }
+
+    function loadCmsState() {
+      try {
+        const raw = localStorage.getItem(CMS_STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed.config) cmsConfig = { ...defaultCmsConfig, ...parsed.config };
+        if (Array.isArray(parsed.projects) && parsed.projects.length > 0) {
+          portfolioProjects = parsed.projects;
+        }
+      } catch (e) {}
+    }
+
+    function showCmsToast(msg) {
+      const banner = document.getElementById("cmsToastBanner");
+      const text = document.getElementById("cmsToastText");
+      if (!banner || !text) return;
+      text.textContent = msg;
+      banner.classList.remove("hidden");
+      setTimeout(() => banner.classList.add("hidden"), 3200);
+    }
+
+    function applyCmsThemeAndContact() {
+      // Apply Brand Colors via CSS Variables
+      document.documentElement.style.setProperty("--brand-primary", cmsConfig.primaryColor || "#111214");
+      document.documentElement.style.setProperty("--brand-bg", cmsConfig.bgColor || "#D9DADB");
+      document.documentElement.style.setProperty("--brand-muted", cmsConfig.mutedColor || "#5A5C60");
+
+      // Apply Custom Logo or Default Signature SVG
+      const customWrap = document.getElementById("customLogoWrapper");
+      const customImg = document.getElementById("customLogoImg");
+      const customTxt = document.getElementById("customLogoText");
+      const sigSvg = document.getElementById("defaultSignatureSvg");
+
+      if (cmsConfig.customLogoDataUrl && customWrap && customImg && sigSvg) {
+        customImg.src = cmsConfig.customLogoDataUrl;
+        if (customTxt) customTxt.textContent = cmsConfig.customLogoText || "";
+        customWrap.classList.remove("hidden");
+        customWrap.classList.add("flex");
+        sigSvg.classList.add("hidden");
+      } else if (customWrap && sigSvg) {
+        customWrap.classList.add("hidden");
+        customWrap.classList.remove("flex");
+        sigSvg.classList.remove("hidden");
+      }
+
+      // Apply Contact Details to Modal
+      const waLink = document.getElementById("contactWaLink");
+      const waDisp = document.getElementById("contactWaDisplay");
+      const emLink = document.getElementById("contactEmailLink");
+      const emDisp = document.getElementById("contactEmailDisplay");
+      const beLink = document.getElementById("contactBeLink");
+      const beTitle = document.getElementById("contactBeTitle");
+      const beDisp = document.getElementById("contactBeDisplay");
+
+      if (waLink) waLink.href = `https://wa.me/${cmsConfig.waNumber}`;
+      if (waDisp) waDisp.textContent = cmsConfig.waDisplay;
+      if (emLink) emLink.href = `mailto:${cmsConfig.email}`;
+      if (emDisp) emDisp.textContent = cmsConfig.email;
+      if (beLink) beLink.href = cmsConfig.behanceUrl;
+      if (beTitle) beTitle.textContent = cmsConfig.socialHandle;
+      if (beDisp) beDisp.textContent = cmsConfig.behanceUrl.replace(/^https?:\/\/(www\.)?/, "");
+
+      // Admin active indicator dot on header button
+      const adminDot = document.getElementById("adminActiveDot");
+      if (adminDot) {
+        if (isAdminAuthenticated) adminDot.classList.remove("hidden");
+        else adminDot.classList.add("hidden");
+      }
+    }
+
+    function openAdminLoginModal() {
+      if (isAdminAuthenticated) {
+        switchPage("admin");
+        return;
+      }
+      const modal = document.getElementById("adminLoginModal");
+      if (!modal) return;
+      modal.classList.remove("hidden");
+      requestAnimationFrame(() => modal.classList.remove("opacity-0"));
+    }
+
+    function closeAdminLoginModal() {
+      const modal = document.getElementById("adminLoginModal");
+      if (!modal) return;
+      modal.classList.add("opacity-0");
+      setTimeout(() => modal.classList.add("hidden"), 250);
+    }
+
+    function applyCmsPresetTheme(primary, bg, muted) {
+      cmsConfig.primaryColor = primary;
+      cmsConfig.bgColor = bg;
+      cmsConfig.mutedColor = muted;
+      const pIn = document.getElementById("cmsColorPrimary");
+      const bIn = document.getElementById("cmsColorBg");
+      const mIn = document.getElementById("cmsColorMuted");
+      if (pIn) pIn.value = primary;
+      if (bIn) bIn.value = bg;
+      if (mIn) mIn.value = muted;
+      document.getElementById("cmsColorPrimaryHex").textContent = primary;
+      document.getElementById("cmsColorBgHex").textContent = bg;
+      document.getElementById("cmsColorMutedHex").textContent = muted;
+      applyCmsThemeAndContact();
+      saveCmsState();
+      showCmsToast("Theme colors updated!");
+    }
+
+    // ==================== DYNAMIC MULTI-SIZE MEDIA & DETAIL BLOCKS BUILDER ====================
+    let cmsDraftBlocks = [];
+
+    function createDefaultMediaBlock(url = "", layout = "col-span-12", aspect = "aspect-[16/9]", captionEn = "", captionAr = "") {
+      return {
+        uid: "blk_" + Math.random().toString(36).slice(2, 9),
+        url,
+        layout,   // "col-span-12" (Full 100%) | "md:col-span-6" (Half 50%) | "md:col-span-4" (Third 33%) | "md:col-span-8" (Wide 66%)
+        aspect,   // "aspect-auto" (Natural Original Size) | "aspect-[16/9]" | "aspect-[4/3]" | "aspect-square" | "aspect-[3/4]" | "aspect-[21/9]"
+        captionEn,
+        captionAr
+      };
+    }
+
+    function renderCmsMediaBlocksEditor() {
+      const container = document.getElementById("cmsMediaBlocksContainer");
+      if (!container) return;
+
+      if (cmsDraftBlocks.length === 0) {
+        container.innerHTML = `
+          <div class="rounded-2xl border border-dashed border-black/15 bg-white/40 p-6 text-center">
+            <p class="text-xs font-semibold text-obsidian">No additional media frames added yet.</p>
+            <p class="text-[11px] text-slateText mt-1">Click "+ Add Image / Detail Block" or "+ Batch Upload Multiple Images" to build a rich multi-size project showcase.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = cmsDraftBlocks.map((blk, idx) => `
+        <div class="rounded-2xl bg-white/80 border border-white p-3.5 shadow-sm space-y-3" data-block-uid="${blk.uid}">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-full bg-obsidian text-white text-[10px] font-bold">Frame #${idx + 1}</span>
+              ${blk.url ? `<img src="${blk.url}" alt="Preview" class="w-8 h-8 rounded-lg object-cover border border-black/10" />` : ""}
+            </div>
+            <div class="flex items-center gap-1">
+              <button type="button" onclick="moveCmsMediaBlock(${idx}, -1)" ${idx === 0 ? "disabled" : ""} class="px-2 py-1 rounded-lg bg-black/5 hover:bg-black/10 disabled:opacity-30 text-[10px] font-bold text-obsidian">↑</button>
+              <button type="button" onclick="moveCmsMediaBlock(${idx}, 1)" ${idx === cmsDraftBlocks.length - 1 ? "disabled" : ""} class="px-2 py-1 rounded-lg bg-black/5 hover:bg-black/10 disabled:opacity-30 text-[10px] font-bold text-obsidian">↓</button>
+              <button type="button" onclick="removeCmsMediaBlock(${idx})" class="px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-700 text-[10px] font-bold">Remove</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+            <div class="sm:col-span-6">
+              <label class="block text-[10px] font-semibold text-slateText mb-1">Image URL or File Upload</label>
+              <div class="flex gap-1.5">
+                <input type="text" value="${blk.url}" oninput="updateCmsMediaBlockField(${idx}, 'url', this.value)" placeholder="https://..." class="flex-1 px-3 py-2 rounded-xl bg-white border border-black/10 text-[11px] text-obsidian" />
+                <label class="px-2.5 py-2 rounded-xl bg-obsidian text-white text-[10px] font-bold cursor-pointer shrink-0">
+                  File
+                  <input type="file" accept="image/*" onchange="uploadCmsMediaBlockFile(${idx}, this)" class="hidden" />
+                </label>
+              </div>
+            </div>
+
+            <div class="sm:col-span-3">
+              <label class="block text-[10px] font-semibold text-slateText mb-1">Grid Width Size</label>
+              <select onchange="updateCmsMediaBlockField(${idx}, 'layout', this.value)" class="w-full px-2.5 py-2 rounded-xl bg-white border border-black/10 text-[11px] font-semibold text-obsidian">
+                <option value="col-span-12" ${blk.layout === "col-span-12" ? "selected" : ""}>Full Width (100%)</option>
+                <option value="md:col-span-8" ${blk.layout === "md:col-span-8" ? "selected" : ""}>Large Feature (66%)</option>
+                <option value="md:col-span-6" ${blk.layout === "md:col-span-6" ? "selected" : ""}>Half Width (50%)</option>
+                <option value="md:col-span-4" ${blk.layout === "md:col-span-4" ? "selected" : ""}>Third Grid (33%)</option>
+              </select>
+            </div>
+
+            <div class="sm:col-span-3">
+              <label class="block text-[10px] font-semibold text-slateText mb-1">Aspect Ratio / Height</label>
+              <select onchange="updateCmsMediaBlockField(${idx}, 'aspect', this.value)" class="w-full px-2.5 py-2 rounded-xl bg-white border border-black/10 text-[11px] font-semibold text-obsidian">
+                <option value="aspect-auto" ${blk.aspect === "aspect-auto" ? "selected" : ""}>Natural Original Size</option>
+                <option value="aspect-[16/9]" ${blk.aspect === "aspect-[16/9]" ? "selected" : ""}>16:9 Widescreen</option>
+                <option value="aspect-[4/3]" ${blk.aspect === "aspect-[4/3]" ? "selected" : ""}>4:3 Standard</option>
+                <option value="aspect-square" ${blk.aspect === "aspect-square" ? "selected" : ""}>1:1 Square</option>
+                <option value="aspect-[3/4]" ${blk.aspect === "aspect-[3/4]" ? "selected" : ""}>3:4 Tall Portrait</option>
+                <option value="aspect-[21/9]" ${blk.aspect === "aspect-[21/9]" ? "selected" : ""}>21:9 Panoramic</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <input type="text" value="${blk.captionEn}" oninput="updateCmsMediaBlockField(${idx}, 'captionEn', this.value)" placeholder="Frame detail / caption (English)..." class="w-full px-3 py-1.5 rounded-xl bg-white border border-black/10 text-[11px] text-obsidian" />
+            </div>
+            <div>
+              <input type="text" value="${blk.captionAr}" oninput="updateCmsMediaBlockField(${idx}, 'captionAr', this.value)" placeholder="شرح تفصيلي للصورة (عربي)..." class="w-full px-3 py-1.5 rounded-xl bg-white border border-black/10 text-[11px] text-obsidian" />
+            </div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function updateCmsMediaBlockField(idx, field, val) {
+      if (!cmsDraftBlocks[idx]) return;
+      cmsDraftBlocks[idx][field] = val;
+      if (field === "url") renderCmsMediaBlocksEditor();
+    }
+
+    function uploadCmsMediaBlockFile(idx, inputEl) {
+      const file = inputEl.files && inputEl.files[0];
+      if (!file || !cmsDraftBlocks[idx]) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        cmsDraftBlocks[idx].url = reader.result;
+        renderCmsMediaBlocksEditor();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function moveCmsMediaBlock(idx, dir) {
+      const target = idx + dir;
+      if (target < 0 || target >= cmsDraftBlocks.length) return;
+      const temp = cmsDraftBlocks[idx];
+      cmsDraftBlocks[idx] = cmsDraftBlocks[target];
+      cmsDraftBlocks[target] = temp;
+      renderCmsMediaBlocksEditor();
+    }
+
+    function removeCmsMediaBlock(idx) {
+      cmsDraftBlocks.splice(idx, 1);
+      renderCmsMediaBlocksEditor();
+    }
+
+    function editCmsProject(id) {
+      const proj = portfolioProjects.find((p) => p.id === id);
+      if (!proj) return;
+      document.getElementById("cmsEditProjectId").value = proj.id;
+      document.getElementById("cmsProjectFormHeading").textContent = `Edit Project #0${proj.id} — ${proj.titleEn}`;
+      document.getElementById("cmsProjectSubmitBtn").textContent = "Update Published Project";
+      document.getElementById("cmsCancelEditProjectBtn").classList.remove("hidden");
+
+      document.getElementById("cmsProjTitleEn").value = proj.titleEn || "";
+      document.getElementById("cmsProjTitleAr").value = proj.titleAr || "";
+      document.getElementById("cmsProjCatEn").value = proj.categoryEn || "";
+      document.getElementById("cmsProjCatAr").value = proj.categoryAr || "";
+      document.getElementById("cmsProjClient").value = proj.client || "";
+      document.getElementById("cmsProjYear").value = proj.year || "2026";
+      document.getElementById("cmsProjLoc").value = proj.location || "";
+      document.getElementById("cmsProjLocAr").value = proj.locationAr || proj.location || "";
+      document.getElementById("cmsProjRoleEn").value = proj.roleEn || "Lead Brand & 3D Designer";
+      document.getElementById("cmsProjRoleAr").value = proj.roleAr || "مصمم هويات ومنتجات 3D أول";
+      document.getElementById("cmsProjImgUrl").value = proj.imageUrl || "";
+      document.getElementById("cmsProjCoverAspect").value = proj.coverAspect || "aspect-[4/3]";
+      document.getElementById("cmsProjTools").value = (proj.tools || []).join(", ");
+      document.getElementById("cmsProjDelivEn").value = proj.deliverablesEn || "";
+      document.getElementById("cmsProjDelivAr").value = proj.deliverablesAr || "";
+      document.getElementById("cmsProjDescEn").value = proj.descriptionEn || "";
+      document.getElementById("cmsProjDescAr").value = proj.descriptionAr || "";
+      document.getElementById("cmsProjChallengeEn").value = proj.challengeEn || "";
+      document.getElementById("cmsProjChallengeAr").value = proj.challengeAr || "";
+      document.getElementById("cmsProjSolutionEn").value = proj.solutionEn || "";
+      document.getElementById("cmsProjSolutionAr").value = proj.solutionAr || "";
+
+      if (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0) {
+        cmsDraftBlocks = proj.mediaBlocks.map((b) => ({ ...b }));
+      } else {
+        cmsDraftBlocks = (proj.gallery || []).map((url, idx) =>
+          createDefaultMediaBlock(
+            url,
+            idx === 0 ? "col-span-12" : "md:col-span-6",
+            idx === 0 ? "aspect-[16/9]" : "aspect-[4/3]",
+            "",
+            ""
+          )
+        );
+      }
+      renderCmsMediaBlocksEditor();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function resetCmsProjectForm() {
+      document.getElementById("cmsProjectForm").reset();
+      document.getElementById("cmsEditProjectId").value = "";
+      document.getElementById("cmsProjectFormHeading").textContent = "Publish New Precision Project";
+      document.getElementById("cmsProjectSubmitBtn").textContent = "Publish Complete Project to Platform";
+      document.getElementById("cmsCancelEditProjectBtn").classList.add("hidden");
+      cmsDraftBlocks = [
+        createDefaultMediaBlock("", "col-span-12", "aspect-[16/9]", "", ""),
+        createDefaultMediaBlock("", "md:col-span-6", "aspect-[4/3]", "", ""),
+        createDefaultMediaBlock("", "md:col-span-6", "aspect-[3/4]", "", "")
+      ];
+      renderCmsMediaBlocksEditor();
+    }
+
+    function deleteCmsProject(id) {
+      if (portfolioProjects.length <= 1) {
+        showCmsToast("At least 1 project must remain published.");
+        return;
+      }
+      portfolioProjects = portfolioProjects.filter((p) => p.id !== id);
+      saveCmsState();
+      buildCarouselCards();
+      renderAdminDashboard();
+      showCmsToast("Project deleted from platform.");
+    }
+
+    function renderAdminDashboard() {
+      if (cmsDraftBlocks.length === 0 && !document.getElementById("cmsEditProjectId").value) {
+        cmsDraftBlocks = [
+          createDefaultMediaBlock("", "col-span-12", "aspect-[16/9]", "", ""),
+          createDefaultMediaBlock("", "md:col-span-6", "aspect-[4/3]", "", ""),
+          createDefaultMediaBlock("", "md:col-span-6", "aspect-[3/4]", "", "")
+        ];
+      }
+      renderCmsMediaBlocksEditor();
+
+      // Populate Content Form
+      document.getElementById("cmsStudioTagEn").value = cmsConfig.studioTagEn;
+      document.getElementById("cmsStudioTagAr").value = cmsConfig.studioTagAr;
+      document.getElementById("cmsHeroTitleEn").value = cmsConfig.heroTitleEn;
+      document.getElementById("cmsHeroTitleAr").value = cmsConfig.heroTitleAr;
+      document.getElementById("cmsHeroSubEn").value = cmsConfig.heroSubEn;
+      document.getElementById("cmsHeroSubAr").value = cmsConfig.heroSubAr;
+      document.getElementById("cmsAboutBioEn").value = cmsConfig.aboutBioEn;
+      document.getElementById("cmsAboutBioAr").value = cmsConfig.aboutBioAr;
+
+      // Populate Contact Form
+      document.getElementById("cmsWaNumber").value = cmsConfig.waNumber;
+      document.getElementById("cmsWaDisplay").value = cmsConfig.waDisplay;
+      document.getElementById("cmsEmailAddr").value = cmsConfig.email;
+      document.getElementById("cmsBehanceUrl").value = cmsConfig.behanceUrl;
+      document.getElementById("cmsSocialHandle").value = cmsConfig.socialHandle;
+      document.getElementById("cmsNewPasscode").value = cmsConfig.passcode;
+
+      // Populate Identity Form
+      document.getElementById("cmsColorPrimary").value = cmsConfig.primaryColor;
+      document.getElementById("cmsColorPrimaryHex").textContent = cmsConfig.primaryColor;
+      document.getElementById("cmsColorBg").value = cmsConfig.bgColor;
+      document.getElementById("cmsColorBgHex").textContent = cmsConfig.bgColor;
+      document.getElementById("cmsColorMuted").value = cmsConfig.mutedColor;
+      document.getElementById("cmsColorMutedHex").textContent = cmsConfig.mutedColor;
+      document.getElementById("cmsCustomLogoBrandText").value = cmsConfig.customLogoText || "";
+
+      // Render Projects List
+      const countEl = document.getElementById("cmsProjectsCount");
+      if (countEl) countEl.textContent = portfolioProjects.length;
+      const listEl = document.getElementById("cmsProjectsList");
+      if (listEl) {
+        listEl.innerHTML = portfolioProjects.map((proj) => `
+          <div class="ios-subcard rounded-2xl p-3.5 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <img src="${proj.imageUrl}" alt="${proj.titleEn}" class="w-14 h-14 rounded-xl object-cover shrink-0 border border-white" />
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-full bg-obsidian text-white text-[10px] font-bold">0${proj.id}</span>
+                  <span class="text-[10px] font-semibold text-slateText">${proj.categoryEn}</span>
+                </div>
+                <h4 class="text-xs sm:text-sm font-bold text-obsidian truncate mt-0.5">${proj.titleEn}</h4>
+                <p class="text-[11px] text-slateText truncate">${proj.titleAr} • ${proj.client}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" onclick="openProjectPage(${proj.id})" class="px-2.5 py-1.5 rounded-xl bg-white/80 hover:bg-white text-[11px] font-semibold text-obsidian">View</button>
+              <button type="button" onclick="editCmsProject(${proj.id})" class="px-2.5 py-1.5 rounded-xl bg-obsidian text-white text-[11px] font-semibold hover:opacity-90">Edit</button>
+              <button type="button" onclick="deleteCmsProject(${proj.id})" class="px-2.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-700 text-[11px] font-bold">✕</button>
+            </div>
+          </div>
+        `).join("");
+      }
+    }
+
+    // ==================== SMART COOKIE & VISITOR INTEREST ENGINE ====================
+    const COOKIE_KEY = "mk_studio_visitor_prefs";
+    let visitorCookieState = {
+      consent: false,
+      dismissed: false,
+      selectedInterest: null, // "3D" | "Branding" | "Social" | "UI"
+      scores: { "3D": 0, "Branding": 0, "Social": 0, "UI": 0 },
+      viewedIds: []
+    };
+
+    function setBrowserCookie(name, valueObj, days = 90) {
+      try {
+        const expires = new Date(Date.now() + days * 864e5).toUTCString();
+        const encoded = encodeURIComponent(JSON.stringify(valueObj));
+        document.cookie = `${name}=${encoded}; expires=${expires}; path=/; SameSite=Lax`;
+        localStorage.setItem(name, JSON.stringify(valueObj));
+      } catch (e) {}
+    }
+
+    function getBrowserCookie(name) {
+      try {
+        const match = document.cookie.split("; ").find((row) => row.startsWith(name + "="));
+        if (match) {
+          return JSON.parse(decodeURIComponent(match.split("=")[1]));
+        }
+        const ls = localStorage.getItem(name);
+        return ls ? JSON.parse(ls) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function getDominantInterest() {
+      if (visitorCookieState.selectedInterest) return visitorCookieState.selectedInterest;
+      const entries = Object.entries(visitorCookieState.scores || {});
+      entries.sort((a, b) => b[1] - a[1]);
+      return entries[0] && entries[0][1] > 0 ? entries[0][0] : null;
+    }
+
+    function getInterestDisplayName(interestKey, isAr) {
+      const map = {
+        "3D": isAr ? "تصميم 3D والـ CGI" : "3D & CGI Visuals",
+        "Branding": isAr ? "الهويات البصرية" : "Brand Identity",
+        "Social": isAr ? "حملات السوشيال ميديا" : "Social Campaigns",
+        "UI": isAr ? "واجهات UI والتطبيقات" : "UI & Digital Design"
+      };
+      return map[interestKey] || (isAr ? "مقترح لك" : "For You");
+    }
+
+    function getProjectMatchScore(proj) {
+      const dominant = getDominantInterest();
+      if (!dominant) return 0;
+      const hay = `${proj.categoryEn} ${proj.titleEn} ${proj.deliverablesEn}`.toLowerCase();
+      if (dominant === "3D" && (hay.includes("3d") || hay.includes("cgi") || hay.includes("exhibition"))) return 10;
+      if (dominant === "Branding" && (hay.includes("brand") || hay.includes("logo"))) return 10;
+      if (dominant === "Social" && (hay.includes("social") || hay.includes("campaign"))) return 10;
+      if (dominant === "UI" && (hay.includes("ui") || hay.includes("app") || hay.includes("interface"))) return 10;
+      return 0;
+    }
+
+    function trackVisitorProjectInterest(proj) {
+      if (!proj) return;
+      if (!visitorCookieState.viewedIds.includes(proj.id)) {
+        visitorCookieState.viewedIds.push(proj.id);
+      }
+      const hay = `${proj.categoryEn} ${proj.titleEn}`.toLowerCase();
+      if (hay.includes("3d") || hay.includes("cgi")) visitorCookieState.scores["3D"] += 2;
+      if (hay.includes("brand") || hay.includes("logo")) visitorCookieState.scores["Branding"] += 2;
+      if (hay.includes("social")) visitorCookieState.scores["Social"] += 2;
+      if (hay.includes("ui")) visitorCookieState.scores["UI"] += 2;
+
+      if (visitorCookieState.consent) {
+        setBrowserCookie(COOKIE_KEY, visitorCookieState);
+      }
+      updateCookieUI();
+    }
+
+    function selectVisitorInterest(interestKey) {
+      visitorCookieState.consent = true;
+      visitorCookieState.selectedInterest = interestKey;
+      visitorCookieState.scores[interestKey] = (visitorCookieState.scores[interestKey] || 0) + 5;
+      setBrowserCookie(COOKIE_KEY, visitorCookieState);
+
+      // Focus panoramic carousel onto best-matching project
+      const bestIdx = portfolioProjects.findIndex((p) => getProjectMatchScore(p) > 0);
+      if (bestIdx !== -1) {
+        targetIndex = bestIdx;
+      }
+
+      buildCarouselCards();
+      updateCookieUI();
+    }
+
+    function acceptAllSmartCookies() {
+      visitorCookieState.consent = true;
+      visitorCookieState.dismissed = true;
+      setBrowserCookie(COOKIE_KEY, visitorCookieState);
+      updateCookieUI();
+    }
+
+    function updateCookieUI() {
+      const isAr = currentLang === "ar";
+      const card = document.getElementById("cookiePreferenceCard");
+      const cardTitle = document.getElementById("cookieCardTitle");
+      const cardSub = document.getElementById("cookieCardSub");
+      const hintEl = document.getElementById("cookieDetectedHint");
+      const acceptBtn = document.getElementById("acceptCookiesBtn");
+      const heroTag = document.getElementById("heroStudioTag");
+
+      const dominant = getDominantInterest();
+
+      if (cardTitle) cardTitle.textContent = isAr ? "كوكيز التخصيص الذكي" : "Smart Personalization Cookies";
+      if (cardSub) {
+        cardSub.textContent = isAr
+          ? "اختر مجال اهتمامك لنقترح لك المشاريع والتصاميم الأنسب لذوقك تلقائياً."
+          : "Select your creative interest so we tailor recommended works for you.";
+      }
+      if (acceptBtn) acceptBtn.textContent = isAr ? "موافق" : "Accept & Save";
+      if (hintEl) {
+        hintEl.textContent = dominant
+          ? (isAr ? `اهتمامك: ${getInterestDisplayName(dominant, true)}` : `Interest: ${getInterestDisplayName(dominant, false)}`)
+          : (isAr ? "تظهر هذه الرسالة عند زيارتك الأولى فقط" : "Shown on your first visit only");
+      }
+
+      // Highlight selected interest chip
+      document.querySelectorAll(".interest-chip").forEach((chip) => {
+        const key = chip.getAttribute("data-interest");
+        const labels = {
+          "3D": isAr ? "تصميم 3D و CGI" : "3D & CGI",
+          "Branding": isAr ? "هويات بصرية" : "Branding",
+          "Social": isAr ? "سوشيال ميديا" : "Social Media",
+          "UI": isAr ? "واجهات UI" : "UI / Digital"
+        };
+        if (labels[key]) chip.textContent = labels[key];
+
+        if (visitorCookieState.selectedInterest === key) {
+          chip.classList.add("bg-[#111214]", "text-white", "border-[#111214]");
+          chip.classList.remove("bg-white/80", "text-[#111214]", "border-white");
+        } else {
+          chip.classList.remove("bg-[#111214]", "text-white", "border-[#111214]");
+          chip.classList.add("bg-white/80", "text-[#111214]", "border-white");
+        }
+      });
+
+      if (heroTag && dominant) {
+        heroTag.textContent = isAr
+          ? `مقترح خصيصاً لاهتمامك بـ ${getInterestDisplayName(dominant, true)}`
+          : `Curated For Your Interest in ${getInterestDisplayName(dominant, false)}`;
+      } else if (heroTag) {
+        heroTag.textContent = isAr ? cmsConfig.studioTagAr : cmsConfig.studioTagEn;
+      }
+
+      // Show ONLY on first visit (until user accepts or dismisses it)
+      if (card) {
+        const hasSeenPrompt = visitorCookieState.consent || visitorCookieState.dismissed;
+        if (hasSeenPrompt) {
+          card.classList.add("hidden");
+        } else {
+          card.classList.remove("hidden");
+        }
+      }
+    }
+
+    // ==================== PORTFOLIO CONTENT DATA ====================
+    const experienceData = [
+      {
+        company: "P.Team & To Vision",
+        roleEn: "Senior 3D & Exhibition Designer",
+        roleAr: "مصمم معارض ومنتجات 3D أول",
+        locationEn: "Saudi Arabia",
+        locationAr: "المملكة العربية السعودية",
+        countryCode: "KSA",
+        period: "2024 – 2026",
+        summaryEn: "Leading 3D product modeling, Saudi Founding Day corporate gifts, and modular Ramadan wayfinding structures for Kidana.",
+        summaryAr: "قيادة نمذجة المنتجات ثلاثية الأبعاد وتوزيعات يوم التأسيس السعودي وتصاميم اللوحات الإرشادية الرمضانية لشركة كدانة."
+      },
+      {
+        company: "Silvage Medical Co.",
+        roleEn: "Lead Brand Identity Designer",
+        roleAr: "مصمم هوية بصرية رئيسي",
+        locationEn: "Riyadh, KSA",
+        locationAr: "الرياض، السعودية",
+        countryCode: "KSA",
+        period: "2024 – 2025",
+        summaryEn: "Architected the complete clinical brand system, packaging guidelines, and digital identity for the Saudi healthcare sector.",
+        summaryAr: "بناء نظام الهوية البصرية الكامل وأدلة التغليف والهوية الرقمية لقطاع الرعاية الصحية في المملكة العربية السعودية."
+      },
+      {
+        company: "Al Hazmi Real Estate",
+        roleEn: "3D Architectural & Brand Visualizer",
+        roleAr: "مصمم هوية وإظهار معماري 3D",
+        locationEn: "Saudi Arabia",
+        locationAr: "المملكة العربية السعودية",
+        countryCode: "KSA",
+        period: "2023 – 2024",
+        summaryEn: "Created corporate monogram branding and photorealistic 3D exterior architectural renders for residential developments.",
+        summaryAr: "تصميم الهوية المؤسسية والريندر المعماري ثلاثي الأبعاد الواقعي للمشاريع السكنية والتطوير العقاري."
+      },
+      {
+        company: "Hempel Paints (Obhour)",
+        roleEn: "3D Product & Campaign Designer",
+        roleAr: "مصمم منتجات 3D وحملات إعلانية",
+        locationEn: "Jeddah, KSA",
+        locationAr: "جدة، السعودية",
+        countryCode: "KSA",
+        period: "2023",
+        summaryEn: "Produced PBR 3D paint product renders and digital promotional campaigns for Contex and Casa Rustica coatings.",
+        summaryAr: "إنتاج ريندر ثلاثي الأبعاد لعبوات الدهانات وحملات ترويجية رقمية لمنتجات كونتكس وكازا رستيكا."
+      },
+      {
+        company: "Al-Riyadh Creative Hub",
+        roleEn: "Senior Visual & Social Designer",
+        roleAr: "مصمم بصري وسوشيال ميديا أول",
+        locationEn: "Riyadh, KSA",
+        locationAr: "الرياض، السعودية",
+        countryCode: "KSA",
+        period: "2022 – 2023",
+        summaryEn: "Directed visual campaigns, typography systems, and social media branding for Gulf F&B and retail enterprises.",
+        summaryAr: "إدارة الحملات البصرية وأنظمة الخطوط وهويات التواصل الاجتماعي لشركات الأغذية والتجزئة في الخليج."
+      },
+      {
+        company: "Gulf Vision Advertising",
+        roleEn: "Outdoor CGI & Print Designer",
+        roleAr: "مصمم CGI وإعلانات خارجية",
+        locationEn: "Dammam, KSA",
+        locationAr: "الدمام، السعودية",
+        countryCode: "KSA",
+        period: "2021 – 2022",
+        summaryEn: "Designed large-format outdoor billboards, exhibition booths, and 3D mockups for commercial launches.",
+        summaryAr: "تصميم لوحات الطرق الإعلانية الضخمة وأجنحة المعارض والنماذج ثلاثية الأبعاد للإطلاقات التجارية."
+      },
+      {
+        company: "Mansoura Downtown & Eskan",
+        roleEn: "Senior Brand & CGI Designer",
+        roleAr: "مصمم هويات ودمج CGI أول",
+        locationEn: "Mansoura, Egypt",
+        locationAr: "المنصورة، مصر",
+        countryCode: "Egypt",
+        period: "2023 – 2025",
+        summaryEn: "Developed brand identity, aqua park launch campaigns, and photorealistic 3D CGI tower wraps for City Center & Al Badry Towers.",
+        summaryAr: "تطوير الهوية البصرية وحملات إطلاق الأكوا بارك ودمج إعلانات الأبراج بتقنية 3D CGI لسيتي سنتر وأبراج البدري."
+      },
+      {
+        company: "Al Amal Real Estate & Medical Clinics",
+        roleEn: "UI & Healthcare Campaign Designer",
+        roleAr: "مصمم واجهات UI وحملات طبية",
+        locationEn: "Egypt",
+        locationAr: "مصر",
+        countryCode: "Egypt",
+        period: "2022 – 2024",
+        summaryEn: "Designed mobile real estate app interfaces and specialized medical awareness campaigns for Dr. Mahmoud Fertility Clinic.",
+        summaryAr: "تصميم واجهات تطبيقات العقارات والحملات الطبية التوعوية المتخصصة لعيادة د. محمود للحقن المجهري."
+      },
+      {
+        company: "Perfect Sport Club",
+        roleEn: "Brand Identity & Sports Designer",
+        roleAr: "مصمم هويات وحملات رياضية",
+        locationEn: "Talkha, Egypt",
+        locationAr: "طلخا، مصر",
+        countryCode: "Egypt",
+        period: "2020 – 2022",
+        summaryEn: "Led full club rebranding and dynamic promotional campaigns across gymnastics, judo, and squash academies.",
+        summaryAr: "قيادة إعادة بناء الهوية البصرية للنادي وتصميم الحملات الترويجية لأكاديميات الجمباز والجودو والسكواش."
+      }
+    ];
+
+    const softwareList = [
+      { code: "Ps", name: "Adobe Photoshop", level: 96, roleEn: "Compositing, Retouching & Key Visuals", roleAr: "الدمج الاحترافي والمعالجة البصرية" },
+      { code: "Ai", name: "Adobe Illustrator", level: 95, roleEn: "Brand Identity, Logos & Vector Systems", roleAr: "الهويات البصرية والشعارات والفيكتور" },
+      { code: "Bl", name: "Blender 3D", level: 92, roleEn: "3D Modeling, Product Renders & CGI", roleAr: "النمذجة ثلاثية الأبعاد والريندر والـ CGI" },
+      { code: "Sp", name: "Adobe Substance 3D", level: 88, roleEn: "PBR Materials, Textures & Packaging", roleAr: "الخامات الواقعية والتغليف ثلاثي الأبعاد" },
+      { code: "Ae", name: "Adobe After Effects", level: 85, roleEn: "Motion Graphics & CGI Tracking", roleAr: "الموشن جرافيك وتتبع الكاميرا" },
+      { code: "Fg", name: "Figma & AI Tools", level: 86, roleEn: "UI Design & Generative Workflows", roleAr: "تصميم الواجهات وأدوات الذكاء الاصطناعي" }
+    ];
+
+    const educationData = {
+      degreeEn: "Bachelor's Degree in Specific Education — Art & Design",
+      degreeAr: "بكالوريوس التربية النوعية — قسم التربية الفنية والتصميم",
+      universityEn: "Mansoura University, Egypt",
+      universityAr: "جامعة المنصورة، جمهورية مصر العربية",
+      period: "2016 – 2020"
+    };
+
+    const expertiseTags = [
+      { en: "Brand Identity Systems", ar: "أنظمة الهوية البصرية" },
+      { en: "3D Product Modeling", ar: "نمذجة المنتجات 3D" },
+      { en: "Outdoor CGI & VFX", ar: "دمج إعلانات الشوارع CGI" },
+      { en: "Packaging & Mockups", ar: "تصميم العبوات والتغليف" },
+      { en: "Exhibition & Booth 3D", ar: "تصميم المعارض والبوثات" },
+      { en: "Social Media Campaigns", ar: "حملات السوشيال ميديا" },
+      { en: "UI/UX Visual Design", ar: "تصميم واجهات المستخدم" },
+      { en: "Typography & Print", ar: "التايبوجرافي والمطبوعات" }
+    ];
+
+    const partnersData = [
+      {
+        name: "Kidana Development",
+        sectorKey: "enterprise",
+        sectorLabelEn: "Urban & Holy Sites Development",
+        sectorLabelAr: "التطوير الحضري والمشاعر المقدسة",
+        badgeEn: "KSA Enterprise",
+        badgeAr: "مؤسسة سعودية",
+        countryEn: "Makkah, Saudi Arabia",
+        countryAr: "مكة المكرمة، السعودية",
+        descEn: "Designed modular Ramadan wayfinding structures and 3D environmental signage concepts.",
+        descAr: "تصميم قوالب اللوحات الإرشادية الرمضانية والهوية البيئية ثلاثية الأبعاد.",
+        icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>`
+      },
+      {
+        name: "Hempel Coatings",
+        sectorKey: "enterprise",
+        sectorLabelEn: "Industrial & Decorative Paints",
+        sectorLabelAr: "الدهانات الصناعية والديكورية",
+        badgeEn: "Global Brand",
+        badgeAr: "علامة عالمية",
+        countryEn: "Jeddah, Saudi Arabia",
+        countryAr: "جدة، السعودية",
+        descEn: "3D product packaging visualization and digital campaigns for protective and decorative lines.",
+        descAr: "إظهار ثلاثي الأبعاد لعبوات الدهانات وحملات رقمية لخطوط الحماية والديكور.",
+        icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
+      },
+      {
+        name: "Silvage Medical",
+        sectorKey: "wellness",
+        sectorLabelEn: "Medical & Healthcare Supplies",
+        sectorLabelAr: "المستلزمات الطبية والرعاية الصحية",
+        badgeEn: "Healthcare",
+        badgeAr: "قطاع طبي",
+        countryEn: "Riyadh, Saudi Arabia",
+        countryAr: "الرياض، السعودية",
+        descEn: "Full corporate visual identity, clinical stationery, and product branding guidelines.",
+        descAr: "تصميم الهوية البصرية الكاملة والمطبوعات الطبية ودليل استخدام العلامة.",
+        icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`
+      },
+      {
+        name: "Al Hazmi Real Estate",
+        sectorKey: "enterprise",
+        sectorLabelEn: "Real Estate & Property Development",
+        sectorLabelAr: "التطوير والاستثمار العقاري",
+        badgeEn: "Real Estate",
+        badgeAr: "تطوير عقاري",
+        countryEn: "Saudi Arabia",
+        countryAr: "المملكة العربية السعودية",
+        descEn: "Corporate brand identity and photorealistic 3D architectural exterior visualizations.",
+        descAr: "تصميم الهوية المؤسسية والإظهار المعماري الخارجي ثلاثي الأبعاد.",
+        icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/></svg>`
+      },
+      {
+        name: "P.Team & To Vision",
+        sectorKey: "advertising",
+        sectorLabelEn: "Events, Exhibitions & Branding",
+        sectorLabelAr: "المعارض والفعاليات والهويات",
+        badgeEn: "Agency Partner",
+        badgeAr: "وكالة إبداعية",
+        countryEn: "Saudi Arabia",
+        countryAr: "المملكة العربية السعودية",
+        descEn: "Strategic creative collaboration on Saudi Founding Day 3D gifts and exhibition booths.",
+        descAr: "شراكة إبداعية لتنفيذ توزيعات يوم التأسيس ثلاثية الأبعاد وأجنحة المعارض.",
+        icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>`
+      },
+      {
+        name: "Al-Mazaq Roastery & Hospitality",
+        sectorKey: "fnb",
+        sectorLabelEn: "Specialty Coffee & Hospitality",
+        sectorLabelAr: "القهوة المختصة والضيافة",
+        badgeEn: "F&B Sector",
+        badgeAr: "أغذية وضيافة",
+        countryEn: "Riyadh, Saudi Arabia",
+        countryAr: "الرياض، السعودية",
+        descEn: "3D coffee pouch packaging renders, seasonal menus, and brand visual storytelling.",
+        descAr: "تصميم وريندر عبوات القهوة ثلاثية الأبعاد وقوائم الضيافة الموسمية.",
+        icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>`
+      },
+      {
+        name: "Veloura Beauty & Spa",
+        sectorKey: "wellness",
+        sectorLabelEn: "Luxury Cosmetics & Wellness",
+        sectorLabelAr: "مستحضرات التجميل والعناية",
+        badgeEn: "Beauty & Care",
+        badgeAr: "جمال وعناية",
+        countryEn: "Jeddah, Saudi Arabia",
+        countryAr: "جدة، السعودية",
+        descEn: "3D cosmetic bottle studio renders and minimalist luxury social media art direction.",
+        descAr: "ريندر استوديو ثلاثي الأبعاد لعبوات التجميل وإدارة فنية لحملات التواصل.",
+        icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`
+      },
+      {
+        name: "Barq Express Logistics",
+        sectorKey: "logistics",
+        sectorLabelEn: "Smart Delivery & Fleet Solutions",
+        sectorLabelAr: "حلول التوصيل الذكي والأساطيل",
+        badgeEn: "Logistics",
+        badgeAr: "خدمات لوجستية",
+        countryEn: "Riyadh, Saudi Arabia",
+        countryAr: "الرياض، السعودية",
+        descEn: "Fleet branding wraps, 3D delivery box visuals, and fast-commerce promotional graphics.",
+        descAr: "تصميم هوية أسطول المركبات وصناديق التوصيل ثلاثية الأبعاد والحملات الترويجية.",
+        icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`
+      },
+      {
+        name: "Mansoura Downtown & Eskan",
+        sectorKey: "enterprise",
+        sectorLabelEn: "Integrated Residential & Commercial",
+        sectorLabelAr: "المجمعات السكنية والتجارية",
+        badgeEn: "Landmark",
+        badgeAr: "مشروع رائد",
+        countryEn: "Mansoura, Egypt",
+        countryAr: "المنصورة، مصر",
+        descEn: "Brand identity, aqua park launch visuals, and large-scale 3D CGI outdoor building wraps.",
+        descAr: "الهوية البصرية وحملات الأكوا بارك وإعلانات الأبراج المدمجة بتقنية 3D CGI.",
+        icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`
+      }
+    ];
+
+    let portfolioProjects = [
+      {
+        id: 1,
+        titleEn: "Silvage Medical Branding",
+        titleAr: "هوية علامة سالفج الطبية",
+        categoryEn: "Branding",
+        categoryAr: "هوية بصرية",
+        client: "Silvage Medical",
+        year: "2025",
+        location: "Saudi Arabia",
+        locationAr: "المملكة العربية السعودية",
+        roleEn: "Lead Brand Designer",
+        roleAr: "مصمم هوية رئيسي",
+        tools: ["Adobe Illustrator", "Adobe Photoshop", "Brand Guidelines"],
+        deliverablesEn: "Brand Identity, Logo System, Medical Visuals, Stationery",
+        deliverablesAr: "هوية بصرية متكاملة، نظام الشعار، المطبوعات الطبية",
+        descriptionEn: "Complete brand architecture and visual identity for Silvage in the Saudi medical field, combining clinical trust with modern minimalism.",
+        descriptionAr: "بناء الهوية البصرية الكاملة لشركة سالفج العاملة في القطاع الطبي بالمملكة العربية السعودية، بأسلوب يجمع بين الثقة الطبية والحداثة.",
+        challengeEn: "Creating a distinctive, trustworthy medical identity that stands out in the Saudi healthcare supply sector while remaining clean across digital and clinical packaging.",
+        challengeAr: "ابتكار هوية طبية موثوقة ومتميزة في قطاع الإمدادات الطبية السعودي مع الحفاظ على وضوحها عبر العبوات والمنصات الرقمية.",
+        solutionEn: "Developed a geometric emblem paired with a calm clinical color palette, modular typography, and strict brand usage guidelines.",
+        solutionAr: "تصميم رمز هندسي دقيق مع لوحة ألوان طبية هادئة ونظام خطوط متناسق ودليل إرشادي شامل لتطبيقات الهوية.",
+        imageUrl: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=900&q=85",
+        gallery: [
+          "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?auto=format&fit=crop&w=800&q=80"
+        ]
+      },
+      {
+        id: 2,
+        titleEn: "Mansoura Downtown Compound",
+        titleAr: "داون تاون المنصورة العقارية",
+        categoryEn: "Logo & Social Media",
+        categoryAr: "لوجو وسوشيال ميديا",
+        client: "Mansoura Downtown",
+        year: "2024",
+        location: "Mansoura, Egypt",
+        locationAr: "المنصورة، مصر",
+        roleEn: "Senior Visual & Campaign Designer",
+        roleAr: "مصمم هويات وحملات أول",
+        tools: ["Adobe Illustrator", "Adobe Photoshop", "After Effects"],
+        deliverablesEn: "Branding, Social Media Campaigns, Aqua Park Launch Visuals",
+        deliverablesAr: "هوية بصرية، حملات سوشيال ميديا، إطلاق أكوا بارك",
+        descriptionEn: "Brand identity and digital campaigns for the first real residential compound and aqua park in Mansoura offering integrated lifestyle services.",
+        descriptionAr: "تصميم الهوية والحملات الإعلانية لأول كمبوند سكني حقيقي وأكوا بارك في المنصورة يقدم خدمات متكاملة بلا حدود.",
+        challengeEn: "Positioning a landmark mixed-use residential and entertainment destination to attract families and investors across the Delta region.",
+        challengeAr: "إبراز المشروع كأول وجهة سكنية وترفيهية متكاملة في المنصورة لجذب العائلات والمستثمرين في منطقة الدلتا.",
+        solutionEn: "Crafted an architectural crest logo and high-impact seasonal campaign visuals highlighting luxury living and family recreation.",
+        solutionAr: "تصميم شعار معماري فخم وحملات إعلانية متكاملة تبرز رفاهية السكن وتجربة الأكوا بارك والخدمات المتكاملة.",
+        imageUrl: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=900&q=85",
+        gallery: [
+          "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80"
+        ]
+      },
+      {
+        id: 3,
+        titleEn: "Perfect Sport Club",
+        titleAr: "نادي بيرفكت الرياضي",
+        categoryEn: "Rebranding",
+        categoryAr: "إعادة بناء الهوية",
+        client: "Perfect Sport Club",
+        year: "2022",
+        location: "Talkha, Egypt",
+        locationAr: "طلخا، مصر",
+        roleEn: "Branding & Sports Campaign Designer",
+        roleAr: "مصمم هويات وحملات رياضية",
+        tools: ["Adobe Illustrator", "Adobe Photoshop"],
+        deliverablesEn: "Rebranding, Gymnastics, Judo & Squash Academy Campaigns",
+        deliverablesAr: "إعادة بناء الهوية، حملات الجمباز والجودو والسكواش",
+        descriptionEn: "Complete rebranding and sports promotional campaigns for gymnastics, judo, and squash academies.",
+        descriptionAr: "إعادة تصميم الهوية البصرية والحملات الترويجية لأكاديميات الجمباز والجودو والسكواش بنادي بيرفكت الرياضي.",
+        challengeEn: "Modernizing an established multi-sport club identity to energize youth enrollments across diverse athletic disciplines.",
+        challengeAr: "تحديث هوية النادي الرياضي العريق بصورة عصرية حماسية لزيادة اشتراكات الناشئين في مختلف الألعاب الفردية.",
+        solutionEn: "Built a dynamic athletic visual language with bold typography, energetic lighting compositions, and unified academy sub-badges.",
+        solutionAr: "بناء لغة بصرية رياضية ديناميكية بخطوط قوية وإضاءة حماسية وشعارات فرعية موحدة لكل أكاديمية رياضية.",
+        imageUrl: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=900&q=85",
+        gallery: [
+          "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=800&q=80"
+        ]
+      },
+      {
+        id: 4,
+        titleEn: "Dr. Mahmoud Fertility Clinic",
+        titleAr: "عيادة د. محمود للحقن المجهري",
+        categoryEn: "Social Media Design",
+        categoryAr: "تصميم السوشيال ميديا",
+        client: "Dr. Mahmoud Clinic",
+        year: "2024",
+        location: "Egypt",
+        locationAr: "مصر",
+        roleEn: "Medical Visual & Social Designer",
+        roleAr: "مصمم محتوى طبي وسوشيال ميديا",
+        tools: ["Adobe Photoshop", "Adobe Illustrator"],
+        deliverablesEn: "Medical Infographics, IVF & 4D Ultrasound Campaigns",
+        deliverablesAr: "إنفوجرافيك طبي، حملات الحقن المجهري والسونار رباعي الأبعاد",
+        descriptionEn: "Educational and promotional social media campaigns covering IVF, safe pregnancy, and maternal healthcare.",
+        descriptionAr: "حملات توعوية وإعلانية متخصصة للحمل الآمن، الحقن المجهري، ومتابعة سكر الحمل والسونار رباعي الأبعاد.",
+        challengeEn: "Communicating sensitive medical procedures with warmth, clarity, and scientific credibility for expectant families.",
+        challengeAr: "تبسيط المعلومات الطبية الدقيقة وتقديمها بأسلوب بصري دافئ ومطمئن يجمع بين المصداقية العلمية والوضوح.",
+        solutionEn: "Designed calm pastel-toned visual series, clear medical infographics, and patient-focused awareness posts.",
+        solutionAr: "تصميم سلسلة بصرية بألوان هادئة ومريحة للعين مع إنفوجرافيك مبسط ومنشورات توعوية تعزز ثقة المرضى.",
+        imageUrl: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=900&q=85",
+        gallery: [
+          "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=800&q=80"
+        ]
+      },
+      {
+        id: 5,
+        titleEn: "Al Hazmi Real Estate",
+        titleAr: "شركة الحازمي العقارية",
+        categoryEn: "3D Work & Logo",
+        categoryAr: "أعمال 3D وشعار",
+        client: "Al Hazmi Co.",
+        year: "2024",
+        location: "Saudi Arabia",
+        locationAr: "المملكة العربية السعودية",
+        roleEn: "3D Visualization & Brand Designer",
+        roleAr: "مصمم هوية وإظهار معماري 3D",
+        tools: ["Blender 3D", "Adobe Illustrator", "Adobe Photoshop"],
+        deliverablesEn: "Corporate Logo & 3D Architectural Visualization",
+        deliverablesAr: "تصميم الشعار والريندر المعماري ثلاثي الأبعاد",
+        descriptionEn: "Corporate visual identity and photorealistic 3D architectural visualization for Al Hazmi Real Estate in KSA.",
+        descriptionAr: "تصميم الهوية البصرية والريندر المعماري ثلاثي الأبعاد لشركة الحازمي العقارية في السعودية.",
+        challengeEn: "Delivering an authoritative Saudi real estate corporate brand alongside realistic 3D exterior renders prior to construction.",
+        challengeAr: "تقديم هوية عقارية سعودية رصينة مع إظهار معماري ثلاثي الأبعاد واقعي للمشاريع قبل اكتمال التنفيذ.",
+        solutionEn: "Combined a monogram logo inspired by architectural geometry with sunlit 3D exterior renders in Blender.",
+        solutionAr: "دمج شعار هندسي مستوحى من الخطوط المعمارية مع لقطات ريندر خارجية واقعية بإضاءة طبيعية عبر برنامج Blender.",
+        imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=85",
+        gallery: [
+          "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80"
+        ]
+      },
+      {
+        id: 6,
+        titleEn: "Al Amal Real Estate UI Design",
+        titleAr: "تصميم واجهة تطبيق الأمل العقارية",
+        categoryEn: "UI Design",
+        categoryAr: "تصميم واجهات المستخدم UI",
+        client: "Al Amal Real Estate",
+        year: "2024",
+        location: "Egypt",
+        locationAr: "مصر",
+        roleEn: "UI/UX Visual Designer",
+        roleAr: "مصمم واجهات مستخدم UI",
+        tools: ["Figma", "Adobe Illustrator", "Adobe Photoshop"],
+        deliverablesEn: "UI/UX Interface Design, Real Estate App Screens, Interactive Prototype",
+        deliverablesAr: "تصميم واجهات تطبيقات الهواتف الذكية للقطاع العقاري",
+        descriptionEn: "Modern user interface design for Al Amal Real Estate mobile platform showcasing residential towers and unit availability.",
+        descriptionAr: "تصميم واجهة مستخدم حديثة لمنصة الأمل العقارية لعرض الأبراج السكنية والمشاريع العقارية وتفاصيل الوحدات.",
+        challengeEn: "Simplifying property browsing, installment calculators, and floor-plan comparisons on mobile screens.",
+        challengeAr: "تبسيط تجربة تصفح الوحدات العقارية وحاسبة الأقساط ومقارنة المخططات الهندسية على شاشات الهواتف الذكية.",
+        solutionEn: "Designed a clean card-based UI system with intuitive filters, high-contrast typography, and streamlined inquiry flows.",
+        solutionAr: "تصميم واجهة عصرية تعتمد على البطاقات المرنة وفلاتر البحث الذكية وتجربة تصفح سلسة وسريعة.",
+        imageUrl: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=900&q=85",
+        gallery: [
+          "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1551650975-87deedd944c3?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1522542550221-31fd19575a2d?auto=format&fit=crop&w=800&q=80"
+        ]
+      },
+      {
+        id: 7,
+        titleEn: "Hempel Industrial & Decorative Paints",
+        titleAr: "دهانات همبل أبحر",
+        categoryEn: "Social Media & 3D Product",
+        categoryAr: "سوشيال ميديا ومنتجات 3D",
+        client: "Hempel Obhour",
+        year: "2023",
+        location: "Jeddah, KSA",
+        locationAr: "جدة، السعودية",
+        roleEn: "3D Product & Campaign Designer",
+        roleAr: "مصمم منتجات 3D وحملات إعلانية",
+        tools: ["Blender 3D", "Adobe Substance", "Adobe Photoshop"],
+        deliverablesEn: "3D Paint Gallons, Contex & Casa Rustica Campaigns",
+        deliverablesAr: "ريندر 3D لعبوات الدهان، حملات كونتكس وكازا رستيكا",
+        descriptionEn: "Photorealistic 3D product renders and social media campaigns for Hempel protective and decorative coatings in Jeddah.",
+        descriptionAr: "نمذجة ثلاثية الأبعاد لعبوات دهانات همبل وحملات إعلانية لمنتجات كونتكس وكازا رستيكا في أبحر الشمالية بجدة.",
+        challengeEn: "Showcasing both heavy-duty protective coatings and luxury decorative wall textures with accurate material reflections.",
+        challengeAr: "إبراز جودة الدهانات الإنشائية والديكورية وتأثير ملمس الخامات على الجدران بدقة بصرية عالية.",
+        solutionEn: "Modeled exact 3D paint cans with PBR metallic/matte shaders in Blender & Substance paired with rich interior scenes.",
+        solutionAr: "نمذجة عبوات الدهان بدقة واقعية مع محاكاة خامات المعادن والطلاء في Blender و Substance ضمن مشاهد ديكورية متكاملة.",
+        imageUrl: "https://images.unsplash.com/photo-1562259949-e8e7689d7828?auto=format&fit=crop&w=900&q=85",
+        gallery: [
+          "https://images.unsplash.com/photo-1562259949-e8e7689d7828?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80"
+        ]
+      },
+      {
+        id: 8,
+        titleEn: "3D CGI & Outdoor Billboard VFX",
+        titleAr: "أعمال 3D CGI وإعلانات الشوارع المدمجة",
+        categoryEn: "3D CGI & VFX",
+        categoryAr: "خدع بصرية ودمج 3D CGI",
+        client: "Eskan Elmansoura / Automotive / Smart Home",
+        year: "2024",
+        location: "KSA & Egypt",
+        locationAr: "السعودية ومصر",
+        roleEn: "3D CGI & Compositing Artist",
+        roleAr: "فنان 3D CGI ودمج بصري",
+        tools: ["Blender 3D", "After Effects", "Adobe Photoshop"],
+        deliverablesEn: "CGI Building Wraps, 360° Smart Camera 3D, Automotive Renders",
+        deliverablesAr: "دمج إعلانات الأبراج CGI، كاميرا ذكية 360°، ريندر سيارات",
+        descriptionEn: "Photorealistic CGI architectural banners for Al Badry Towers & City Center, 360° smart camera clay-to-final renders, and automotive lighting.",
+        descriptionAr: "دمج بصري ثلاثي الأبعاد لإعلانات أبراج البدري وسيتي سنتر بالمنصورة، ونمذجة كاميرا المراقبة الذكية وريندر السيارات الواقعي.",
+        challengeEn: "Matching real-world camera perspective, daylight shadows, and fabric physics for large-scale outdoor CGI integrations.",
+        challengeAr: "مطابقة منظور الكاميرا الواقعي وظلال الإضاءة الطبيعية وحركة الخامات لدمج الإعلانات الضخمة على واجهات الأبراج.",
+        solutionEn: "Executed camera tracking, HDRI environment lighting, and multi-pass compositing for seamless photorealism.",
+        solutionAr: "تطبيق تتبع الكاميرا وإضاءة HDRI الواقعية والدمج متعدد الطبقات لتحقيق واقعية بصرية كاملة.",
+        imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=900&q=85",
+        gallery: [
+          "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=800&q=80"
+        ]
+      },
+      {
+        id: 9,
+        titleEn: "Saudi Founding Day & Kidana Booths",
+        titleAr: "منتجات يوم التأسيس وبوثات كدانة",
+        categoryEn: "3D Product & Exhibition",
+        categoryAr: "منتجات 3D وتصميم معارض",
+        client: "P.Team & To Vision (Kidana)",
+        year: "2025",
+        location: "Saudi Arabia",
+        locationAr: "المملكة العربية السعودية",
+        roleEn: "3D Exhibition & Product Designer",
+        roleAr: "مصمم معارض ومنتجات 3D",
+        tools: ["Blender 3D", "Adobe Substance", "Adobe Illustrator"],
+        deliverablesEn: "Saudi Founding Day 2025 3D Gifts, Kidana Ramadan Wayfinding",
+        deliverablesAr: "توزيعات يوم التأسيس 2025، قوالب إرشادية لموقع إفطار كدانة",
+        descriptionEn: "3D modeling for Saudi Founding Day 2025 corporate gifts and modular Ramadan wayfinding banners for Kidana.",
+        descriptionAr: "تنفيذ جميع منتجات وتوزيعات يوم التأسيس 2025 بالنمذجة ثلاثية الأبعاد، وتصميم 3 خيارات لقوالب إرشادية لموقع إفطار رمضاني لشركة كدانة.",
+        challengeEn: "Blending authentic Saudi heritage motifs with functional, modular crowd-wayfinding structures and corporate gift packaging.",
+        challengeAr: "دمج الزخارف التراثية السعودية الأصيلة مع تصاميم لوحات إرشادية عملية وتوزيعات مؤسسية فاخرة ليوم التأسيس.",
+        solutionEn: "Created production-ready 3D prototypes with traditional patterns, accurate dimensions, and nighttime lighting previews.",
+        solutionAr: "إعداد نماذج ثلاثية الأبعاد جاهزة للتصنيع بزخارف تراثية وأبعاد هندسية دقيقة مع محاكاة الإضاءة الليلية.",
+        imageUrl: "https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=900&q=85",
+        gallery: [
+          "https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80"
+        ]
+      }
+    ];
+
+    let cardElements = [];
+    let virtualIndex = 0;
+    let targetIndex = 0;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let dragStartTarget = 0;
+    let dragMoved = false;
+    let isStageHovered = false;
+    let pointerDownCardId = null;
+
+    // ==================== CAROUSEL & PROJECT BROWSING ====================
+    function wrapIndex(idx, len) { return ((idx % len) + len) % len; }
+    function shortestDelta(index, center, len) {
+      let d = index - center;
+      while (d > len / 2) d -= len;
+      while (d < -len / 2) d += len;
+      return d;
+    }
+
+    function buildCarouselCards() {
+      const stage = document.getElementById("carouselStage");
+      if (!stage) return;
+      stage.innerHTML = "";
+      cardElements = [];
+
+      portfolioProjects.forEach((proj) => {
+        const card = document.createElement("article");
+        card.className = "carousel-card group";
+        card.setAttribute("role", "button");
+        card.setAttribute("tabindex", "0");
+        card.dataset.projectId = String(proj.id);
+        const title = currentLang === "ar" ? proj.titleAr : proj.titleEn;
+        const cat = currentLang === "ar" ? proj.categoryAr : proj.categoryEn;
+        const isRecommended = getProjectMatchScore(proj) > 0;
+        const recLabel = currentLang === "ar" ? "★ مقترح لك" : "★ For You";
+
+        card.innerHTML = `
+          <div class="card-inner">
+            <img src="${proj.imageUrl}" alt="${title}" loading="eager" />
+            ${isRecommended ? `
+              <div class="absolute top-3.5 start-3.5 px-2.5 py-1 rounded-full bg-[#111214]/85 backdrop-blur-md border border-white/30 text-[10px] font-bold text-white shadow-sm pointer-events-none">
+                ${recLabel}
+              </div>
+            ` : ""}
+            <!-- Permanent Frosted Glass Title & Category Caption -->
+            <div class="absolute inset-x-0 bottom-0 pt-14 pb-4 px-4 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-white transition-all duration-300 pointer-events-none">
+              <div class="flex items-center justify-between gap-2 mb-1">
+                <span class="inline-block px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md border border-white/25 text-[10px] font-semibold uppercase tracking-wider text-white/95">${cat}</span>
+                <span class="text-[10px] font-mono text-white/75">0${proj.id}</span>
+              </div>
+              <h3 class="text-sm sm:text-base font-bold leading-snug text-white drop-shadow-sm line-clamp-1">${title}</h3>
+            </div>
+          </div>
+        `;
+
+        card.addEventListener("pointerdown", () => {
+          pointerDownCardId = proj.id;
+        });
+
+        card.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (!dragMoved) {
+            openProjectPage(proj.id);
+          }
+        });
+
+        card.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            openProjectPage(proj.id);
+          }
+        });
+
+        stage.appendChild(card);
+        cardElements.push(card);
+      });
+    }
+
+    function detectCardAtPoint(clientX, clientY) {
+      const elements = document.elementsFromPoint(clientX, clientY);
+      for (const el of elements) {
+        const card = el.closest && el.closest(".carousel-card");
+        if (card && card.dataset.projectId) {
+          return Number(card.dataset.projectId);
+        }
+      }
+      return null;
+    }
+
+    function renderCarouselFrame() {
+      const homeView = document.getElementById("homePortfolioView");
+      const isHomeVisible = homeView && !homeView.classList.contains("hidden");
+
+      if (isHomeVisible && cardElements.length > 0) {
+        if (!isDragging && !isStageHovered) targetIndex += 0.0022;
+        virtualIndex += (targetIndex - virtualIndex) * 0.08;
+        const total = portfolioProjects.length;
+        const vw = window.innerWidth;
+
+        // Strong cylindrical concave perspective: small recessed center, large angled sides
+        const radius = Math.max(660, vw * 0.46);
+        const cardWidth = 300;
+        const minChordAngle = 2 * Math.asin(cardWidth / (2 * radius));
+        const angleStep = minChordAngle + 0.022;
+
+        for (let i = 0; i < total; i++) {
+          const card = cardElements[i];
+          const d = shortestDelta(i, virtualIndex, total);
+          const absD = Math.abs(d);
+
+          if (absD > 4.2) {
+            card.style.opacity = "0";
+            card.style.pointerEvents = "none";
+            continue;
+          }
+
+          card.style.opacity = "1";
+          card.style.pointerEvents = "auto";
+
+          const theta = d * angleStep;
+          const xPos = Math.sin(theta) * radius;
+          // Deep center recess (-460px) and strong forward sweep on sides
+          const zPos = (1 - Math.cos(theta)) * radius - 460;
+          const rotateYDeg = (-theta * 180) / Math.PI;
+
+          card.style.transform = `translate3d(${xPos.toFixed(2)}px, 0px, ${zPos.toFixed(2)}px) rotateY(${rotateYDeg.toFixed(2)}deg)`;
+          card.style.zIndex = Math.round(100 + (1 - Math.cos(theta)) * 200);
+        }
+      }
+      requestAnimationFrame(renderCarouselFrame);
+    }
+
+    // ==================== PAGE CONTENT & NAVIGATION ====================
+    function setResumeCountry(filter) {
+      resumeCountryFilter = filter;
+      renderResumeContent();
+    }
+
+    function renderResumeContent() {
+      const container = document.getElementById("resumeDynamicContainer");
+      if (!container) return;
+      const isAr = currentLang === "ar";
+      const filteredExp = resumeCountryFilter === "ALL"
+        ? experienceData
+        : experienceData.filter((item) => item.countryCode === resumeCountryFilter);
+
+      const stats = [
+        {
+          value: "+06",
+          label: isAr ? "سنوات الخبرة العملية" : "Years of Experience",
+          sub: isAr ? "السوق السعودي والمصري" : "KSA & Egypt Markets",
+          icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`
+        },
+        {
+          value: "+180",
+          label: isAr ? "مشروع وهوية بصرية" : "Projects & Identities",
+          sub: isAr ? "تصميم 2D و 3D و CGI" : "2D, 3D & CGI Visuals",
+          icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`
+        },
+        {
+          value: "+09",
+          label: isAr ? "شركات ووكالات كبرى" : "Agencies & Brands",
+          sub: isAr ? "قيادة وتنفيذ إبداعي" : "Creative Direction",
+          icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`
+        },
+        {
+          value: "95%",
+          label: isAr ? "دقة الإخراج البصري" : "Visual Craft Precision",
+          sub: isAr ? "إتقان Photoshop و Blender" : "Photoshop & Blender Mastery",
+          icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`
+        }
+      ];
+
+      container.innerHTML = `
+        <div class="glass-card inner-anim-card rounded-[32px] p-6 sm:p-10" style="animation-delay: 0.04s">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div class="inner-anim-text" style="animation-delay: 0.12s">
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 text-xs font-semibold text-[#111214] mb-3 shadow-sm">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>${isAr ? "السيرة الذاتية التنفيذية • 2026" : "Executive Curriculum Vitae • 2026"}</span>
+              </div>
+              <h2 class="text-2xl sm:text-4xl font-bold text-[#111214] tracking-tight">
+                ${isAr ? "مصطفى خالد — مصمم جرافيك أول ومصمم 3D" : "Mostafa Khaled — Senior 2D & 3D Designer"}
+              </h2>
+              <p class="mt-2 text-xs sm:text-sm text-[#5A5C60] max-w-2xl leading-relaxed">
+                ${isAr
+                  ? "خبرة واسعة في بناء الهويات البصرية وتصميم المنتجات ثلاثية الأبعاد والـ CGI للوكالات والشركات في المملكة العربية السعودية ومصر."
+                  : "Extensive creative leadership in brand identity systems, 3D product visualization, and photorealistic CGI across Saudi Arabia and Egypt."}
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-2 inner-anim-text" style="animation-delay: 0.18s">
+              <button type="button" onclick="setResumeCountry('ALL')" class="px-4 py-2 rounded-full text-xs font-semibold transition-all ${resumeCountryFilter === 'ALL' ? 'bg-[#111214] text-white shadow' : 'bg-white/80 text-[#5A5C60] hover:text-[#111214]'}">
+                ${isAr ? "الكل (9)" : "All Markets (9)"}
+              </button>
+              <button type="button" onclick="setResumeCountry('KSA')" class="px-4 py-2 rounded-full text-xs font-semibold transition-all ${resumeCountryFilter === 'KSA' ? 'bg-[#111214] text-white shadow' : 'bg-white/80 text-[#5A5C60] hover:text-[#111214]'}">
+                ${isAr ? "السعودية (6)" : "Saudi Arabia (6)"}
+              </button>
+              <button type="button" onclick="setResumeCountry('Egypt')" class="px-4 py-2 rounded-full text-xs font-semibold transition-all ${resumeCountryFilter === 'Egypt' ? 'bg-[#111214] text-white shadow' : 'bg-white/80 text-[#5A5C60] hover:text-[#111214]'}">
+                ${isAr ? "مصر (3)" : "Egypt (3)"}
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+            ${stats.map((st, idx) => `
+              <div class="ios-subcard inner-anim-card rounded-2xl p-5 flex items-start gap-4" style="animation-delay: ${(0.18 + idx * 0.06).toFixed(2)}s">
+                <div class="w-11 h-11 rounded-xl bg-[#111214] text-white flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105">
+                  ${st.icon}
+                </div>
+                <div>
+                  <div class="text-2xl font-bold text-[#111214] leading-none">${st.value}</div>
+                  <div class="text-xs font-semibold text-[#111214] mt-1.5">${st.label}</div>
+                  <div class="text-[11px] text-[#5A5C60] mt-0.5">${st.sub}</div>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div class="lg:col-span-7 glass-card inner-anim-card rounded-[32px] p-6 sm:p-8" style="animation-delay: 0.22s">
+            <div class="flex items-center gap-3 mb-6 inner-anim-text" style="animation-delay: 0.26s">
+              <div class="w-9 h-9 rounded-xl bg-[#111214] text-white flex items-center justify-center">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              </div>
+              <h3 class="text-lg sm:text-xl font-bold text-[#111214]">
+                ${isAr ? "المسيرة المهنية والخبرات" : "Professional Experience Timeline"}
+              </h3>
+            </div>
+
+            <div class="relative border-s-2 border-[#111214]/15 ps-6 space-y-6 ms-2">
+              ${filteredExp.map((exp, idx) => `
+                <div class="relative ios-subcard inner-anim-card rounded-2xl p-4 sm:p-5" style="animation-delay: ${(0.28 + idx * 0.05).toFixed(2)}s">
+                  <span class="absolute -start-[31px] top-6 w-3.5 h-3.5 rounded-full bg-[#111214] ring-4 ring-white"></span>
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h4 class="text-sm sm:text-base font-bold text-[#111214]">${isAr ? exp.roleAr : exp.roleEn}</h4>
+                    <span class="px-3 py-1 rounded-full bg-[#111214]/5 text-[11px] font-semibold text-[#111214]">${exp.period}</span>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-3 text-xs font-medium text-[#5A5C60] mt-1">
+                    <span class="text-[#111214] font-semibold">${exp.company}</span>
+                    <span>•</span>
+                    <span>${isAr ? exp.locationAr : exp.locationEn}</span>
+                  </div>
+                  <p class="text-xs text-[#45474A] mt-2.5 leading-relaxed">${isAr ? exp.summaryAr : exp.summaryEn}</p>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+
+          <div class="lg:col-span-5 space-y-6">
+            <div class="glass-card inner-anim-card rounded-[32px] p-6 sm:p-8" style="animation-delay: 0.28s">
+              <div class="flex items-center gap-3 mb-5 inner-anim-text" style="animation-delay: 0.32s">
+                <div class="w-9 h-9 rounded-xl bg-[#111214] text-white flex items-center justify-center">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                </div>
+                <h3 class="text-lg font-bold text-[#111214]">
+                  ${isAr ? "البرامج والأدوات التقنية" : "Software & Technical Mastery"}
+                </h3>
+              </div>
+              <div class="space-y-4">
+                ${softwareList.map((sw, idx) => `
+                  <div class="inner-anim-text" style="animation-delay: ${(0.34 + idx * 0.04).toFixed(2)}s">
+                    <div class="flex items-center justify-between text-xs mb-1.5">
+                      <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 rounded-md bg-[#111214] text-white font-bold text-[10px]">${sw.code}</span>
+                        <span class="font-semibold text-[#111214]">${sw.name}</span>
+                      </div>
+                      <span class="font-bold text-[#111214]">${sw.level}%</span>
+                    </div>
+                    <div class="w-full h-2 rounded-full bg-black/10 overflow-hidden">
+                      <div class="h-full rounded-full bg-[#111214] inner-skill-bar" style="width: ${sw.level}%; animation-delay: ${(0.4 + idx * 0.05).toFixed(2)}s"></div>
+                    </div>
+                    <span class="block text-[10px] text-[#5A5C60] mt-1">${isAr ? sw.roleAr : sw.roleEn}</span>
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+
+            <div class="glass-card inner-anim-card rounded-[32px] p-6 sm:p-8" style="animation-delay: 0.36s">
+              <div class="flex items-center gap-3 mb-4 inner-anim-text" style="animation-delay: 0.4s">
+                <div class="w-9 h-9 rounded-xl bg-[#111214] text-white flex items-center justify-center">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                </div>
+                <h3 class="text-lg font-bold text-[#111214]">
+                  ${isAr ? "التعليم ومجالات التخصص" : "Education & Core Expertise"}
+                </h3>
+              </div>
+              <div class="p-4 rounded-2xl ios-subcard mb-5">
+                <div class="text-xs font-bold text-[#111214]">${isAr ? educationData.degreeAr : educationData.degreeEn}</div>
+                <div class="text-xs text-[#5A5C60] mt-0.5">${isAr ? educationData.universityAr : educationData.universityEn}</div>
+                <span class="inline-block mt-2 px-2.5 py-0.5 rounded-full bg-[#111214]/5 text-[11px] font-semibold text-[#111214]">${educationData.period}</span>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                ${expertiseTags.map((tag, idx) => `
+                  <span class="inner-anim-text px-3 py-1.5 rounded-full bg-white/85 border border-white text-xs font-medium text-[#111214] shadow-sm hover:-translate-y-0.5 transition-transform" style="animation-delay: ${(0.44 + idx * 0.03).toFixed(2)}s">
+                    ${isAr ? tag.ar : tag.en}
+                  </span>
+                `).join("")}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function setPartnersSector(sector) {
+      partnersSectorFilter = sector;
+      renderPartnersContent();
+    }
+
+    function renderPartnersContent() {
+      const container = document.getElementById("partnersDynamicContainer");
+      if (!container) return;
+      const isAr = currentLang === "ar";
+      const filteredPartners = partnersSectorFilter === "ALL"
+        ? partnersData
+        : partnersData.filter((p) => p.sectorKey === partnersSectorFilter);
+
+      const partnerStats = [
+        { value: "+09", label: isAr ? "شركاء نجاح استراتيجيين" : "Strategic Success Partners", sub: isAr ? "علامات تجارية رائدة" : "Leading Regional Brands" },
+        { value: "05", label: isAr ? "قطاعات اقتصادية متنوعة" : "Diverse Industry Sectors", sub: isAr ? "صناعي، غذائي، لوجستي، عناية" : "Industrial, F&B, Logistics, Spa" },
+        { value: "+25", label: isAr ? "عاماً من عراقة الشركاء" : "Years Partner Heritage", sub: isAr ? "مؤسسات راسخة في الخليج" : "Established Gulf Enterprises" },
+        { value: "100%", label: isAr ? "تطابق الهوية البصرية" : "Brand Consistency", sub: isAr ? "حلول مصممة خصيصاً" : "Tailored Visual Systems" }
+      ];
+
+      const sectors = [
+        { key: "ALL", en: "All Partners", ar: "جميع الشركاء" },
+        { key: "enterprise", en: "Enterprise & Industry", ar: "المؤسسات والصناعة" },
+        { key: "fnb", en: "Food & Hospitality", ar: "الأغذية والضيافة" },
+        { key: "wellness", en: "Beauty & Wellness", ar: "الجمال والعناية" },
+        { key: "logistics", en: "Logistics & Delivery", ar: "التوصيل واللوجستيات" },
+        { key: "advertising", en: "Advertising & Events", ar: "الدعاية والمعارض" }
+      ];
+
+      container.innerHTML = `
+        <div class="glass-card inner-anim-card rounded-[32px] p-6 sm:p-10" style="animation-delay: 0.04s">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div class="inner-anim-text" style="animation-delay: 0.1s">
+              <span class="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-[#5A5C60] mb-2">
+                ${isAr ? "شركاء النجاح • السعودية والمنطقة" : "Partners of Success • KSA & Regional"}
+              </span>
+              <h2 class="text-2xl sm:text-4xl font-bold text-[#111214] tracking-tight">
+                ${isAr ? "علامات تجارية وثقت برؤيتنا الإبداعية" : "Brands That Trusted Our Visual Craft"}
+              </h2>
+            </div>
+            <div class="flex flex-wrap gap-2 inner-anim-text" style="animation-delay: 0.16s">
+              ${sectors.map(sec => `
+                <button type="button" onclick="setPartnersSector('${sec.key}')" class="px-3.5 py-2 rounded-full text-xs font-semibold transition-all ${partnersSectorFilter === sec.key ? 'bg-[#111214] text-white shadow' : 'bg-white/80 text-[#5A5C60] hover:text-[#111214]'}">
+                  ${isAr ? sec.ar : sec.en}
+                </button>
+              `).join("")}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+            ${partnerStats.map((st, idx) => `
+              <div class="ios-subcard inner-anim-card rounded-2xl p-5" style="animation-delay: ${(0.18 + idx * 0.05).toFixed(2)}s">
+                <div class="text-2xl font-bold text-[#111214]">${st.value}</div>
+                <div class="text-xs font-semibold text-[#111214] mt-1">${st.label}</div>
+                <div class="text-[11px] text-[#5A5C60] mt-0.5">${st.sub}</div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          ${filteredPartners.map((partner, idx) => `
+            <article class="glass-card inner-anim-card rounded-[28px] p-6 flex flex-col justify-between group" style="animation-delay: ${(0.24 + idx * 0.05).toFixed(2)}s">
+              <div>
+                <div class="flex items-center justify-between gap-3 mb-4">
+                  <div class="w-11 h-11 rounded-2xl bg-[#111214] text-white flex items-center justify-center shadow-sm transition-transform duration-300 group-hover:scale-105">
+                    ${partner.icon}
+                  </div>
+                  <span class="px-3 py-1 rounded-full bg-white text-[11px] font-semibold text-[#111214] border border-black/5">
+                    ${isAr ? partner.badgeAr : partner.badgeEn}
+                  </span>
+                </div>
+                <h3 class="text-lg font-bold text-[#111214]">${partner.name}</h3>
+                <span class="block text-[11px] font-semibold text-[#5A5C60] mt-0.5">${isAr ? partner.sectorLabelAr : partner.sectorLabelEn}</span>
+                <p class="text-xs text-[#45474A] mt-3 leading-relaxed">${isAr ? partner.descAr : partner.descEn}</p>
+              </div>
+              <div class="mt-5 pt-4 border-t border-black/5 flex items-center justify-between text-[11px] font-medium text-[#5A5C60]">
+                <span>${isAr ? partner.countryAr : partner.countryEn}</span>
+                <span class="text-[#111214] font-semibold">${isAr ? "شريك نجاح معتمد" : "Verified Partner"}</span>
+              </div>
+            </article>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function renderAboutContent() {
+      const container = document.getElementById("aboutDynamicContainer");
+      if (!container) return;
+      const isAr = currentLang === "ar";
+
+      const aboutStats = [
+        { value: "+06", label: isAr ? "سنوات من الإبداع" : "Years of Craft", sub: isAr ? "خبرة متواصلة في السوق" : "Continuous Market Mastery" },
+        { value: "2D+3D", label: isAr ? "تخصص مزدوج متكامل" : "Dual Specialization", sub: isAr ? "هويات بصرية ونمذجة 3D" : "Brand Systems & 3D CGI" },
+        { value: "02", label: isAr ? "أسواق إقليمية رئيسية" : "Regional Markets", sub: isAr ? "السعودية ومصر" : "Saudi Arabia & Egypt" },
+        { value: "100%", label: isAr ? "التزام بالجودة والتسليم" : "Delivery Commitment", sub: isAr ? "دقة التفاصيل والابتكار" : "Attention to Detail" }
+      ];
+
+      const pillars = [
+        {
+          titleEn: "Strategic Brand Identity",
+          titleAr: "بناء الهويات البصرية الاستراتيجية",
+          descEn: "Crafting memorable logos, packaging, and cohesive visual systems tailored to position brands distinctly in competitive markets.",
+          descAr: "تصميم شعارات وأنظمة هوية بصرية متكاملة وتغليف احترافي يمنح العلامات التجارية حضوراً قوياً ومتميزاً في الأسواق التنافسية.",
+          icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>`
+        },
+        {
+          titleEn: "Photorealistic 3D & CGI",
+          titleAr: "الواقعية الفائقة في الـ 3D والـ CGI",
+          descEn: "Specializing in 3D product modeling, studio lighting, architectural visualization, and outdoor CGI billboard integration using Blender & Substance.",
+          descAr: "التخصص في نمذجة المنتجات ثلاثية الأبعاد وإضاءة الاستوديو ودمج إعلانات الشوارع بتقنية CGI باستخدام Blender و Substance.",
+          icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`
+        },
+        {
+          titleEn: "AI-Enhanced Creative Workflow",
+          titleAr: "التكامل التقني والذكاء الاصطناعي",
+          descEn: "Combining traditional design principles with modern AI generative tools, Runway, and motion graphics to accelerate visual storytelling.",
+          descAr: "دمج قواعد التصميم الأكاديمية مع أدوات الذكاء الاصطناعي التوليدي والموشن جرافيك لتقديم حلول بصرية مبتكرة وسريعة التنفيذ.",
+          icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`
+        }
+      ];
+
+      container.innerHTML = `
+        <div class="glass-card inner-anim-card rounded-[32px] p-6 sm:p-10" style="animation-delay: 0.04s">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div class="max-w-3xl inner-anim-text" style="animation-delay: 0.1s">
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 text-xs font-semibold text-[#111214] mb-3 shadow-sm">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>${isAr ? "MK STUDIO • متاح للمشاريع والاستشارات الإبداعية" : "MK STUDIO • Available for Projects & Creative Direction"}</span>
+              </div>
+              <h2 class="text-2xl sm:text-4xl font-bold text-[#111214] tracking-tight">
+                ${isAr ? "مرحباً، أنا مصطفى خالد" : "Hello, I'm Mostafa Khaled"}
+              </h2>
+              <p class="mt-3 text-xs sm:text-sm text-[#45474A] leading-relaxed">
+                ${isAr ? cmsConfig.aboutBioAr : cmsConfig.aboutBioEn}
+              </p>
+              <div class="flex flex-wrap gap-2 mt-4">
+                <span class="px-3 py-1 rounded-full bg-[#111214] text-white text-[11px] font-semibold">#BRANDING</span>
+                <span class="px-3 py-1 rounded-full bg-white text-[#111214] text-[11px] font-semibold">#3D_DESIGN</span>
+                <span class="px-3 py-1 rounded-full bg-white text-[#111214] text-[11px] font-semibold">#3D_PRODUCT</span>
+                <span class="px-3 py-1 rounded-full bg-white text-[#111214] text-[11px] font-semibold">#PRINT_DESIGN</span>
+                <span class="px-3 py-1 rounded-full bg-white text-[#111214] text-[11px] font-semibold">#MOTION_GRAPHIC</span>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-3 shrink-0 inner-anim-text" style="animation-delay: 0.16s">
+              <button type="button" onclick="switchPage('home')" class="px-5 py-3 rounded-full bg-[#111214] text-white text-xs font-semibold shadow hover:opacity-90 transition-all">
+                ${isAr ? "استعرض الأعمال" : "Explore Works"}
+              </button>
+              <button type="button" onclick="switchPage('resume')" class="px-5 py-3 rounded-full bg-white text-[#111214] text-xs font-semibold shadow-sm hover:bg-white/90 transition-all">
+                ${isAr ? "السيرة الذاتية" : "View Resume"}
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+            ${aboutStats.map((st, idx) => `
+              <div class="ios-subcard inner-anim-card rounded-2xl p-5" style="animation-delay: ${(0.2 + idx * 0.05).toFixed(2)}s">
+                <div class="text-2xl font-bold text-[#111214]">${st.value}</div>
+                <div class="text-xs font-semibold text-[#111214] mt-1">${st.label}</div>
+                <div class="text-[11px] text-[#5A5C60] mt-0.5">${st.sub}</div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          ${pillars.map((pil, idx) => `
+            <div class="glass-card inner-anim-card rounded-[28px] p-6 sm:p-7" style="animation-delay: ${(0.26 + idx * 0.06).toFixed(2)}s">
+              <div class="w-11 h-11 rounded-2xl bg-[#111214] text-white flex items-center justify-center mb-4">
+                ${pil.icon}
+              </div>
+              <h3 class="text-base sm:text-lg font-bold text-[#111214]">${isAr ? pil.titleAr : pil.titleEn}</h3>
+              <p class="text-xs sm:text-sm text-[#45474A] mt-2 leading-relaxed">${isAr ? pil.descAr : pil.descEn}</p>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function switchPage(pageName, projectId = null) {
+      if (pageName === "admin" && !isAdminAuthenticated) {
+        openAdminLoginModal();
+        return;
+      }
+      const pages = {
+        home: document.getElementById("homePortfolioView"),
+        resume: document.getElementById("resumeView"),
+        partners: document.getElementById("partnersView"),
+        about: document.getElementById("aboutView"),
+        project: document.getElementById("projectPageView"),
+        admin: document.getElementById("adminDashboardView")
+      };
+
+      Object.entries(pages).forEach(([key, el]) => {
+        if (!el) return;
+        if (key === pageName) {
+          el.classList.remove("hidden");
+        } else {
+          el.classList.add("hidden");
+        }
+      });
+
+      const activeNavKey = pageName === "project" ? "home" : pageName;
+      document.querySelectorAll(".nav-pill-btn").forEach((btn) => {
+        const isActive = btn.getAttribute("data-page") === activeNavKey;
+        if (isActive) {
+          btn.classList.add("active", "bg-[#111214]", "text-white", "font-semibold", "shadow-sm");
+          btn.classList.remove("text-[#5A5C60]", "font-medium");
+        } else {
+          btn.classList.remove("active", "bg-[#111214]", "text-white", "font-semibold", "shadow-sm");
+          btn.classList.add("text-[#5A5C60]", "font-medium");
+        }
+      });
+
+      if (pageName === "project" && projectId !== null) {
+        renderProjectPage(projectId);
+        if (window.location.hash !== `#project/${projectId}`) {
+          history.replaceState(null, "", `#project/${projectId}`);
+        }
+      } else {
+        if (window.location.hash !== `#${pageName}`) {
+          history.replaceState(null, "", `#${pageName}`);
+        }
+      }
+
+      if (pageName === "resume") renderResumeContent();
+      if (pageName === "partners") renderPartnersContent();
+      if (pageName === "about") renderAboutContent();
+      if (pageName === "admin") renderAdminDashboard();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function openProjectPage(projectId) {
+      switchPage("project", projectId);
+    }
+
+    function renderProjectPage(projectId) {
+      const projIndex = portfolioProjects.findIndex((p) => p.id === Number(projectId));
+      const proj = portfolioProjects[projIndex !== -1 ? projIndex : 0];
+      if (!proj) return;
+
+      activeProjectId = proj.id;
+      trackVisitorProjectInterest(proj);
+      const isAr = currentLang === "ar";
+
+      // Labels & Navigation Counter
+      document.getElementById("backToWorkArrow").textContent = isAr ? "→" : "←";
+      document.getElementById("backToWorkLabel").textContent = isAr ? "العودة لجميع الأعمال" : "Back to All Work";
+      document.getElementById("projectCounterBadge").textContent = `0${proj.id} / 0${portfolioProjects.length}`;
+
+      // Quick Number Tabs (01 .. 09)
+      const quickTabs = document.getElementById("projectQuickTabs");
+      if (quickTabs) {
+        quickTabs.innerHTML = portfolioProjects.map((p) => {
+          const isCurrent = p.id === proj.id;
+          return `
+            <button type="button" onclick="openProjectPage(${p.id})" title="${isAr ? p.titleAr : p.titleEn}" class="w-7 h-7 rounded-full text-[11px] font-bold transition-all ${isCurrent ? 'bg-[#111214] text-white shadow-sm' : 'text-[#5A5C60] hover:bg-white/80 hover:text-[#111214]'}">
+              0${p.id}
+            </button>
+          `;
+        }).join("");
+      }
+
+      // Hero Showcase & Metadata
+      const coverBox = document.getElementById("modalProjectImage").parentElement;
+      if (coverBox) {
+        coverBox.className = `rounded-[24px] overflow-hidden bg-[#E5E6E8] ${proj.coverAspect || "aspect-[4/3]"} shadow-md border border-white/85 relative group`;
+      }
+      document.getElementById("modalProjectImage").src = proj.imageUrl;
+      document.getElementById("modalProjectImage").alt = isAr ? proj.titleAr : proj.titleEn;
+      document.getElementById("modalProjectLocationBadge").textContent = isAr ? (proj.locationAr || proj.location) : proj.location;
+      document.getElementById("modalProjectCategory").textContent = isAr ? proj.categoryAr : proj.categoryEn;
+      document.getElementById("modalProjectYearPill").textContent = proj.year;
+      document.getElementById("modalProjectSlugPill").textContent = `#project/${proj.id}`;
+      document.getElementById("modalProjectTitle").textContent = isAr ? proj.titleAr : proj.titleEn;
+      document.getElementById("modalProjectDescription").textContent = isAr ? proj.descriptionAr : proj.descriptionEn;
+      // Gallery Shots (Supports Multi-Size Editorial Grid Blocks & Captions)
+      document.getElementById("gallerySubHeading").textContent = isAr ? "معرض الصور والتفاصيل متعدد المقاسات" : "Multi-Size Visual Showcase & Details";
+      document.getElementById("galleryHeading").textContent = isAr ? "لقطات ومخرجات المشروع" : "Project Visual Frames";
+      document.getElementById("inquireProjectBtnLbl").textContent = isAr ? "اطلب مشروعاً مشابهاً" : "Request Similar Project";
+      const galleryContainer = document.getElementById("modalProjectGallery");
+
+      const activeBlocks = (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0)
+        ? proj.mediaBlocks
+        : (proj.gallery || [proj.imageUrl]).map((imgSrc, idx) => ({
+            url: imgSrc,
+            layout: idx === 0 && (proj.gallery || []).length > 2 ? "col-span-12" : "md:col-span-4",
+            aspect: idx === 0 && (proj.gallery || []).length > 2 ? "aspect-[21/9]" : "aspect-[4/3]",
+            captionEn: "",
+            captionAr: ""
+          }));
+
+      galleryContainer.innerHTML = activeBlocks.map((blk, idx) => {
+        const cap = isAr ? (blk.captionAr || blk.captionEn) : (blk.captionEn || blk.captionAr);
+        const aspectCls = blk.aspect || "aspect-[4/3]";
+        const layoutCls = blk.layout || "md:col-span-4";
+        const imgFitCls = aspectCls === "aspect-auto" ? "w-full h-auto object-contain" : "w-full h-full object-cover";
+        return `
+          <figure class="${layoutCls} col-span-1 flex flex-col justify-between rounded-2xl overflow-hidden bg-white/55 border border-white/85 shadow-sm group cursor-pointer" onclick="document.getElementById('modalProjectImage').src='${blk.url}'">
+            <div class="overflow-hidden bg-[#E5E6E8] ${aspectCls} w-full">
+              <img src="${blk.url}" alt="${(isAr ? proj.titleAr : proj.titleEn)} - ${idx + 1}" class="${imgFitCls} transition-transform duration-500 group-hover:scale-[1.03]" />
+            </div>
+            ${cap ? `
+              <figcaption class="px-4 py-3 text-xs font-medium text-[#2A2C30] bg-white/75 backdrop-blur-md border-t border-white/80 leading-relaxed">
+                <span class="inline-block font-bold text-[#111214] me-1.5">0${idx + 1}.</span>${cap}
+              </figcaption>
+            ` : ""}
+          </figure>
+        `;
+      }).join("");
+
+      // Similar / Related Projects Suggestions (3 smart-matched projects + Cookie Interest Boost)
+      const dominant = getDominantInterest();
+      document.getElementById("relatedProjectsSub").textContent = dominant
+        ? (isAr ? `مقترح بناءً على اهتمامك بـ ${getInterestDisplayName(dominant, true)}` : `Tailored to Your ${getInterestDisplayName(dominant, false)} Interest`)
+        : (isAr ? "اكتشف المزيد" : "Explore More");
+      document.getElementById("relatedProjectsHeading").textContent = isAr ? "مشاريع مقاربة وذات صلة" : "Similar & Related Projects";
+      document.getElementById("viewAllWorksBtnLbl").textContent = isAr ? "عرض كل المشاريع" : "View All Projects";
+
+      const currentKeywords = `${proj.categoryEn} ${proj.location}`.toLowerCase().split(/[\s&,]+/);
+      const relatedList = portfolioProjects
+        .filter((p) => p.id !== proj.id)
+        .map((candidate) => {
+          const candText = `${candidate.categoryEn} ${candidate.location}`.toLowerCase();
+          let score = getProjectMatchScore(candidate);
+          currentKeywords.forEach((kw) => {
+            if (kw.length > 2 && candText.includes(kw)) score += 2;
+          });
+          return { item: candidate, score };
+        })
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3)
+        .map((entry) => entry.item);
+
+      const relatedGrid = document.getElementById("relatedProjectsGrid");
+      if (relatedGrid) {
+        relatedGrid.innerHTML = relatedList.map((rel) => {
+          const relTitle = isAr ? rel.titleAr : rel.titleEn;
+          const relCat = isAr ? rel.categoryAr : rel.categoryEn;
+          const relLoc = isAr ? (rel.locationAr || rel.location) : rel.location;
+          return `
+            <article onclick="openProjectPage(${rel.id})" role="button" tabindex="0" class="ios-subcard rounded-2xl p-3.5 cursor-pointer group flex flex-col justify-between">
+              <div>
+                <div class="rounded-xl overflow-hidden bg-[#E5E6E8] aspect-[16/10] mb-3.5 relative border border-white/75">
+                  <img src="${rel.imageUrl}" alt="${relTitle}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <span class="glass-pill absolute top-2.5 start-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-[#111214]">0${rel.id}</span>
+                </div>
+                <span class="inline-block text-[10px] font-semibold uppercase tracking-wider text-[#5A5C60] mb-1">${relCat}</span>
+                <h4 class="text-sm sm:text-base font-bold text-[#111214] group-hover:opacity-80 transition-opacity line-clamp-1">${relTitle}</h4>
+              </div>
+              <div class="mt-3 pt-2.5 border-t border-black/5 flex items-center justify-between text-[11px] font-medium text-[#5A5C60]">
+                <span>${relLoc} • ${rel.year}</span>
+                <span class="font-bold text-[#111214] group-hover:translate-x-0.5 transition-transform">${isAr ? "عرض ←" : "View →"}</span>
+              </div>
+            </article>
+          `;
+        }).join("");
+      }
+    }
+
+    function navigateProjectModal(step) {
+      const idx = portfolioProjects.findIndex((p) => p.id === activeProjectId);
+      if (idx === -1) return;
+      const nextIdx = (idx + step + portfolioProjects.length) % portfolioProjects.length;
+      openProjectPage(portfolioProjects[nextIdx].id);
+    }
+
+    function closeProjectPage() {
+      switchPage("home");
+    }
+
+    function openContactModal() {
+      const modal = document.getElementById("contactModal");
+      if (!modal) return;
+      modal.classList.remove("hidden");
+      requestAnimationFrame(() => modal.classList.remove("opacity-0"));
+    }
+
+    function closeContactModal() {
+      const modal = document.getElementById("contactModal");
+      if (!modal) return;
+      modal.classList.add("opacity-0");
+      setTimeout(() => modal.classList.add("hidden"), 250);
+    }
+
+    function applyLanguageUI() {
+      const isAr = currentLang === "ar";
+      document.documentElement.lang = isAr ? "ar" : "en";
+      document.documentElement.dir = isAr ? "rtl" : "ltr";
+
+      const langBtn = document.getElementById("langToggleBtn");
+      if (langBtn) langBtn.textContent = isAr ? "EN" : "AR";
+
+      const heroTitle = document.getElementById("heroEditorialTitle");
+      const heroSub = document.getElementById("heroEditorialSubtitle");
+      const contactLabel = document.getElementById("contactBtnLabel");
+      const pdfLabel = document.getElementById("pdfBtnLabel");
+
+      if (heroTitle) {
+        const rawHeroTitle = isAr ? cmsConfig.heroTitleAr : cmsConfig.heroTitleEn;
+        heroTitle.innerHTML = rawHeroTitle.replace(/\n/g, "<br />");
+      }
+      if (heroSub) {
+        heroSub.textContent = isAr ? cmsConfig.heroSubAr : cmsConfig.heroSubEn;
+      }
+      if (contactLabel) contactLabel.textContent = isAr ? "تواصل الآن" : "Contact Now";
+      if (pdfLabel) pdfLabel.textContent = isAr ? "تحميل البورتفوليو PDF" : "Download PDF";
+
+      const navLabels = {
+        home: isAr ? "الأعمال" : "All Work",
+        resume: isAr ? "السيرة الذاتية" : "Resume",
+        partners: isAr ? "الشركاء" : "Partners",
+        about: isAr ? "من أنا" : "About me"
+      };
+      document.querySelectorAll(".nav-pill-btn").forEach((btn) => {
+        const key = btn.getAttribute("data-page");
+        if (navLabels[key]) btn.textContent = navLabels[key];
+      });
+
+      buildCarouselCards();
+      updateCookieUI();
+      renderResumeContent();
+      renderPartnersContent();
+      renderAboutContent();
+      const projectView = document.getElementById("projectPageView");
+      if (projectView && !projectView.classList.contains("hidden")) {
+        renderProjectPage(activeProjectId);
+      }
+    }
+
+    // ==================== PDF EXPORT ====================
+    function exportPortfolioPDF() {
+      if (!window.jspdf) {
+        openContactModal();
+        return;
+      }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const margin = 16;
+      const contentW = pageW - margin * 2;
+      let y = 0;
+
+      const drawHeaderBanner = () => {
+        doc.setFillColor(17, 18, 20);
+        doc.rect(0, 0, pageW, 44, "F");
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(20);
+        doc.text("MOSTAFA KHALED", margin, 17);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(215, 217, 220);
+        doc.text("Senior 2D & 3D Graphic Designer | Brand Identity, 3D Product & CGI", margin, 24);
+
+        // Interactive Clickable Hyperlinks in Header
+        doc.setFontSize(8.5);
+        doc.setTextColor(147, 197, 253);
+        const emailLabel = "Email: Mkalwayzy@gmail.com";
+        doc.textWithLink(emailLabel, margin, 34, { url: "mailto:Mkalwayzy@gmail.com" });
+
+        const waLabel = "WhatsApp: +20 100 277 9252";
+        doc.textWithLink(waLabel, margin + 56, 34, { url: "https://wa.me/201002779252" });
+
+        const beLabel = "Behance: behance.net/Mkelwayzy";
+        doc.textWithLink(beLabel, margin + 114, 34, { url: "https://www.behance.net/Mkelwayzy" });
+
+        y = 54;
+      };
+
+      const ensureSpace = (neededHeight) => {
+        if (y + neededHeight > pageH - 16) {
+          doc.addPage();
+          y = 18;
+        }
+      };
+
+      const drawSectionTitle = (title) => {
+        ensureSpace(14);
+        doc.setFillColor(235, 236, 238);
+        doc.roundedRect(margin, y - 5, contentW, 8.5, 2, 2, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10.5);
+        doc.setTextColor(17, 18, 20);
+        doc.text(title.toUpperCase(), margin + 3, y + 0.8);
+        y += 9;
+      };
+
+      // ==================== PAGE 1: EXECUTIVE CV ====================
+      drawHeaderBanner();
+
+      // Executive Summary
+      drawSectionTitle("Executive Summary & Core Focus");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.2);
+      doc.setTextColor(60, 62, 66);
+      const summaryLines = doc.splitTextToSize(
+        "Senior 2D & 3D Graphic Designer with 6+ years of extensive creative leadership across the Saudi Arabian and Egyptian markets. Specializing in strategic Brand Identity Systems, 3D Product Modeling, Photorealistic CGI Outdoor Visuals, Packaging, and Motion Graphics.",
+        contentW
+      );
+      doc.text(summaryLines, margin, y);
+      y += summaryLines.length * 4.6 + 4;
+
+      // Key Metrics Bar
+      ensureSpace(16);
+      const kpis = [
+        { val: "+06 Years", lbl: "Market Experience" },
+        { val: "+180 Projects", lbl: "2D, 3D & CGI Delivered" },
+        { val: "+09 Agencies", lbl: "KSA & Egypt Roles" },
+        { val: "95% Craft", lbl: "Visual Precision" }
+      ];
+      const boxW = (contentW - 9) / 4;
+      kpis.forEach((k, idx) => {
+        const bx = margin + idx * (boxW + 3);
+        doc.setDrawColor(215, 217, 220);
+        doc.roundedRect(bx, y, boxW, 13, 2, 2, "S");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9.5);
+        doc.setTextColor(17, 18, 20);
+        doc.text(k.val, bx + 3, y + 5.5);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(95, 98, 102);
+        doc.text(k.lbl, bx + 3, y + 10.5);
+      });
+      y += 20;
+
+      // Professional Experience (All 9 Roles from Website)
+      drawSectionTitle("Professional Experience (Saudi Arabia & Egypt)");
+      experienceData.forEach((exp) => {
+        const descLines = doc.splitTextToSize(exp.summaryEn, contentW - 4);
+        const blockH = 11 + descLines.length * 4.1;
+        ensureSpace(blockH);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9.5);
+        doc.setTextColor(17, 18, 20);
+        doc.text(`${exp.roleEn} — ${exp.company}`, margin, y);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(80, 82, 86);
+        const rightTag = `${exp.locationEn} | ${exp.period}`;
+        doc.text(rightTag, pageW - margin - doc.getTextWidth(rightTag), y);
+
+        y += 4.5;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(65, 68, 72);
+        doc.text(descLines, margin + 2, y);
+        y += descLines.length * 4.1 + 3.5;
+      });
+
+      // Education & Core Expertise
+      drawSectionTitle("Education & Core Expertise");
+      ensureSpace(22);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9.5);
+      doc.setTextColor(17, 18, 20);
+      doc.text(`${educationData.degreeEn} — ${educationData.universityEn} (${educationData.period})`, margin, y);
+      y += 5.5;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(60, 62, 66);
+      const expertiseText = "Core Expertise: " + expertiseTags.map((t) => t.en).join("  •  ");
+      const expTagLines = doc.splitTextToSize(expertiseText, contentW);
+      doc.text(expTagLines, margin, y);
+      y += expTagLines.length * 4.3 + 4;
+
+      // Software Mastery with Visual Progress Bars
+      drawSectionTitle("Software & Technical Mastery");
+      softwareList.forEach((sw) => {
+        ensureSpace(8);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(17, 18, 20);
+        doc.text(`${sw.name} (${sw.roleEn})`, margin, y);
+
+        const pctText = `${sw.level}%`;
+        doc.text(pctText, pageW - margin - doc.getTextWidth(pctText), y);
+
+        const barX = margin + 96;
+        const barW = contentW - 110;
+        doc.setFillColor(225, 227, 230);
+        doc.roundedRect(barX, y - 3, barW, 2.8, 1, 1, "F");
+        doc.setFillColor(17, 18, 20);
+        doc.roundedRect(barX, y - 3, (barW * sw.level) / 100, 2.8, 1, 1, "F");
+        y += 6.5;
+      });
+
+      // ==================== PORTFOLIO PROJECTS & CASE STUDIES ====================
+      y += 3;
+      drawSectionTitle("Selected Portfolio Works & Case Studies");
+      portfolioProjects.forEach((proj, idx) => {
+        const descLines = doc.splitTextToSize(proj.descriptionEn, contentW - 6);
+        const delivLines = doc.splitTextToSize(`Deliverables: ${proj.deliverablesEn}`, contentW - 6);
+        const cardH = 14 + descLines.length * 4 + delivLines.length * 3.8;
+        ensureSpace(cardH + 3);
+
+        doc.setDrawColor(210, 212, 215);
+        doc.setFillColor(250, 250, 251);
+        doc.roundedRect(margin, y - 4, contentW, cardH, 2.5, 2.5, "FD");
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9.8);
+        doc.setTextColor(17, 18, 20);
+        doc.text(`0${idx + 1}. ${proj.titleEn}`, margin + 3, y + 1);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(90, 92, 96);
+        const meta = `${proj.categoryEn}  |  ${proj.client} (${proj.location}, ${proj.year})`;
+        doc.text(meta, pageW - margin - 3 - doc.getTextWidth(meta), y + 1);
+
+        y += 6;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.4);
+        doc.setTextColor(55, 58, 62);
+        doc.text(descLines, margin + 3, y);
+        y += descLines.length * 4;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(17, 18, 20);
+        doc.text(delivLines, margin + 3, y);
+        y += delivLines.length * 3.8 + 5;
+      });
+
+      // ==================== STRATEGIC PARTNERS ====================
+      drawSectionTitle("Partners of Success (Saudi Arabia & Regional)");
+      partnersData.forEach((partner) => {
+        const pDesc = doc.splitTextToSize(`${partner.name} (${partner.sectorLabelEn} — ${partner.countryEn}): ${partner.descEn}`, contentW - 2);
+        ensureSpace(pDesc.length * 4.1 + 3);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.4);
+        doc.setTextColor(50, 52, 56);
+        doc.text(pDesc, margin, y);
+        y += pDesc.length * 4.1 + 2.5;
+      });
+
+      // ==================== CLICKABLE CONTACT & PORTFOLIO FOOTER ====================
+      ensureSpace(22);
+      y += 4;
+      doc.setFillColor(17, 18, 20);
+      doc.roundedRect(margin, y, contentW, 18, 3, 3, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9.5);
+      doc.setTextColor(255, 255, 255);
+      doc.text("Direct Links & Full Interactive Showcase:", margin + 4, y + 6.5);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(147, 197, 253);
+      doc.textWithLink("Behance Portfolio (behance.net/Mkelwayzy)", margin + 4, y + 13, { url: "https://www.behance.net/Mkelwayzy" });
+      doc.textWithLink("WhatsApp Direct (+20 100 277 9252)", margin + 78, y + 13, { url: "https://wa.me/201002779252" });
+      doc.textWithLink("Email (Mkalwayzy@gmail.com)", margin + 134, y + 13, { url: "mailto:Mkalwayzy@gmail.com" });
+
+      // Page Numbers Footer on All Pages
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(130, 132, 136);
+        doc.text(`Mostafa Khaled — Executive CV & Portfolio 2026  |  Page ${p} of ${totalPages}`, margin, pageH - 7);
+        doc.setTextColor(59, 130, 246);
+        doc.textWithLink("behance.net/Mkelwayzy", pageW - margin - 34, pageH - 7, { url: "https://www.behance.net/Mkelwayzy" });
+      }
+
+      doc.save("Mostafa_Khaled_CV_&_Portfolio_2026.pdf");
+    }
+
+    // ==================== EVENT BINDINGS & ROUTING ====================
+    document.addEventListener("DOMContentLoaded", () => {
+      loadCmsState();
+      applyCmsThemeAndContact();
+
+      // Load saved visitor cookie preferences if present
+      const savedCookie = getBrowserCookie(COOKIE_KEY);
+      if (savedCookie) {
+        visitorCookieState = { ...visitorCookieState, ...savedCookie };
+        const bestIdx = portfolioProjects.findIndex((p) => getProjectMatchScore(p) > 0);
+        if (bestIdx !== -1) {
+          virtualIndex = bestIdx;
+          targetIndex = bestIdx;
+        }
+      }
+
+      buildCarouselCards();
+      updateCookieUI();
+      requestAnimationFrame(renderCarouselFrame);
+
+      // Cookie Card Event Listeners
+      document.querySelectorAll(".interest-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          selectVisitorInterest(chip.getAttribute("data-interest"));
+        });
+      });
+
+      const acceptCookiesBtn = document.getElementById("acceptCookiesBtn");
+      const minimizeCookieCardBtn = document.getElementById("minimizeCookieCardBtn");
+
+      if (acceptCookiesBtn) {
+        acceptCookiesBtn.addEventListener("click", acceptAllSmartCookies);
+      }
+      if (minimizeCookieCardBtn) {
+        minimizeCookieCardBtn.addEventListener("click", () => {
+          visitorCookieState.dismissed = true;
+          setBrowserCookie(COOKIE_KEY, visitorCookieState);
+          updateCookieUI();
+        });
+      }
+
+      const stage = document.getElementById("carouselStage");
+      if (stage) {
+        stage.addEventListener("mouseenter", () => { isStageHovered = true; });
+        stage.addEventListener("mouseleave", () => { isStageHovered = false; isDragging = false; });
+        stage.addEventListener("mousedown", (e) => {
+          isDragging = true;
+          dragMoved = false;
+          dragStartX = e.clientX;
+          dragStartY = e.clientY;
+          dragStartTarget = targetIndex;
+          const hitId = detectCardAtPoint(e.clientX, e.clientY);
+          if (hitId !== null) pointerDownCardId = hitId;
+        });
+        window.addEventListener("mousemove", (e) => {
+          if (!isDragging) return;
+          const dx = e.clientX - dragStartX;
+          const dy = e.clientY - dragStartY;
+          if (Math.hypot(dx, dy) > 14) dragMoved = true;
+          if (dragMoved) {
+            targetIndex = dragStartTarget - dx * 0.0045;
+          }
+        });
+        window.addEventListener("mouseup", (e) => {
+          if (isDragging && !dragMoved) {
+            const clickedId = pointerDownCardId !== null ? pointerDownCardId : detectCardAtPoint(e.clientX, e.clientY);
+            pointerDownCardId = null;
+            isDragging = false;
+            if (clickedId !== null) {
+              openProjectPage(clickedId);
+              return;
+            }
+          }
+          pointerDownCardId = null;
+          isDragging = false;
+          setTimeout(() => { dragMoved = false; }, 50);
+        });
+        stage.addEventListener("touchstart", (e) => {
+          if (!e.touches[0]) return;
+          isDragging = true;
+          dragMoved = false;
+          dragStartX = e.touches[0].clientX;
+          dragStartY = e.touches[0].clientY;
+          dragStartTarget = targetIndex;
+          const hitId = detectCardAtPoint(e.touches[0].clientX, e.touches[0].clientY);
+          if (hitId !== null) pointerDownCardId = hitId;
+        }, { passive: true });
+        stage.addEventListener("touchmove", (e) => {
+          if (!isDragging || !e.touches[0]) return;
+          const dx = e.touches[0].clientX - dragStartX;
+          const dy = e.touches[0].clientY - dragStartY;
+          if (Math.hypot(dx, dy) > 14) dragMoved = true;
+          if (dragMoved) {
+            targetIndex = dragStartTarget - dx * 0.0055;
+          }
+        }, { passive: true });
+        stage.addEventListener("touchend", (e) => {
+          if (isDragging && !dragMoved) {
+            const touch = e.changedTouches && e.changedTouches[0];
+            const tappedId = pointerDownCardId !== null
+              ? pointerDownCardId
+              : (touch ? detectCardAtPoint(touch.clientX, touch.clientY) : null);
+            pointerDownCardId = null;
+            isDragging = false;
+            if (tappedId !== null) {
+              openProjectPage(tappedId);
+              return;
+            }
+          }
+          pointerDownCardId = null;
+          isDragging = false;
+          setTimeout(() => { dragMoved = false; }, 50);
+        });
+      }
+
+      document.querySelectorAll(".nav-pill-btn").forEach((btn) => {
+        btn.addEventListener("click", () => switchPage(btn.getAttribute("data-page")));
+      });
+
+      const headerLogo = document.getElementById("headerLogoLink");
+      if (headerLogo) {
+        headerLogo.addEventListener("click", (e) => {
+          e.preventDefault();
+          switchPage("home");
+        });
+      }
+
+      const langToggle = document.getElementById("langToggleBtn");
+      if (langToggle) {
+        langToggle.addEventListener("click", () => {
+          currentLang = currentLang === "en" ? "ar" : "en";
+          applyLanguageUI();
+        });
+      }
+
+      const contactBtn = document.getElementById("contactNowBtn");
+      const headerAccountBtn = document.getElementById("headerAccountBtn");
+      const closeContactBtn = document.getElementById("closeContactModalBtn");
+      const closeProjectBtn = document.getElementById("closeProjectPageBtn");
+      const pdfBtn = document.getElementById("downloadPdfBtn");
+
+      if (contactBtn) contactBtn.addEventListener("click", openContactModal);
+      if (headerAccountBtn) {
+        headerAccountBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openAdminLoginModal();
+        });
+      }
+      if (closeContactBtn) closeContactBtn.addEventListener("click", closeContactModal);
+      if (closeProjectBtn) closeProjectBtn.addEventListener("click", closeProjectPage);
+      if (pdfBtn) pdfBtn.addEventListener("click", exportPortfolioPDF);
+
+      // ==================== ADMIN LOGIN & CMS EVENT WIRING ====================
+      const closeAdminLoginBtn = document.getElementById("closeAdminLoginBtn");
+      if (closeAdminLoginBtn) closeAdminLoginBtn.addEventListener("click", closeAdminLoginModal);
+
+      const adminLoginForm = document.getElementById("adminLoginForm");
+      if (adminLoginForm) {
+        adminLoginForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const pass = document.getElementById("adminLoginPass").value.trim();
+          const errEl = document.getElementById("adminLoginError");
+          if (pass === cmsConfig.passcode || pass === "admin2026") {
+            isAdminAuthenticated = true;
+            if (errEl) errEl.classList.add("hidden");
+            applyCmsThemeAndContact();
+            closeAdminLoginModal();
+            switchPage("admin");
+          } else {
+            if (errEl) errEl.classList.remove("hidden");
+          }
+        });
+      }
+
+      // CMS Tabs Switching
+      document.querySelectorAll(".cms-tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const targetTab = btn.getAttribute("data-cms-tab");
+          document.querySelectorAll(".cms-tab-btn").forEach((b) => {
+            b.classList.remove("active", "bg-obsidian", "text-white", "font-bold");
+            b.classList.add("text-slateText", "font-semibold");
+          });
+          btn.classList.add("active", "bg-obsidian", "text-white", "font-bold");
+          btn.classList.remove("text-slateText", "font-semibold");
+
+          document.querySelectorAll(".cms-tab-panel").forEach((panel) => panel.classList.add("hidden"));
+          const activePanel = document.getElementById(`cmsTab${targetTab.charAt(0).toUpperCase() + targetTab.slice(1)}`);
+          if (activePanel) activePanel.classList.remove("hidden");
+        });
+      });
+
+      // Project Image File Upload to Data URL
+      const projImgFile = document.getElementById("cmsProjImgFile");
+      if (projImgFile) {
+        projImgFile.addEventListener("change", (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            document.getElementById("cmsProjImgUrl").value = reader.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // Add Single Media Block Button
+      const addMediaBlockBtn = document.getElementById("addMediaBlockBtn");
+      if (addMediaBlockBtn) {
+        addMediaBlockBtn.addEventListener("click", () => {
+          cmsDraftBlocks.push(createDefaultMediaBlock("", "md:col-span-6", "aspect-auto", "", ""));
+          renderCmsMediaBlocksEditor();
+        });
+      }
+
+      // Batch Upload Multiple Images with Auto-Detected Natural Aspect Ratios
+      const batchImagesInput = document.getElementById("cmsBatchImagesInput");
+      if (batchImagesInput) {
+        batchImagesInput.addEventListener("change", (e) => {
+          const files = Array.from(e.target.files || []);
+          if (!files.length) return;
+          files.forEach((file) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const dataUrl = reader.result;
+              const probe = new Image();
+              probe.onload = () => {
+                const ratio = probe.naturalWidth / (probe.naturalHeight || 1);
+                let autoLayout = "md:col-span-6";
+                let autoAspect = "aspect-auto";
+                if (ratio >= 1.8) {
+                  autoLayout = "col-span-12";
+                  autoAspect = "aspect-[21/9]";
+                } else if (ratio >= 1.25) {
+                  autoLayout = "md:col-span-6";
+                  autoAspect = "aspect-[16/9]";
+                } else if (ratio <= 0.85) {
+                  autoLayout = "md:col-span-4";
+                  autoAspect = "aspect-[3/4]";
+                } else {
+                  autoLayout = "md:col-span-6";
+                  autoAspect = "aspect-square";
+                }
+                cmsDraftBlocks.push(createDefaultMediaBlock(dataUrl, autoLayout, autoAspect, "", ""));
+                renderCmsMediaBlocksEditor();
+              };
+              probe.src = dataUrl;
+            };
+            reader.readAsDataURL(file);
+          });
+          e.target.value = "";
+        });
+      }
+
+      // Publish or Update Precision Project
+      const cmsProjectForm = document.getElementById("cmsProjectForm");
+      if (cmsProjectForm) {
+        cmsProjectForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const editId = document.getElementById("cmsEditProjectId").value;
+          const toolsArr = document.getElementById("cmsProjTools").value.split(",").map((s) => s.trim()).filter(Boolean);
+          const imgUrl = document.getElementById("cmsProjImgUrl").value.trim();
+          const validMediaBlocks = cmsDraftBlocks
+            .filter((b) => b.url && b.url.trim() !== "")
+            .map((b) => ({ ...b, url: b.url.trim() }));
+
+          const galleryUrls = validMediaBlocks.length > 0
+            ? validMediaBlocks.map((b) => b.url)
+            : [imgUrl];
+
+          const descEn = document.getElementById("cmsProjDescEn").value.trim();
+          const descAr = document.getElementById("cmsProjDescAr").value.trim();
+
+          const projectPayload = {
+            titleEn: document.getElementById("cmsProjTitleEn").value.trim(),
+            titleAr: document.getElementById("cmsProjTitleAr").value.trim(),
+            categoryEn: document.getElementById("cmsProjCatEn").value.trim(),
+            categoryAr: document.getElementById("cmsProjCatAr").value.trim(),
+            client: document.getElementById("cmsProjClient").value.trim(),
+            year: document.getElementById("cmsProjYear").value.trim(),
+            location: document.getElementById("cmsProjLoc").value.trim(),
+            locationAr: document.getElementById("cmsProjLocAr").value.trim() || document.getElementById("cmsProjLoc").value.trim(),
+            roleEn: document.getElementById("cmsProjRoleEn").value.trim() || "Lead Brand & 3D Designer",
+            roleAr: document.getElementById("cmsProjRoleAr").value.trim() || "مصمم هويات ومنتجات 3D أول",
+            tools: toolsArr.length ? toolsArr : ["Blender 3D", "Adobe Photoshop"],
+            deliverablesEn: document.getElementById("cmsProjDelivEn").value.trim(),
+            deliverablesAr: document.getElementById("cmsProjDelivAr").value.trim() || document.getElementById("cmsProjDelivEn").value.trim(),
+            descriptionEn: descEn,
+            descriptionAr: descAr,
+            challengeEn: document.getElementById("cmsProjChallengeEn").value.trim() || descEn,
+            challengeAr: document.getElementById("cmsProjChallengeAr").value.trim() || descAr,
+            solutionEn: document.getElementById("cmsProjSolutionEn").value.trim() || "Executed with high-precision visual craft, balanced typography, and studio lighting.",
+            solutionAr: document.getElementById("cmsProjSolutionAr").value.trim() || "تم التنفيذ بدقة بصرية عالية وتوازن في الخطوط وإضاءة استوديو احترافية.",
+            imageUrl: imgUrl,
+            coverAspect: document.getElementById("cmsProjCoverAspect").value || "aspect-[4/3]",
+            mediaBlocks: validMediaBlocks,
+            gallery: galleryUrls
+          };
+
+          if (editId) {
+            const idx = portfolioProjects.findIndex((p) => p.id === Number(editId));
+            if (idx !== -1) {
+              portfolioProjects[idx] = { ...portfolioProjects[idx], ...projectPayload };
+            }
+            showCmsToast("Project updated with all custom media frames!");
+          } else {
+            const nextId = portfolioProjects.reduce((max, p) => Math.max(max, p.id), 0) + 1;
+            portfolioProjects.unshift({ id: nextId, ...projectPayload });
+            showCmsToast("Precision project published to platform!");
+          }
+
+          resetCmsProjectForm();
+          saveCmsState();
+          buildCarouselCards();
+          renderAdminDashboard();
+        });
+      }
+
+      const cancelEditProjBtn = document.getElementById("cmsCancelEditProjectBtn");
+      if (cancelEditProjBtn) cancelEditProjBtn.addEventListener("click", resetCmsProjectForm);
+
+      // Save Platform Content Form
+      const cmsContentForm = document.getElementById("cmsContentForm");
+      if (cmsContentForm) {
+        cmsContentForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          cmsConfig.studioTagEn = document.getElementById("cmsStudioTagEn").value;
+          cmsConfig.studioTagAr = document.getElementById("cmsStudioTagAr").value;
+          cmsConfig.heroTitleEn = document.getElementById("cmsHeroTitleEn").value;
+          cmsConfig.heroTitleAr = document.getElementById("cmsHeroTitleAr").value;
+          cmsConfig.heroSubEn = document.getElementById("cmsHeroSubEn").value;
+          cmsConfig.heroSubAr = document.getElementById("cmsHeroSubAr").value;
+          cmsConfig.aboutBioEn = document.getElementById("cmsAboutBioEn").value;
+          cmsConfig.aboutBioAr = document.getElementById("cmsAboutBioAr").value;
+          saveCmsState();
+          applyLanguageUI();
+          showCmsToast("Platform content & texts updated!");
+        });
+      }
+
+      // Save Contact & Security Form
+      const cmsContactForm = document.getElementById("cmsContactForm");
+      if (cmsContactForm) {
+        cmsContactForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          cmsConfig.waNumber = document.getElementById("cmsWaNumber").value.replace(/[^0-9]/g, "");
+          cmsConfig.waDisplay = document.getElementById("cmsWaDisplay").value;
+          cmsConfig.email = document.getElementById("cmsEmailAddr").value;
+          cmsConfig.behanceUrl = document.getElementById("cmsBehanceUrl").value;
+          cmsConfig.socialHandle = document.getElementById("cmsSocialHandle").value;
+          const newPass = document.getElementById("cmsNewPasscode").value.trim();
+          if (newPass) cmsConfig.passcode = newPass;
+          saveCmsState();
+          applyCmsThemeAndContact();
+          showCmsToast("Contact & social details saved!");
+        });
+      }
+
+      // Live Color Picker Hex Labels
+      ["Primary", "Bg", "Muted"].forEach((key) => {
+        const input = document.getElementById(`cmsColor${key}`);
+        const hexLbl = document.getElementById(`cmsColor${key}Hex`);
+        if (input && hexLbl) {
+          input.addEventListener("input", () => {
+            hexLbl.textContent = input.value.toUpperCase();
+          });
+        }
+      });
+
+      // Custom Logo Upload
+      const customLogoFile = document.getElementById("cmsCustomLogoFile");
+      if (customLogoFile) {
+        customLogoFile.addEventListener("change", (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            cmsConfig.customLogoDataUrl = reader.result;
+            applyCmsThemeAndContact();
+            saveCmsState();
+            showCmsToast("Custom logo uploaded!");
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const useSigLogoBtn = document.getElementById("cmsUseSignatureLogoBtn");
+      if (useSigLogoBtn) {
+        useSigLogoBtn.addEventListener("click", () => {
+          cmsConfig.customLogoDataUrl = "";
+          applyCmsThemeAndContact();
+          saveCmsState();
+          showCmsToast("Restored signature calligraphy logo.");
+        });
+      }
+
+      const cmsIdentityForm = document.getElementById("cmsIdentityForm");
+      if (cmsIdentityForm) {
+        cmsIdentityForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          cmsConfig.primaryColor = document.getElementById("cmsColorPrimary").value;
+          cmsConfig.bgColor = document.getElementById("cmsColorBg").value;
+          cmsConfig.mutedColor = document.getElementById("cmsColorMuted").value;
+          cmsConfig.customLogoText = document.getElementById("cmsCustomLogoBrandText").value;
+          applyCmsThemeAndContact();
+          saveCmsState();
+          showCmsToast("Brand identity & colors applied!");
+        });
+      }
+
+      const cmsLogoutBtn = document.getElementById("cmsLogoutBtn");
+      if (cmsLogoutBtn) {
+        cmsLogoutBtn.addEventListener("click", () => {
+          isAdminAuthenticated = false;
+          applyCmsThemeAndContact();
+          switchPage("home");
+        });
+      }
+
+      const cmsResetDefaultsBtn = document.getElementById("cmsResetDefaultsBtn");
+      if (cmsResetDefaultsBtn) {
+        cmsResetDefaultsBtn.addEventListener("click", () => {
+          localStorage.removeItem(CMS_STORAGE_KEY);
+          cmsConfig = { ...defaultCmsConfig };
+          applyCmsThemeAndContact();
+          applyLanguageUI();
+          renderAdminDashboard();
+          showCmsToast("Platform reset to original defaults.");
+        });
+      }
+
+      applyLanguageUI();
+
+      // Support Direct URL Hash Routing (#project/1 .. #project/9, #resume, #partners, #about, #admin)
+      const handleInitialRoute = () => {
+        const hash = window.location.hash;
+        if (hash.startsWith("#project/")) {
+          const id = parseInt(hash.replace("#project/", ""), 10);
+          if (!isNaN(id)) openProjectPage(id);
+        } else if (hash === "#resume" || hash === "#partners" || hash === "#about" || hash === "#admin") {
+          switchPage(hash.replace("#", ""));
+        }
+      };
+      handleInitialRoute();
+      window.addEventListener("hashchange", handleInitialRoute);
+    });

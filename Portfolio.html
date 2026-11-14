@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mostafa Khaled — Brand Identity &amp; 3D Designer Portfolio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"IBM Plex Sans"', '"IBM Plex Sans Arabic"', 'sans-serif'],
+            serif: ['"IBM Plex Sans"', '"IBM Plex Sans Arabic"', 'sans-serif'],
+            mono: ['"IBM Plex Sans"', '"IBM Plex Sans Arabic"', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="./assets/css/styles.css" />
+</head>
+<body class="architectural-grid min-h-screen flex flex-col justify-between selection:bg-obsidian selection:text-white">
+
+  <!-- ==================== TOP NAVIGATION HEADER ==================== -->
+  <header class="fixed top-0 inset-x-0 z-[9999] py-4 pointer-events-none">
+    <div class="w-full max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12 flex items-center justify-between relative">
+      <!-- Left: Signature Logo (Asset 4_2.svg or Custom Uploaded Logo) linked to All Work -->
+      <a href="#" id="headerLogoLink" aria-label="Mostafa Khaled Portfolio" class="block hover:scale-105 transition-transform duration-300 pointer-events-auto">
+        <div id="customLogoWrapper" class="hidden items-center gap-2.5">
+          <img id="customLogoImg" src="" alt="Brand Logo" class="h-12 sm:h-14 w-auto object-contain rounded-xl" />
+          <span id="customLogoText" class="text-base sm:text-lg font-bold tracking-tight text-obsidian"></span>
+        </div>
+        <svg id="defaultSignatureSvg" viewBox="0 0 1160 400" class="h-14 sm:h-16 lg:h-[72px] w-auto" style="fill: var(--brand-primary);">
+          <!-- Top diamond dot above الطاء -->
+          <path d="M842 18 L854 32 L840 48 L828 34 Z"/>
+          <!-- Long ascending diagonal stem -->
+          <path d="M833 52 L839 54 L760 226 L753 224 Z"/>
+          <!-- Secondary ascending vertical stroke -->
+          <path d="M750 156 L757 159 L726 226 L719 224 Z"/>
+          <!-- Diamond dot above الفاء -->
+          <path d="M635 154 L647 167 L634 182 L622 169 Z"/>
+          <!-- Diamond dot above الخاء -->
+          <path d="M472 198 L484 211 L471 226 L459 213 Z"/>
+          <!-- Grand Sweeping Arch Loop from top-center around the left side into خالد -->
+          <path d="M412 68 C472 18 564 -6 644 6 C714 16 742 62 712 118 C684 170 618 220 538 262 C474 296 418 310 398 302 C386 297 390 282 404 268 L412 272 C402 282 401 289 409 291 C426 295 478 278 536 246 C610 205 674 156 700 108 C726 60 701 22 638 14 C562 4 476 28 418 76 Z"/>
+          <!-- Left circular flourish loop + Alif & Lam of خالد -->
+          <path d="M406 140 L414 144 C394 192 374 240 356 282 C348 300 336 298 332 280 C322 232 278 192 214 188 C134 183 54 234 28 296 C8 344 36 382 104 384 C178 386 274 342 362 276 L368 282 C276 352 176 396 98 394 C22 392 -12 348 12 292 C42 222 128 170 216 176 C282 180 328 218 342 266 C345 276 350 275 355 264 C372 224 390 182 406 140 Z"/>
+          <path d="M434 150 L441 154 L402 246 L395 244 Z"/>
+          <!-- Khaf / Dal connection of خالد -->
+          <path d="M398 258 C414 252 436 250 458 254 C478 258 494 254 508 244 L500 264 C486 274 468 278 448 274 C428 270 408 272 392 278 Z"/>
+          <!-- Main calligraphy body: مصطفى + descending return loop of الياء -->
+          <path d="M826 226 C838 226 846 236 842 250 C838 265 822 278 804 280 C790 282 778 276 770 268 C754 282 734 292 714 294 C698 295 684 290 674 280 C660 290 644 294 628 293 C616 292 606 286 600 278 C588 288 574 296 560 302 C550 306 546 314 554 322 C568 334 568 352 552 368 C532 388 498 398 478 394 C466 391 466 378 480 364 C498 346 530 324 568 302 L574 308 C538 330 508 352 494 368 C486 376 488 381 498 381 C514 381 536 372 546 358 C554 346 550 334 538 326 C526 318 528 304 542 294 C562 280 584 268 598 250 C606 240 612 228 622 226 C632 224 638 234 634 248 C630 260 622 268 614 274 C624 278 636 278 648 272 C658 268 664 260 668 250 C678 230 698 216 718 216 C732 216 742 226 738 240 C734 254 720 266 704 272 C716 276 732 274 746 264 C758 258 766 248 774 238 C786 226 806 226 826 226 Z M714 232 C700 232 686 244 680 258 C696 258 714 248 718 238 C720 234 718 232 714 232 Z"/>
+          <!-- Two dots below الياء -->
+          <path d="M656 350 L667 361 L655 374 L644 363 Z"/>
+          <path d="M680 348 L691 359 L679 372 L668 361 Z"/>
+          <!-- Lower sweeping signature flourish under the entire name -->
+          <path d="M1152 254 C1158 258 1156 266 1144 272 C1134 277 1126 284 1122 292 C1118 282 1122 272 1130 266 C1114 260 1082 260 1038 268 C862 298 634 344 426 392 C398 398 372 402 352 400 C338 398 336 390 348 382 C376 364 416 342 448 326 L454 332 C426 348 394 368 374 382 C368 386 372 389 382 388 C412 384 462 374 514 362 L518 368 C472 380 426 392 388 398 Z"/>
+          <path d="M1134 262 C978 282 778 324 584 368 C580 369 581 364 588 362 C778 314 976 270 1134 252 Z"/>
+        </svg>
+      </a>
+
+      <!-- Center: Main Navigation Bar (Centered geometrically) -->
+      <nav aria-label="Main Navigation" class="glass-pill px-2 py-1.5 rounded-full hidden sm:flex items-center gap-1 shadow-sm pointer-events-auto absolute left-1/2 -translate-x-1/2">
+        <button type="button" data-page="home" class="nav-pill-btn active bg-[#111214] text-white font-semibold shadow-sm px-4 py-1.5 rounded-full text-xs transition-all">All Work</button>
+        <button type="button" data-page="resume" class="nav-pill-btn text-[#5A5C60] font-medium hover:text-[#111214] px-4 py-1.5 rounded-full text-xs transition-all">Resume</button>
+        <button type="button" data-page="partners" class="nav-pill-btn text-[#5A5C60] font-medium hover:text-[#111214] px-4 py-1.5 rounded-full text-xs transition-all">Partners</button>
+        <button type="button" data-page="about" class="nav-pill-btn text-[#5A5C60] font-medium hover:text-[#111214] px-4 py-1.5 rounded-full text-xs transition-all">About me</button>
+      </nav>
+
+      <!-- Right: Unified Language & Admin Control Panel Login Glass Pill -->
+      <div class="glass-pill h-10 px-1.5 rounded-full flex items-center shadow-sm pointer-events-auto relative z-[99999]">
+        <button id="langToggleBtn" type="button" aria-label="Switch Language" class="h-8 px-3 rounded-full text-xs font-semibold text-[#111214] hover:bg-white/60 transition-all cursor-pointer">
+          AR
+        </button>
+        <span class="w-px h-4 bg-[#111214]/15 mx-0.5"></span>
+        <button id="headerAccountBtn" type="button" title="Admin Control Panel" aria-label="Admin Login & Control Panel" class="h-8 px-2.5 rounded-full flex items-center gap-1.5 text-[#111214] hover:bg-white/60 transition-all cursor-pointer">
+          <span id="adminActiveDot" class="hidden w-2 h-2 rounded-full bg-emerald-500"></span>
+          <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== 1. PAGE: ALL WORK / PANORAMIC HOME ==================== -->
+  <main id="homePortfolioView" class="h-screen w-full flex flex-col justify-between pt-20 sm:pt-24 pb-16 sm:pb-20 overflow-hidden relative">
+
+    <!-- Editorial Hero Header -->
+    <section class="w-full max-w-4xl mx-auto px-5 text-center z-20 translate-y-[110px] pointer-events-none shrink-0 relative">
+      <span id="heroStudioTag" class="inline-block text-[10px] sm:text-xs font-medium uppercase tracking-[0.24em] text-slateText mb-1">Mostafa Khaled Studio</span>
+      <h1 id="heroEditorialTitle" class="text-2xl sm:text-4xl lg:text-[42px] font-serif font-normal tracking-tight text-obsidian leading-[1.12]">
+        Express Your Brand with<br />Our Visual Craft
+      </h1>
+      <p id="heroEditorialSubtitle" class="mt-1.5 text-xs sm:text-sm text-slateText max-w-xl mx-auto leading-relaxed">
+        Showcase your identity with strategic brand systems and photorealistic 3D product visuals crafted for impact.
+      </p>
+    </section>
+
+    <!-- Full-Width 3D Cylindrical Concave Panoramic Strip -->
+    <section aria-label="Featured Design Works" class="panoramic-ribbon-wrapper relative z-30 pointer-events-auto shrink-0">
+      <div id="carouselStage" class="carousel-stage"></div>
+    </section>
+
+    <!-- Bottom Bar: Left Contact, Center Smart Cookies Bar & Right PDF Action -->
+    <div class="w-full max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12 -mt-6 z-40 flex items-center justify-between gap-4 shrink-0 pointer-events-none">
+      <!-- Left: Contact Now Action Pill -->
+      <button id="contactNowBtn" type="button" aria-label="Contact Now" class="glass-pill h-11 px-5 rounded-full flex items-center gap-2 text-xs sm:text-sm font-semibold text-obsidian shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 shrink-0 pointer-events-auto">
+        <svg class="w-4 h-4 text-obsidian" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+        </svg>
+        <span id="contactBtnLabel">Contact Now</span>
+      </button>
+
+      <!-- Center: Smart Cookies & Visitor Interest Preference Bar (Aligned precisely with bottom buttons) -->
+      <div id="cookiePromptWrapper" class="pointer-events-auto max-w-md w-full mx-auto px-2">
+        <div id="cookiePreferenceCard" class="hidden glass-card rounded-2xl px-4 py-2.5 w-full shadow-lg transition-all duration-300 border border-white flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-6 h-6 rounded-lg bg-obsidian text-white flex items-center justify-center shrink-0">
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"/>
+                <path d="M8.5 8.5v.01"/><path d="M16 15.5v.01"/><path d="M12 12v.01"/><path d="M11 17v.01"/><path d="M7 14v.01"/>
+              </svg>
+            </span>
+            <div class="min-w-0 text-start">
+              <h4 id="cookieCardTitle" class="text-[11px] font-bold text-obsidian truncate">Smart Cookies</h4>
+            </div>
+          </div>
+
+          <div id="cookieInterestChips" class="flex items-center gap-1">
+            <button type="button" data-interest="3D" class="interest-chip px-2 py-1 rounded-full bg-white/80 hover:bg-white text-[10px] font-semibold text-obsidian border border-white transition-all cursor-pointer">3D</button>
+            <button type="button" data-interest="Branding" class="interest-chip px-2 py-1 rounded-full bg-white/80 hover:bg-white text-[10px] font-semibold text-obsidian border border-white transition-all cursor-pointer">Branding</button>
+            <button type="button" data-interest="Social" class="interest-chip px-2 py-1 rounded-full bg-white/80 hover:bg-white text-[10px] font-semibold text-obsidian border border-white transition-all cursor-pointer">Social</button>
+            <button type="button" data-interest="UI" class="interest-chip px-2 py-1 rounded-full bg-white/80 hover:bg-white text-[10px] font-semibold text-obsidian border border-white transition-all cursor-pointer">UI</button>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button id="acceptCookiesBtn" type="button" class="px-3 py-1 rounded-full bg-obsidian text-white text-[10px] font-semibold hover:opacity-90 transition-all shadow-sm shrink-0 cursor-pointer">
+              Accept
+            </button>
+            <button id="minimizeCookieCardBtn" type="button" aria-label="Close" class="w-5 h-5 rounded-full bg-white/70 hover:bg-white text-obsidian flex items-center justify-center text-[10px] font-bold shrink-0 cursor-pointer">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Download PDF Action -->
+      <button id="downloadPdfBtn" type="button" aria-label="Download Full Portfolio PDF" class="glass-pill h-11 px-4 sm:px-5 rounded-full flex items-center gap-2 text-xs sm:text-sm font-semibold text-obsidian shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 shrink-0 pointer-events-auto">
+        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span id="pdfBtnLabel">Download PDF</span>
+      </button>
+    </div>
+  </main>
+
+  <!-- ==================== 2. PAGE: RESUME ==================== -->
+  <section id="resumeView" class="hidden min-h-screen w-full pt-28 pb-24 px-5 sm:px-10 lg:px-16">
+    <div id="resumeDynamicContainer" class="max-w-6xl mx-auto space-y-6"></div>
+  </section>
+
+  <!-- ==================== 3. PAGE: PARTNERS ==================== -->
+  <section id="partnersView" class="hidden min-h-screen w-full pt-28 pb-24 px-5 sm:px-10 lg:px-16">
+    <div id="partnersDynamicContainer" class="max-w-6xl mx-auto space-y-6"></div>
+  </section>
+
+  <!-- ==================== 4. PAGE: ABOUT ME ==================== -->
+  <section id="aboutView" class="hidden min-h-screen w-full pt-28 pb-24 px-5 sm:px-10 lg:px-16">
+    <div id="aboutDynamicContainer" class="max-w-6xl mx-auto space-y-6"></div>
+  </section>
+
+  <!-- ==================== 5. DEDICATED SINGLE PROJECT PAGE VIEW ==================== -->
+  <section id="projectPageView" class="hidden min-h-screen w-full pt-28 pb-24 px-5 sm:px-10 lg:px-16">
+    <div class="max-w-6xl mx-auto space-y-6">
+      <!-- Top Bar: Back, Direct Project Switcher & Counter -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <button id="closeProjectPageBtn" type="button" class="glass-pill inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold text-[#111214] hover:bg-white transition-all shadow-sm">
+          <span id="backToWorkArrow">←</span>
+          <span id="backToWorkLabel">Back to All Work</span>
+        </button>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Direct Project Selector Pills -->
+          <div id="projectQuickTabs" class="glass-pill px-2 py-1.5 rounded-full hidden md:flex items-center gap-1 shadow-sm"></div>
+
+          <div class="glass-pill px-3.5 py-1.5 rounded-full flex items-center shadow-sm">
+            <span id="projectCounterBadge" class="text-xs font-bold text-[#5A5C60]">01 / 09</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hero Showcase Card -->
+      <div class="glass-card inner-anim-card rounded-[32px] p-5 sm:p-8 lg:p-10" style="animation-delay: 0.05s">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-7 lg:gap-10 items-center">
+          <div class="lg:col-span-6">
+            <div class="rounded-[24px] overflow-hidden bg-[#E5E6E8] aspect-[4/3] shadow-md border border-white/85 relative group">
+              <img id="modalProjectImage" src="" alt="" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <span id="modalProjectLocationBadge" class="glass-pill absolute top-4 start-4 px-3.5 py-1.5 rounded-full text-[11px] font-semibold text-[#111214] shadow-sm"></span>
+            </div>
+          </div>
+          <div class="lg:col-span-6 flex flex-col justify-between space-y-6">
+            <div class="inner-anim-text" style="animation-delay: 0.12s">
+              <div class="flex flex-wrap items-center gap-2 mb-2.5">
+                <span id="modalProjectCategory" class="px-3 py-1 rounded-full bg-[#111214] text-white text-[11px] font-semibold uppercase tracking-wider"></span>
+                <span id="modalProjectYearPill" class="px-3 py-1 rounded-full bg-white/80 text-[#111214] text-[11px] font-semibold"></span>
+                <span id="modalProjectSlugPill" class="px-3 py-1 rounded-full bg-white/60 text-[#5A5C60] text-[11px] font-mono"></span>
+              </div>
+              <h2 id="modalProjectTitle" class="text-2xl sm:text-4xl font-bold tracking-tight text-[#111214] leading-tight"></h2>
+              <p id="modalProjectDescription" class="mt-4 text-sm sm:text-base leading-relaxed text-[#45474A]"></p>
+            </div>
+
+            <!-- Metadata Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div class="ios-subcard inner-anim-card rounded-2xl p-3.5" style="animation-delay: 0.16s">
+                <span id="metaClientLbl" class="block text-[#5A5C60] text-[10px] font-semibold uppercase tracking-wider mb-1">Client</span>
+                <span id="modalProjectClient" class="text-xs sm:text-sm font-bold text-[#111214]"></span>
+              </div>
+              <div class="ios-subcard inner-anim-card rounded-2xl p-3.5" style="animation-delay: 0.2s">
+                <span id="metaYearLbl" class="block text-[#5A5C60] text-[10px] font-semibold uppercase tracking-wider mb-1">Year &amp; Market</span>
+                <span id="modalProjectYear" class="text-xs sm:text-sm font-bold text-[#111214]"></span>
+              </div>
+              <div class="col-span-2 sm:col-span-1 ios-subcard inner-anim-card rounded-2xl p-3.5" style="animation-delay: 0.24s">
+                <span id="metaRoleLbl" class="block text-[#5A5C60] text-[10px] font-semibold uppercase tracking-wider mb-1">Role</span>
+                <span id="modalProjectRole" class="text-xs sm:text-sm font-bold text-[#111214]"></span>
+              </div>
+            </div>
+
+            <!-- Deliverables & Tools -->
+            <div class="space-y-3 pt-1 inner-anim-text" style="animation-delay: 0.28s">
+              <div>
+                <span id="metaDeliverablesLbl" class="block text-[#5A5C60] text-[11px] font-semibold uppercase tracking-wider mb-1.5">Key Deliverables</span>
+                <p id="modalProjectDeliverables" class="text-xs sm:text-sm font-semibold text-[#111214]"></p>
+              </div>
+              <div>
+                <span id="metaToolsLbl" class="block text-[#5A5C60] text-[11px] font-semibold uppercase tracking-wider mb-2">Tools &amp; Pipeline</span>
+                <div id="modalProjectTools" class="flex flex-wrap gap-2"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Case Study Deep-Dive: Challenge & Creative Solution -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-6 glass-card inner-anim-card rounded-[28px] p-6 sm:p-8" style="animation-delay: 0.3s">
+          <div class="flex items-center gap-2.5 mb-3">
+            <span class="w-8 h-8 rounded-xl bg-[#111214] text-white flex items-center justify-center text-xs font-bold">01</span>
+            <h3 id="challengeHeading" class="text-base sm:text-lg font-bold text-[#111214]">Project Brief &amp; Challenge</h3>
+          </div>
+          <p id="modalProjectChallenge" class="text-xs sm:text-sm text-[#45474A] leading-relaxed"></p>
+        </div>
+
+        <div class="lg:col-span-6 glass-card inner-anim-card rounded-[28px] p-6 sm:p-8" style="animation-delay: 0.34s">
+          <div class="flex items-center gap-2.5 mb-3">
+            <span class="w-8 h-8 rounded-xl bg-[#111214] text-white flex items-center justify-center text-xs font-bold">02</span>
+            <h3 id="solutionHeading" class="text-base sm:text-lg font-bold text-[#111214]">Visual Direction &amp; Execution</h3>
+          </div>
+          <p id="modalProjectSolution" class="text-xs sm:text-sm text-[#45474A] leading-relaxed"></p>
+      <!-- Project Gallery Shots (Supports Multi-Size Editorial Blocks & Captions) -->
+      <div class="glass-card inner-anim-card rounded-[32px] p-6 sm:p-8" style="animation-delay: 0.38s">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div>
+            <span id="gallerySubHeading" class="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[#5A5C60] mb-1">Visual Showcase &amp; Layout</span>
+            <h3 id="galleryHeading" class="text-base sm:text-xl font-bold text-[#111214]">Project Visual Frames</h3>
+          </div>
+          <button type="button" onclick="openContactModal()" class="px-5 py-2.5 rounded-full bg-[#111214] text-white text-xs font-semibold hover:opacity-90 transition-all shadow-sm">
+            <span id="inquireProjectBtnLbl">Request Similar Project</span>
+          </button>
+        </div>
+        <div id="modalProjectGallery" class="grid grid-cols-1 md:grid-cols-12 gap-5"></div>
+      </div>
+
+      <!-- Related / Similar Projects Suggestions -->
+      <div class="glass-card inner-anim-card rounded-[32px] p-6 sm:p-8" style="animation-delay: 0.42s">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+          <div>
+            <span id="relatedProjectsSub" class="block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5A5C60] mb-1">Explore More</span>
+            <h3 id="relatedProjectsHeading" class="text-base sm:text-xl font-bold text-[#111214]">Similar &amp; Related Projects</h3>
+          </div>
+          <button type="button" onclick="switchPage('home')" class="glass-pill px-4 py-2 rounded-full text-xs font-semibold text-[#111214] hover:bg-white transition-all shadow-sm">
+            <span id="viewAllWorksBtnLbl">View All Projects</span>
+          </button>
+        </div>
+        <div id="relatedProjectsGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-5"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== CONTACT MODAL ==================== -->
+  <div id="contactModal" role="dialog" aria-modal="true" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+    <div class="glass-card max-w-md w-full rounded-[32px] p-6 sm:p-8 relative shadow-2xl border border-white">
+      <button id="closeContactModalBtn" type="button" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-obsidian flex items-center justify-center font-bold text-sm shadow-sm transition-all">✕</button>
+      <div class="text-center mb-6">
+        <span class="text-xs font-semibold uppercase tracking-[0.2em] text-slateText">Get In Touch</span>
+        <h3 class="text-2xl font-semibold text-obsidian mt-1">Let's Create Together</h3>
+        <p class="text-xs sm:text-sm text-slateText mt-1.5">Choose your preferred channel to reach Mostafa Khaled.</p>
+      </div>
+      <div class="space-y-3">
+        <a id="contactWaLink" href="https://wa.me/201002779252" target="_blank" rel="noopener" class="flex items-center justify-between p-4 rounded-2xl bg-white/80 hover:bg-white border border-white transition-all shadow-sm group">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-bold text-sm">WA</div>
+            <div>
+              <div class="text-sm font-semibold text-obsidian">WhatsApp Chat</div>
+              <div id="contactWaDisplay" class="text-xs text-slateText">+20 100 277 9252</div>
+            </div>
+          </div>
+          <span class="text-slateText group-hover:translate-x-1 transition-transform">→</span>
+        </a>
+        <a id="contactEmailLink" href="mailto:Mkalwayzy@gmail.com" class="flex items-center justify-between p-4 rounded-2xl bg-white/80 hover:bg-white border border-white transition-all shadow-sm group">
+      <!-- TAB 1: PRECISION PROJECT PUBLISHING STUDIO -->
+      <div id="cmsTabProjects" class="cms-tab-panel space-y-6">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+          <!-- Precision Case Study Builder Form -->
+          <div class="xl:col-span-8 glass-card rounded-[28px] p-6 sm:p-8">
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-4 mb-5 border-b border-black/5">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-slateText">PRECISION CASE STUDY BUILDER</span>
+                <h3 id="cmsProjectFormHeading" class="text-xl font-bold text-obsidian mt-0.5">Publish New Precision Project</h3>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" id="cmsCancelEditProjectBtn" class="hidden px-3.5 py-1.5 rounded-full bg-red-500/10 text-xs font-bold text-red-600 hover:bg-red-500/20">Cancel Edit</button>
+              </div>
+            </div>
+
+            <form id="cmsProjectForm" class="space-y-6">
+              <input type="hidden" id="cmsEditProjectId" value="" />
+
+              <!-- Step 1: Core Bilingual Titles & Classification -->
+              <div class="ios-subcard rounded-2xl p-4 sm:p-5 space-y-4">
+                <div class="flex items-center gap-2">
+                  <span class="w-6 h-6 rounded-lg bg-obsidian text-white text-[11px] font-bold flex items-center justify-center">1</span>
+                  <h4 class="text-xs sm:text-sm font-bold text-obsidian">Basic Identity &amp; Bilingual Metadata</h4>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Project Title (English) *</label>
+                    <input id="cmsProjTitleEn" type="text" required placeholder="e.g. Royal Oud 3D Packaging & CGI" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">عنوان المشروع (بالعربية) *</label>
+                    <input id="cmsProjTitleAr" type="text" required placeholder="مثال: تصميم عبوات عود ملكي 3D و CGI" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Category (English) *</label>
+                    <input id="cmsProjCatEn" type="text" required placeholder="3D Product & Branding" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">التصنيف (بالعربية) *</label>
+                    <input id="cmsProjCatAr" type="text" required placeholder="منتجات ثلاثية الأبعاد وهوية" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Client Name *</label>
+                    <input id="cmsProjClient" type="text" required placeholder="Client / Brand" class="w-full px-3 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Year *</label>
+                    <input id="cmsProjYear" type="text" required value="2026" class="w-full px-3 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Market (EN) *</label>
+                    <input id="cmsProjLoc" type="text" required value="Saudi Arabia" class="w-full px-3 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">السوق / الدولة (AR)</label>
+                    <input id="cmsProjLocAr" type="text" value="المملكة العربية السعودية" class="w-full px-3 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Creative Role (EN)</label>
+                    <input id="cmsProjRoleEn" type="text" value="Lead Brand & 3D Designer" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">الدور الإبداعي (AR)</label>
+                    <input id="cmsProjRoleAr" type="text" value="مصمم هويات ومنتجات 3D أول" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 2: Cover Image & Aspect Ratio -->
+              <div class="ios-subcard rounded-2xl p-4 sm:p-5 space-y-4">
+                <div class="flex items-center gap-2">
+                  <span class="w-6 h-6 rounded-lg bg-obsidian text-white text-[11px] font-bold flex items-center justify-center">2</span>
+                  <h4 class="text-xs sm:text-sm font-bold text-obsidian">Main Cover Visual &amp; Display Proportions</h4>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-end">
+                  <div class="sm:col-span-8">
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Cover Image URL or Direct File Upload *</label>
+                    <div class="flex gap-2">
+                      <input id="cmsProjImgUrl" type="text" required placeholder="https://images.unsplash.com/..." class="flex-1 px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                      <label class="px-3.5 py-2.5 rounded-xl bg-obsidian text-white text-[11px] font-bold cursor-pointer shrink-0 hover:opacity-90">
+                        Upload Image
+                        <input id="cmsProjImgFile" type="file" accept="image/*" class="hidden" />
+                      </label>
+                    </div>
+                  </div>
+                  <div class="sm:col-span-4">
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Cover Frame Aspect Size</label>
+                    <select id="cmsProjCoverAspect" class="w-full px-3 py-2.5 rounded-xl bg-white/90 border border-white text-xs font-semibold text-obsidian">
+                      <option value="aspect-[4/3]">Standard 4:3 (Default)</option>
+                      <option value="aspect-video">Widescreen 16:9 (Landscape)</option>
+                      <option value="aspect-square">Square 1:1 (Social / Post)</option>
+                      <option value="aspect-[3/4]">Portrait 3:4 (Poster / Vertical)</option>
+                      <option value="aspect-[21/9]">Ultra-Wide 21:9 (Banner)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 3: Multi-Size Media Gallery & Editorial Blocks Builder -->
+              <div class="ios-subcard rounded-2xl p-4 sm:p-5 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-lg bg-obsidian text-white text-[11px] font-bold flex items-center justify-center">3</span>
+                    <div>
+                      <h4 class="text-xs sm:text-sm font-bold text-obsidian">Multi-Size Images &amp; Detail Blocks (Behance-Style Layout)</h4>
+                      <p class="text-[10px] text-slateText">Add unlimited images in Full-Width, Half, Third, Portrait, Square, or Panoramic sizes with custom captions.</p>
+                    </div>
+                  </div>
+                  <div class="flex flex-wrap gap-1.5">
+                    <button type="button" id="addMediaBlockBtn" class="px-3.5 py-2 rounded-full bg-obsidian text-white text-[11px] font-bold hover:opacity-90 shadow-sm">
+                      + Add Image / Detail Block
+                    </button>
+                    <label class="px-3.5 py-2 rounded-full bg-white hover:bg-white/90 border border-white text-[11px] font-bold text-obsidian cursor-pointer shadow-sm">
+                      + Batch Upload Multiple Images
+                      <input id="cmsBatchImagesInput" type="file" accept="image/*" multiple class="hidden" />
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Dynamic Blocks List -->
+                <div id="cmsMediaBlocksContainer" class="space-y-3"></div>
+              </div>
+
+              <!-- Step 4: Deep Case Study Narrative, Deliverables & Tools -->
+              <div class="ios-subcard rounded-2xl p-4 sm:p-5 space-y-4">
+                <div class="flex items-center gap-2">
+                  <span class="w-6 h-6 rounded-lg bg-obsidian text-white text-[11px] font-bold flex items-center justify-center">4</span>
+                  <h4 class="text-xs sm:text-sm font-bold text-obsidian">Case Study Narrative, Brief, Solution &amp; Tools</h4>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Overview Description (English) *</label>
+                    <textarea id="cmsProjDescEn" rows="2" required placeholder="Comprehensive project summary..." class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">الوصف العام للمشروع (عربي) *</label>
+                    <textarea id="cmsProjDescAr" rows="2" required placeholder="ملخص شامل لفكرة وأهداف المشروع..." class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">01. Project Brief &amp; Challenge (EN)</label>
+                    <textarea id="cmsProjChallengeEn" rows="2" placeholder="What problem or market challenge did this solve?" class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">01. التحدي ومتطلبات العميل (عربي)</label>
+                    <textarea id="cmsProjChallengeAr" rows="2" placeholder="ما التحدي التصميمي أو التسويقي الذي تم حله؟" class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">02. Visual Direction &amp; Execution (EN)</label>
+                    <textarea id="cmsProjSolutionEn" rows="2" placeholder="How did you craft the visual system, 3D lighting, or typography?" class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">02. التوجه البصري وطريقة التنفيذ (عربي)</label>
+                    <textarea id="cmsProjSolutionAr" rows="2" placeholder="كيف تم تنفيذ الهوية البصرية أو الريندر والإضاءة؟" class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Deliverables (EN)</label>
+                    <input id="cmsProjDelivEn" type="text" value="Brand Identity, 3D Visuals, Packaging" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">المخرجات المنفذة (عربي)</label>
+                    <input id="cmsProjDelivAr" type="text" value="هوية بصرية، ريندر 3D، تغليف" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Software &amp; Tools (comma separated)</label>
+                    <input id="cmsProjTools" type="text" value="Blender 3D, Adobe Substance, Photoshop, Illustrator" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" id="cmsProjectSubmitBtn" class="w-full py-4 rounded-2xl bg-obsidian text-white text-xs sm:text-sm font-bold shadow-lg hover:opacity-95 transition-all">
+                Publish Complete Project to Platform
+              </button>
+            </form>
+          </div>
+
+          <!-- Published Projects Library Sidebar -->
+          <div class="xl:col-span-4 glass-card rounded-[28px] p-6">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-lg font-bold text-obsidian">Published Works (<span id="cmsProjectsCount">9</span>)</h3>
+                <p class="text-[11px] text-slateText">Click Edit to customize multi-size frames</p>
+              </div>
+            </div>
+            <div id="cmsProjectsList" class="space-y-3 max-h-[960px] overflow-y-auto pe-1"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: PLATFORM CONTENT & TEXTS -->
+      <div id="cmsTabContent" class="cms-tab-panel hidden glass-card rounded-[28px] p-6 sm:p-8">
+        <h3 class="text-lg font-bold text-obsidian mb-5">Hero &amp; Platform Copy Management</h3>
+        <form id="cmsContentForm" class="space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">Studio Top Tagline (EN)</label>
+              <input id="cmsStudioTagEn" type="text" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">العبارة التعريفية العلوية (عربي)</label>
+              <input id="cmsStudioTagAr" type="text" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">Main Hero Headline (English)</label>
+              <textarea id="cmsHeroTitleEn" rows="2" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">العنوان الرئيسي للواجهة (عربي)</label>
+              <textarea id="cmsHeroTitleAr" rows="2" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian"></textarea>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">Hero Subtitle (English)</label>
+              <textarea id="cmsHeroSubEn" rows="2" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">الوصف الفرعي للواجهة (عربي)</label>
+              <textarea id="cmsHeroSubAr" rows="2" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian"></textarea>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">About Me Bio (English)</label>
+              <textarea id="cmsAboutBioEn" rows="3" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">نبذة عني (عربي)</label>
+              <textarea id="cmsAboutBioAr" rows="3" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian"></textarea>
+            </div>
+          </div>
+
+          <button type="submit" class="px-6 py-3 rounded-2xl bg-obsidian text-white text-xs font-bold shadow hover:opacity-95 transition-all">
+            Save Platform Content
+          </button>
+        </form>
+      </div>
+
+      <!-- TAB 3: CONTACT & SOCIAL DATA -->
+      <div id="cmsTabContact" class="cms-tab-panel hidden glass-card rounded-[28px] p-6 sm:p-8">
+        <h3 class="text-lg font-bold text-obsidian mb-5">Contact Channels &amp; Social Links</h3>
+        <form id="cmsContactForm" class="space-y-4 max-w-2xl">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">WhatsApp Number (International)</label>
+              <input id="cmsWaNumber" type="text" placeholder="201002779252" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">WhatsApp Display Label</label>
+              <input id="cmsWaDisplay" type="text" placeholder="+20 100 277 9252" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">Direct Email Address</label>
+              <input id="cmsEmailAddr" type="email" placeholder="Mkalwayzy@gmail.com" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">Behance / Portfolio URL</label>
+              <input id="cmsBehanceUrl" type="url" placeholder="https://www.behance.net/Mkelwayzy" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">Social Handle Label</label>
+              <input id="cmsSocialHandle" type="text" placeholder="Behance & Socials (@MKELWAYZY)" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">Update Admin Login Passcode</label>
+              <input id="cmsNewPasscode" type="text" placeholder="admin2026" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+          </div>
+
+          <button type="submit" class="px-6 py-3 rounded-2xl bg-obsidian text-white text-xs font-bold shadow hover:opacity-95 transition-all">
+            Save Contact &amp; Security Settings
+          </button>
+        </form>
+      </div>
+
+      <!-- TAB 4: BRAND IDENTITY, LOGO & COLORS -->
+      <div id="cmsTabIdentity" class="cms-tab-panel hidden glass-card rounded-[28px] p-6 sm:p-8">
+        <h3 class="text-lg font-bold text-obsidian mb-5">Platform Identity, Logos &amp; Color Palette</h3>
+        <form id="cmsIdentityForm" class="space-y-6 max-w-3xl">
+          <!-- Color Pickers -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="ios-subcard rounded-2xl p-4">
+              <label class="block text-xs font-bold text-obsidian mb-2">Primary Brand Color</label>
+              <div class="flex items-center gap-3">
+                <input id="cmsColorPrimary" type="color" value="#111214" class="w-11 h-11 rounded-xl border-0 cursor-pointer bg-transparent" />
+                <span id="cmsColorPrimaryHex" class="text-xs font-mono font-bold text-obsidian">#111214</span>
+              </div>
+            </div>
+            <div class="ios-subcard rounded-2xl p-4">
+              <label class="block text-xs font-bold text-obsidian mb-2">Platform Canvas Background</label>
+              <div class="flex items-center gap-3">
+                <input id="cmsColorBg" type="color" value="#D9DADB" class="w-11 h-11 rounded-xl border-0 cursor-pointer bg-transparent" />
+                <span id="cmsColorBgHex" class="text-xs font-mono font-bold text-obsidian">#D9DADB</span>
+              </div>
+            </div>
+            <div class="ios-subcard rounded-2xl p-4">
+              <label class="block text-xs font-bold text-obsidian mb-2">Secondary Text Accent</label>
+              <div class="flex items-center gap-3">
+                <input id="cmsColorMuted" type="color" value="#5A5C60" class="w-11 h-11 rounded-xl border-0 cursor-pointer bg-transparent" />
+                <span id="cmsColorMutedHex" class="text-xs font-mono font-bold text-obsidian">#5A5C60</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Preset Luxury Themes -->
+          <div>
+            <span class="block text-xs font-bold text-obsidian mb-2">Quick Luxury Palette Presets</span>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" onclick="applyCmsPresetTheme('#111214', '#D9DADB', '#5A5C60')" class="px-3.5 py-2 rounded-full bg-white/85 border border-white text-xs font-semibold text-obsidian hover:bg-white">Architectural Gray (Default)</button>
+              <button type="button" onclick="applyCmsPresetTheme('#1E293B', '#E2E8F0', '#475569')" class="px-3.5 py-2 rounded-full bg-white/85 border border-white text-xs font-semibold text-obsidian hover:bg-white">Nordic Slate Blue</button>
+              <button type="button" onclick="applyCmsPresetTheme('#292524', '#E7E5E4', '#57534E')" class="px-3.5 py-2 rounded-full bg-white/85 border border-white text-xs font-semibold text-obsidian hover:bg-white">Warm Sand Stone</button>
+              <button type="button" onclick="applyCmsPresetTheme('#064E3B', '#D1FAE5', '#047857')" class="px-3.5 py-2 rounded-full bg-white/85 border border-white text-xs font-semibold text-obsidian hover:bg-white">Saudi Emerald Mist</button>
+            </div>
+          </div>
+
+          <!-- Logo Customization -->
+          <div class="ios-subcard rounded-2xl p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-sm font-bold text-obsidian">Header Brand Logo</h4>
+                <p class="text-[11px] text-slateText">Keep the signature calligraphy SVG or upload a custom studio logo.</p>
+              </div>
+              <button type="button" id="cmsUseSignatureLogoBtn" class="px-3 py-1.5 rounded-full bg-white text-[11px] font-bold text-obsidian border border-black/10 hover:bg-white/90">
+                Use Signature SVG
+              </button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-obsidian mb-1">Upload Custom Logo (PNG/SVG)</label>
+                <input id="cmsCustomLogoFile" type="file" accept="image/*" class="w-full text-xs text-obsidian bg-white/80 p-2 rounded-xl border border-white" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-obsidian mb-1">Brand Title Next to Custom Logo</label>
+                <input id="cmsCustomLogoBrandText" type="text" placeholder="MK STUDIO" class="w-full px-3.5 py-2.5 rounded-xl bg-white/85 border border-white text-xs text-obsidian" />
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="px-6 py-3 rounded-2xl bg-obsidian text-white text-xs font-bold shadow hover:opacity-95 transition-all">
+            Apply Brand Identity &amp; Colors
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <script src="./assets/js/app.js"></script>
+</body>
+</html>

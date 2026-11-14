@@ -1,0 +1,199 @@
+    :root {
+      --brand-primary: #111214;
+      --brand-bg: #D9DADB;
+      --brand-muted: #5A5C60;
+      --grid-opacity: 0.42;
+    }
+    *, *::before, *::after {
+      font-family: 'IBM Plex Sans', 'IBM Plex Sans Arabic', sans-serif !important;
+    }
+    body {
+      font-family: 'IBM Plex Sans', 'IBM Plex Sans Arabic', sans-serif;
+      background-color: var(--brand-bg);
+      color: var(--brand-primary);
+      overflow-x: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    [dir="rtl"] body, [dir="rtl"] * {
+      font-family: 'IBM Plex Sans Arabic', 'IBM Plex Sans', sans-serif !important;
+    }
+    .architectural-grid {
+      background-color: var(--brand-bg);
+      background-image:
+        linear-gradient(to right, rgba(255, 255, 255, var(--grid-opacity)) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, var(--grid-opacity)) 1px, transparent 1px);
+      background-size: 80px 80px;
+    }
+    .bg-obsidian {
+      background-color: var(--brand-primary) !important;
+    }
+    .text-obsidian {
+      color: var(--brand-primary) !important;
+    }
+    .text-slateText {
+      color: var(--brand-muted) !important;
+    }
+    /* iPhone / iOS Liquid Frosted Glass Effect */
+    .glass-card {
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.42) 100%);
+      backdrop-filter: blur(28px) saturate(185%);
+      -webkit-backdrop-filter: blur(28px) saturate(185%);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      box-shadow:
+        0 18px 40px -12px rgba(0, 0, 0, 0.08),
+        inset 0 1.5px 1px rgba(255, 255, 255, 0.95),
+        inset 0 -1px 1px rgba(255, 255, 255, 0.35);
+    }
+    .glass-pill {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.76) 0%, rgba(255, 255, 255, 0.48) 100%);
+      backdrop-filter: blur(24px) saturate(190%);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.88);
+      box-shadow:
+        0 10px 28px -6px rgba(0, 0, 0, 0.08),
+        inset 0 1.5px 1px rgba(255, 255, 255, 0.95),
+        inset 0 -1px 1px rgba(255, 255, 255, 0.3);
+    }
+    .ios-subcard {
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.68) 0%, rgba(255, 255, 255, 0.36) 100%);
+      backdrop-filter: blur(22px) saturate(180%);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.82);
+      box-shadow:
+        0 8px 24px -8px rgba(0, 0, 0, 0.05),
+        inset 0 1px 1px rgba(255, 255, 255, 0.9);
+      transition: all 0.25s ease;
+    }
+    .ios-subcard:hover {
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.84) 0%, rgba(255, 255, 255, 0.54) 100%);
+      border-color: rgba(255, 255, 255, 0.98);
+      transform: translateY(-2px);
+    }
+    /* Smooth Inner Pages Entrance & Micro-Interactions (Excludes Home Page) */
+    @keyframes softFadeRise {
+      0% {
+        opacity: 0;
+        transform: translateY(14px) scale(0.99);
+        filter: blur(4px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
+    }
+    @keyframes softTextGlide {
+      0% {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @keyframes barFillGrow {
+      0% {
+        transform: scaleX(0);
+      }
+      100% {
+        transform: scaleX(1);
+      }
+    }
+    .inner-anim-card {
+      opacity: 0;
+      animation: softFadeRise 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.32s ease, background 0.32s ease;
+    }
+    .inner-anim-card:hover {
+      transform: translateY(-3px);
+      box-shadow:
+        0 22px 46px -12px rgba(0, 0, 0, 0.11),
+        inset 0 1.5px 1px rgba(255, 255, 255, 0.98);
+    }
+    .inner-anim-text {
+      opacity: 0;
+      animation: softTextGlide 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    .inner-skill-bar {
+      transform-origin: left center;
+      animation: barFillGrow 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    [dir="rtl"] .inner-skill-bar {
+      transform-origin: right center;
+    }
+    /* True 3D Cylindrical Concave Panoramic Wall */
+    .panoramic-ribbon-wrapper {
+      position: relative;
+      width: 100vw;
+      left: 50%;
+      transform: translateX(-50%);
+      height: 540px;
+      margin-top: -36px;
+      margin-bottom: -24px;
+      overflow: hidden;
+      perspective: 620px;
+      perspective-origin: 50% 50%;
+      cursor: pointer;
+    }
+    .carousel-stage {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-style: preserve-3d;
+      cursor: pointer;
+    }
+    .carousel-card {
+      position: absolute;
+      width: 300px;
+      height: 410px;
+      background: rgba(255, 255, 255, 0.45);
+      backdrop-filter: blur(20px) saturate(170%);
+      -webkit-backdrop-filter: blur(20px) saturate(170%);
+      border-radius: 26px;
+      padding: 6px;
+      overflow: hidden;
+      box-shadow:
+        0 26px 52px -14px rgba(0, 0, 0, 0.16),
+        inset 0 1.5px 1.5px rgba(255, 255, 255, 0.95),
+        inset 0 -1px 1px rgba(255, 255, 255, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.88);
+      backface-visibility: hidden;
+      will-change: transform;
+      user-select: none;
+      cursor: pointer;
+    }
+    .carousel-card:active {
+      cursor: pointer;
+    }
+    .carousel-card .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .carousel-card .card-inner img {
+      transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .carousel-card:hover .card-inner img {
+      transform: scale(1.06);
+    }
+    .carousel-card .card-inner::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.04) 45%, rgba(255, 255, 255, 0) 100%);
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.7);
+      pointer-events: none;
+    }
+    .carousel-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+    }
