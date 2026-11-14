@@ -293,6 +293,26 @@
     </div>
   </section>
 
+  <!-- ==================== ADMIN LOGIN MODAL ==================== -->
+  <div id="adminLoginModal" role="dialog" aria-modal="true" aria-labelledby="adminLoginTitle" class="fixed inset-0 z-[10000] hidden flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+    <div class="glass-card relative w-full max-w-sm rounded-[28px] border border-white p-6 shadow-2xl sm:p-8">
+      <button id="closeAdminLoginBtn" type="button" aria-label="Close admin login" class="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-sm font-bold text-obsidian shadow-sm transition-all hover:bg-white">✕</button>
+      <div class="mb-6 text-center">
+        <span class="text-xs font-semibold uppercase tracking-[0.2em] text-slateText">Studio Access</span>
+        <h2 id="adminLoginTitle" class="mt-1 text-2xl font-semibold text-obsidian">Admin Dashboard</h2>
+        <p class="mt-1.5 text-sm text-slateText">Enter your passcode to manage the portfolio.</p>
+      </div>
+      <form id="adminLoginForm" class="space-y-4">
+        <div>
+          <label for="adminLoginPass" class="mb-1.5 block text-xs font-semibold text-obsidian">Passcode</label>
+          <input id="adminLoginPass" type="password" autocomplete="current-password" required class="w-full rounded-2xl border border-white bg-white/85 px-4 py-3 text-sm text-obsidian outline-none transition focus:ring-2 focus:ring-black/20" />
+        </div>
+        <p id="adminLoginError" role="alert" class="hidden text-sm font-medium text-red-700">Incorrect passcode. Please try again.</p>
+        <button type="submit" class="w-full rounded-2xl bg-obsidian px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90">Sign In</button>
+      </form>
+    </div>
+  </div>
+
   <!-- ==================== CONTACT MODAL ==================== -->
   <div id="contactModal" role="dialog" aria-modal="true" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity duration-300 opacity-0">
     <div class="glass-card max-w-md w-full rounded-[32px] p-6 sm:p-8 relative shadow-2xl border border-white">
