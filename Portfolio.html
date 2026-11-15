@@ -581,7 +581,7 @@
                     <span class="w-6 h-6 rounded-lg bg-obsidian text-white text-[11px] font-bold flex items-center justify-center">3</span>
                     <div>
                       <h4 class="text-xs sm:text-sm font-bold text-obsidian">Project Images</h4>
-                      <p class="text-[10px] text-slateText">Upload multiple images for large, full-width previews. No links or image captions required.</p>
+                      <p class="text-[10px] text-slateText">Drag to reorder each image, choose its grid width, and keep its original proportions or crop it to a ratio.</p>
                     </div>
                   </div>
                   <label class="px-4 py-2.5 rounded-full bg-obsidian text-[11px] font-bold text-white cursor-pointer shadow-sm transition hover:opacity-90">
@@ -591,7 +591,8 @@
                 </div>
 
                 <!-- Dynamic Blocks List -->
-                <div id="cmsMediaBlocksContainer" class="space-y-3"></div>
+                <div id="cmsMediaBlocksContainer" class="grid grid-cols-1 gap-3 md:grid-cols-12"></div>
+                <p id="cmsMediaBlocksStatus" class="sr-only" role="status" aria-live="polite"></p>
                 <div id="cmsProjectUploadProgress" class="hidden rounded-xl border border-black/5 bg-white/70 p-4" aria-live="polite">
                   <div class="mb-2 flex justify-between gap-3 text-[10px] font-semibold text-slateText">
                     <span id="cmsProjectUploadProgressText">Uploading project files…</span>

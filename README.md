@@ -51,7 +51,7 @@ In the project editor, enter the project name and problem summary in English and
 
 Project case studies also support optional outcome and impact text in English and Arabic. Include measurable claims only when you can verify them.
 
-Reorder published projects by dragging their cards or using the up/down controls; this order is shared by the homepage carousel and project navigation. Search the project list by name, country, year, deliverables, or software, and the publish button stays available while editing a long project form. Optionally attach one PDF (up to 15 MB) to a project; visitors can open it from the project details. If Supabase was already configured, rerun [`supabase/setup.sql`](./supabase/setup.sql) to allow PDF uploads.
+Reorder published projects by dragging their cards or using the up/down controls; this order is shared by the homepage carousel and project navigation. In each project editor, reorder gallery images by dragging or using the up/down controls, set each image's grid width, and choose its original proportions or a crop ratio. Search the project list by name, country, year, deliverables, or software, and the publish button stays available while editing a long project form. Optionally attach one PDF (up to 15 MB) to a project; visitors can open it from the project details. If Supabase was already configured, rerun [`supabase/setup.sql`](./supabase/setup.sql) to allow PDF uploads.
 
 ### Supabase setup
 
