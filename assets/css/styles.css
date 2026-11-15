@@ -197,3 +197,10 @@
       object-fit: cover;
       pointer-events: none;
     }
+
+    body.admin-dashboard-active > header {
+      display: none;
+    }
+    body.admin-dashboard-active #adminDashboardView {
+      padding-top: 2rem;
+    }

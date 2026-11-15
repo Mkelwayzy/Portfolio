@@ -18,6 +18,16 @@
       heroSubAr: "أبرز هوية مشروعك بأنظمة بصرية متكاملة وتصميمات منتجات ثلاثية الأبعاد عالية الواقعية.",
       aboutBioEn: "Senior 2D & 3D Graphic Designer with extensive experience across the Egyptian and Saudi markets. Currently specializing as a 3D Designer, bringing strong creative vision and technical expertise to every brand and visual project.",
       aboutBioAr: "مصمم جرافيك أول ثنائي وثلاثي الأبعاد (Senior 2D & 3D Graphic Designer) بخبرة واسعة في السوق المصري والسعودي. أتخصص حالياً في التصميم ثلاثي الأبعاد والـ CGI وبناء الهويات البصرية، وأجمع بين الرؤية الفنية والخبرة التقنية في كل مشروع أعمل عليه.",
+      aboutTitleEn: "Hello, I'm Mostafa Khaled",
+      aboutTitleAr: "مرحباً، أنا مصطفى خالد",
+      aboutStatusEn: "MK STUDIO • Available for Projects & Creative Direction",
+      aboutStatusAr: "MK STUDIO • متاح للمشاريع والاستشارات الإبداعية",
+      resumeTitleEn: "Mostafa Khaled — Senior 2D & 3D Designer",
+      resumeTitleAr: "مصطفى خالد — مصمم جرافيك أول ومصمم 3D",
+      resumeIntroEn: "Extensive creative leadership in brand identity systems, 3D product visualization, and photorealistic CGI across Saudi Arabia and Egypt.",
+      resumeIntroAr: "خبرة واسعة في بناء الهويات البصرية وتصميم المنتجات ثلاثية الأبعاد والـ CGI للوكالات والشركات في المملكة العربية السعودية ومصر.",
+      partnersTitleEn: "Brands That Trusted Our Visual Craft",
+      partnersTitleAr: "علامات تجارية وثقت برؤيتنا الإبداعية",
       waNumber: "201002779252",
       waDisplay: "+20 100 277 9252",
       email: "Mkalwayzy@gmail.com",
@@ -36,9 +46,25 @@
       try {
         localStorage.setItem(CMS_STORAGE_KEY, JSON.stringify({
           config: cmsConfig,
-          projects: portfolioProjects
+          projects: portfolioProjects,
+          experience: experienceData,
+          software: softwareList,
+          education: educationData,
+          expertise: expertiseTags,
+          partners: partnersData,
+          partnerSectors,
+          partnerStats,
+          resumeStats,
+          aboutStats,
+          aboutPillars,
+          aboutTags
         }));
-      } catch (e) {}
+        return true;
+      } catch (error) {
+        console.error("Unable to save portfolio changes to local storage.", error);
+        showCmsToast("Changes could not be saved in this browser. Check available storage space.");
+        return false;
+      }
     }
 
     function loadCmsState() {
@@ -46,11 +72,49 @@
         const raw = localStorage.getItem(CMS_STORAGE_KEY);
         if (!raw) return;
         const parsed = JSON.parse(raw);
+        let repairedProjectIds = false;
         if (parsed.config) cmsConfig = { ...defaultCmsConfig, ...parsed.config };
         if (Array.isArray(parsed.projects) && parsed.projects.length > 0) {
-          portfolioProjects = parsed.projects;
+          const validProjects = parsed.projects.filter((project) => project && typeof project === "object" && !Array.isArray(project));
+          if (validProjects.length > 0) {
+            const nextAvailableId = validProjects.reduce((max, project) => {
+              const id = Number(project.id);
+              return Number.isSafeInteger(id) && id > 0 ? Math.max(max, id) : max;
+            }, 0) + 1;
+            const usedIds = new Set();
+            let nextId = nextAvailableId;
+            portfolioProjects = validProjects.map((project) => {
+              const id = Number(project.id);
+              if (Number.isSafeInteger(id) && id > 0 && !usedIds.has(id)) {
+                usedIds.add(id);
+                return { ...project, id };
+              }
+              while (usedIds.has(nextId)) nextId += 1;
+              repairedProjectIds = true;
+              usedIds.add(nextId);
+              return { ...project, id: nextId++ };
+            });
+          }
         }
-      } catch (e) {}
+        if (Array.isArray(parsed.experience)) experienceData = parsed.experience;
+        if (Array.isArray(parsed.software)) softwareList = parsed.software;
+        if (parsed.education && typeof parsed.education === "object") educationData = { ...educationData, ...parsed.education };
+        if (Array.isArray(parsed.expertise)) expertiseTags = parsed.expertise;
+        if (Array.isArray(parsed.partners)) partnersData = parsed.partners;
+        if (Array.isArray(parsed.partnerSectors)) partnerSectors = parsed.partnerSectors;
+        if (Array.isArray(parsed.partnerStats)) partnerStats = parsed.partnerStats;
+        if (Array.isArray(parsed.resumeStats)) resumeStats = parsed.resumeStats;
+        if (Array.isArray(parsed.aboutStats)) aboutStats = parsed.aboutStats;
+        if (Array.isArray(parsed.aboutPillars)) aboutPillars = parsed.aboutPillars;
+        if (Array.isArray(parsed.aboutTags)) aboutTags = parsed.aboutTags;
+        if (repairedProjectIds) {
+          console.warn("Duplicate or invalid project IDs were reassigned to keep project records distinct.");
+          if (saveCmsState()) showCmsToast("Duplicate project IDs were corrected and saved.");
+        }
+      } catch (error) {
+        console.error("Unable to load saved portfolio changes.", error);
+        showCmsToast("Saved changes could not be loaded. The default content is shown.");
+      }
     }
 
     function showCmsToast(msg) {
@@ -143,8 +207,7 @@
       document.getElementById("cmsColorBgHex").textContent = bg;
       document.getElementById("cmsColorMutedHex").textContent = muted;
       applyCmsThemeAndContact();
-      saveCmsState();
-      showCmsToast("Theme colors updated!");
+      if (saveCmsState()) showCmsToast("Theme colors updated!");
     }
 
     // ==================== DYNAMIC MULTI-SIZE MEDIA & DETAIL BLOCKS BUILDER ====================
@@ -271,6 +334,7 @@
       const proj = portfolioProjects.find((p) => p.id === id);
       if (!proj) return;
       document.getElementById("cmsEditProjectId").value = proj.id;
+      document.getElementById("cmsProjectIdDisplay").value = `#${String(proj.id).padStart(3, "0")} (existing project)`;
       document.getElementById("cmsProjectFormHeading").textContent = `Edit Project #0${proj.id} — ${proj.titleEn}`;
       document.getElementById("cmsProjectSubmitBtn").textContent = "Update Published Project";
       document.getElementById("cmsCancelEditProjectBtn").classList.remove("hidden");
@@ -317,6 +381,7 @@
     function resetCmsProjectForm() {
       document.getElementById("cmsProjectForm").reset();
       document.getElementById("cmsEditProjectId").value = "";
+      document.getElementById("cmsProjectIdDisplay").value = `#${String(getNextProjectId()).padStart(3, "0")} (assigned on publish)`;
       document.getElementById("cmsProjectFormHeading").textContent = "Publish New Precision Project";
       document.getElementById("cmsProjectSubmitBtn").textContent = "Publish Complete Project to Platform";
       document.getElementById("cmsCancelEditProjectBtn").classList.add("hidden");
@@ -334,10 +399,10 @@
         return;
       }
       portfolioProjects = portfolioProjects.filter((p) => p.id !== id);
-      saveCmsState();
+      const saved = saveCmsState();
       buildCarouselCards();
       renderAdminDashboard();
-      showCmsToast("Project deleted from platform.");
+      if (saved) showCmsToast("Project deleted from platform.");
     }
 
     function renderAdminDashboard() {
@@ -359,6 +424,16 @@
       document.getElementById("cmsHeroSubAr").value = cmsConfig.heroSubAr;
       document.getElementById("cmsAboutBioEn").value = cmsConfig.aboutBioEn;
       document.getElementById("cmsAboutBioAr").value = cmsConfig.aboutBioAr;
+      document.getElementById("cmsAboutTitleEn").value = cmsConfig.aboutTitleEn;
+      document.getElementById("cmsAboutTitleAr").value = cmsConfig.aboutTitleAr;
+      document.getElementById("cmsAboutStatusEn").value = cmsConfig.aboutStatusEn;
+      document.getElementById("cmsAboutStatusAr").value = cmsConfig.aboutStatusAr;
+      document.getElementById("cmsResumeTitleEn").value = cmsConfig.resumeTitleEn;
+      document.getElementById("cmsResumeTitleAr").value = cmsConfig.resumeTitleAr;
+      document.getElementById("cmsResumeIntroEn").value = cmsConfig.resumeIntroEn;
+      document.getElementById("cmsResumeIntroAr").value = cmsConfig.resumeIntroAr;
+      document.getElementById("cmsPartnersTitleEn").value = cmsConfig.partnersTitleEn;
+      document.getElementById("cmsPartnersTitleAr").value = cmsConfig.partnersTitleAr;
 
       // Populate Contact Form
       document.getElementById("cmsWaNumber").value = cmsConfig.waNumber;
@@ -377,10 +452,16 @@
       document.getElementById("cmsColorMutedHex").textContent = cmsConfig.mutedColor;
       document.getElementById("cmsCustomLogoBrandText").value = cmsConfig.customLogoText || "";
 
+      renderCmsPageEditors();
+
       // Render Projects List
       const countEl = document.getElementById("cmsProjectsCount");
       if (countEl) countEl.textContent = portfolioProjects.length;
       const listEl = document.getElementById("cmsProjectsList");
+      const projectIdInput = document.getElementById("cmsProjectIdDisplay");
+      if (projectIdInput && !document.getElementById("cmsEditProjectId").value) {
+        projectIdInput.value = `#${String(getNextProjectId()).padStart(3, "0")} (assigned on publish)`;
+      }
       if (listEl) {
         listEl.innerHTML = portfolioProjects.map((proj) => `
           <div class="ios-subcard rounded-2xl p-3.5 flex items-center justify-between gap-3">
@@ -569,7 +650,7 @@
     }
 
     // ==================== PORTFOLIO CONTENT DATA ====================
-    const experienceData = [
+    let experienceData = [
       {
         company: "P.Team & To Vision",
         roleEn: "Senior 3D & Exhibition Designer",
@@ -671,7 +752,7 @@
       }
     ];
 
-    const softwareList = [
+    let softwareList = [
       { code: "Ps", name: "Adobe Photoshop", level: 96, roleEn: "Compositing, Retouching & Key Visuals", roleAr: "الدمج الاحترافي والمعالجة البصرية" },
       { code: "Ai", name: "Adobe Illustrator", level: 95, roleEn: "Brand Identity, Logos & Vector Systems", roleAr: "الهويات البصرية والشعارات والفيكتور" },
       { code: "Bl", name: "Blender 3D", level: 92, roleEn: "3D Modeling, Product Renders & CGI", roleAr: "النمذجة ثلاثية الأبعاد والريندر والـ CGI" },
@@ -680,7 +761,7 @@
       { code: "Fg", name: "Figma & AI Tools", level: 86, roleEn: "UI Design & Generative Workflows", roleAr: "تصميم الواجهات وأدوات الذكاء الاصطناعي" }
     ];
 
-    const educationData = {
+    let educationData = {
       degreeEn: "Bachelor's Degree in Specific Education — Art & Design",
       degreeAr: "بكالوريوس التربية النوعية — قسم التربية الفنية والتصميم",
       universityEn: "Mansoura University, Egypt",
@@ -688,7 +769,7 @@
       period: "2016 – 2020"
     };
 
-    const expertiseTags = [
+    let expertiseTags = [
       { en: "Brand Identity Systems", ar: "أنظمة الهوية البصرية" },
       { en: "3D Product Modeling", ar: "نمذجة المنتجات 3D" },
       { en: "Outdoor CGI & VFX", ar: "دمج إعلانات الشوارع CGI" },
@@ -699,7 +780,68 @@
       { en: "Typography & Print", ar: "التايبوجرافي والمطبوعات" }
     ];
 
-    const partnersData = [
+    let resumeStats = [
+      { value: "+06", labelEn: "Years of Experience", labelAr: "سنوات الخبرة العملية", subEn: "KSA & Egypt Markets", subAr: "السوق السعودي والمصري", icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>` },
+      { value: "+180", labelEn: "Projects & Identities", labelAr: "مشروع وهوية بصرية", subEn: "2D, 3D & CGI Visuals", subAr: "تصميم 2D و 3D و CGI", icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>` },
+      { value: "+09", labelEn: "Agencies & Brands", labelAr: "شركات ووكالات كبرى", subEn: "Creative Direction", subAr: "قيادة وتنفيذ إبداعي", icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>` },
+      { value: "95%", labelEn: "Visual Craft Precision", labelAr: "دقة الإخراج البصري", subEn: "Photoshop & Blender Mastery", subAr: "إتقان Photoshop و Blender", icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>` }
+    ];
+
+    let partnerStats = [
+      { value: "+09", labelEn: "Strategic Success Partners", labelAr: "شركاء نجاح استراتيجيين", subEn: "Leading Regional Brands", subAr: "علامات تجارية رائدة" },
+      { value: "05", labelEn: "Diverse Industry Sectors", labelAr: "قطاعات اقتصادية متنوعة", subEn: "Industrial, F&B, Logistics, Spa", subAr: "صناعي، غذائي، لوجستي، عناية" },
+      { value: "+25", labelEn: "Years Partner Heritage", labelAr: "عاماً من عراقة الشركاء", subEn: "Established Gulf Enterprises", subAr: "مؤسسات راسخة في الخليج" },
+      { value: "100%", labelEn: "Brand Consistency", labelAr: "تطابق الهوية البصرية", subEn: "Tailored Visual Systems", subAr: "حلول مصممة خصيصاً" }
+    ];
+
+    let partnerSectors = [
+      { key: "enterprise", en: "Enterprise & Industry", ar: "المؤسسات والصناعة" },
+      { key: "fnb", en: "Food & Hospitality", ar: "الأغذية والضيافة" },
+      { key: "wellness", en: "Beauty & Wellness", ar: "الجمال والعناية" },
+      { key: "logistics", en: "Logistics & Delivery", ar: "التوصيل واللوجستيات" },
+      { key: "advertising", en: "Advertising & Events", ar: "الدعاية والمعارض" }
+    ];
+
+    let aboutStats = [
+      { value: "+06", labelEn: "Years of Craft", labelAr: "سنوات من الإبداع", subEn: "Continuous Market Mastery", subAr: "خبرة متواصلة في السوق" },
+      { value: "2D+3D", labelEn: "Dual Specialization", labelAr: "تخصص مزدوج متكامل", subEn: "Brand Systems & 3D CGI", subAr: "هويات بصرية ونمذجة 3D" },
+      { value: "02", labelEn: "Regional Markets", labelAr: "أسواق إقليمية رئيسية", subEn: "Saudi Arabia & Egypt", subAr: "السعودية ومصر" },
+      { value: "100%", labelEn: "Delivery Commitment", labelAr: "التزام بالجودة والتسليم", subEn: "Attention to Detail", subAr: "دقة التفاصيل والابتكار" }
+    ];
+
+    let aboutPillars = [
+      {
+        titleEn: "Strategic Brand Identity",
+        titleAr: "بناء الهويات البصرية الاستراتيجية",
+        descEn: "Crafting memorable logos, packaging, and cohesive visual systems tailored to position brands distinctly in competitive markets.",
+        descAr: "تصميم شعارات وأنظمة هوية بصرية متكاملة وتغليف احترافي يمنح العلامات التجارية حضوراً قوياً ومتميزاً في الأسواق التنافسية.",
+        icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>`
+      },
+      {
+        titleEn: "Photorealistic 3D & CGI",
+        titleAr: "الواقعية الفائقة في الـ 3D والـ CGI",
+        descEn: "Specializing in 3D product modeling, studio lighting, architectural visualization, and outdoor CGI billboard integration using Blender & Substance.",
+        descAr: "التخصص في نمذجة المنتجات ثلاثية الأبعاد وإضاءة الاستوديو ودمج إعلانات الشوارع بتقنية CGI باستخدام Blender و Substance.",
+        icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`
+      },
+      {
+        titleEn: "AI-Enhanced Creative Workflow",
+        titleAr: "التكامل التقني والذكاء الاصطناعي",
+        descEn: "Combining traditional design principles with modern AI generative tools, Runway, and motion graphics to accelerate visual storytelling.",
+        descAr: "دمج قواعد التصميم الأكاديمية مع أدوات الذكاء الاصطناعي التوليدي والموشن جرافيك لتقديم حلول بصرية مبتكرة وسريعة التنفيذ.",
+        icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`
+      }
+    ];
+
+    let aboutTags = [
+      { value: "BRANDING" },
+      { value: "3D_DESIGN" },
+      { value: "3D_PRODUCT" },
+      { value: "PRINT_DESIGN" },
+      { value: "MOTION_GRAPHIC" }
+    ];
+
+    let partnersData = [
       {
         name: "Kidana Development",
         sectorKey: "enterprise",
@@ -818,6 +960,241 @@
         icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`
       }
     ];
+
+    const cmsCollectionSchemas = {
+      experience: {
+        title: "Experience",
+        editorId: "cmsExperienceEditor",
+        items: () => experienceData,
+        fields: [
+          ["company", "Company"],
+          ["roleEn", "Role (EN)"],
+          ["roleAr", "المسمى الوظيفي (AR)"],
+          ["locationEn", "Location (EN)"],
+          ["locationAr", "الموقع (AR)"],
+          ["countryCode", "Country filter (KSA / Egypt)"],
+          ["period", "Period"],
+          ["summaryEn", "Description (EN)", "textarea"],
+          ["summaryAr", "الوصف (AR)", "textarea"]
+        ],
+        create: () => ({ company: "", roleEn: "", roleAr: "", locationEn: "", locationAr: "", countryCode: "KSA", period: "", summaryEn: "", summaryAr: "" }),
+        heading: (item) => item.company || "New experience"
+      },
+      software: {
+        title: "Software skill",
+        editorId: "cmsSoftwareEditor",
+        items: () => softwareList,
+        fields: [
+          ["code", "Short label"],
+          ["name", "Software"],
+          ["level", "Skill level (%)", "number"],
+          ["roleEn", "Description (EN)", "textarea"],
+          ["roleAr", "الوصف (AR)", "textarea"]
+        ],
+        create: () => ({ code: "", name: "", level: 80, roleEn: "", roleAr: "" }),
+        heading: (item) => item.name || "New software skill"
+      },
+      expertise: {
+        title: "Expertise",
+        editorId: "cmsExpertiseEditor",
+        items: () => expertiseTags,
+        fields: [["en", "Expertise (EN)"], ["ar", "التخصص (AR)"]],
+        create: () => ({ en: "", ar: "" }),
+        heading: (item) => item.en || item.ar || "New expertise"
+      },
+      partner: {
+        title: "Partner",
+        editorId: "cmsPartnerEditor",
+        items: () => partnersData,
+        fields: [
+          ["name", "Partner name"],
+          ["sectorKey", "Sector key"],
+          ["sectorLabelEn", "Sector (EN)"],
+          ["sectorLabelAr", "القطاع (AR)"],
+          ["badgeEn", "Badge (EN)"],
+          ["badgeAr", "الشارة (AR)"],
+          ["countryEn", "Location (EN)"],
+          ["countryAr", "الموقع (AR)"],
+          ["descEn", "Description (EN)", "textarea"],
+          ["descAr", "الوصف (AR)", "textarea"]
+        ],
+        create: () => ({ name: "", sectorKey: partnerSectors[0]?.key || "enterprise", sectorLabelEn: "", sectorLabelAr: "", badgeEn: "", badgeAr: "", countryEn: "", countryAr: "", descEn: "", descAr: "", icon: partnersData[0]?.icon || "" }),
+        heading: (item) => item.name || "New partner"
+      },
+      partnerSector: {
+        title: "Partner sector",
+        editorId: "cmsPartnerSectorEditor",
+        items: () => partnerSectors,
+        fields: [["key", "Sector key (unique)"], ["en", "Name (EN)"], ["ar", "الاسم (AR)"]],
+        create: () => ({ key: "", en: "", ar: "" }),
+        heading: (item) => item.en || item.ar || "New sector"
+      },
+      partnerStat: {
+        title: "Partner statistic",
+        editorId: "cmsPartnerStatsEditor",
+        items: () => partnerStats,
+        fields: [["value", "Value"], ["labelEn", "Label (EN)"], ["labelAr", "التسمية (AR)"], ["subEn", "Caption (EN)"], ["subAr", "الوصف (AR)"]],
+        create: () => ({ value: "", labelEn: "", labelAr: "", subEn: "", subAr: "" }),
+        heading: (item) => item.labelEn || item.labelAr || "New statistic"
+      },
+      resumeStat: {
+        title: "Resume statistic",
+        editorId: "cmsResumeStatsEditor",
+        items: () => resumeStats,
+        fields: [["value", "Value"], ["labelEn", "Label (EN)"], ["labelAr", "التسمية (AR)"], ["subEn", "Caption (EN)"], ["subAr", "الوصف (AR)"]],
+        create: () => ({ value: "", labelEn: "", labelAr: "", subEn: "", subAr: "", icon: resumeStats[0]?.icon || "" }),
+        heading: (item) => item.labelEn || item.labelAr || "New statistic"
+      },
+      aboutStat: {
+        title: "About statistic",
+        editorId: "cmsAboutStatsEditor",
+        items: () => aboutStats,
+        fields: [["value", "Value"], ["labelEn", "Label (EN)"], ["labelAr", "التسمية (AR)"], ["subEn", "Caption (EN)"], ["subAr", "الوصف (AR)"]],
+        create: () => ({ value: "", labelEn: "", labelAr: "", subEn: "", subAr: "" }),
+        heading: (item) => item.labelEn || item.labelAr || "New statistic"
+      },
+      aboutPillar: {
+        title: "About section",
+        editorId: "cmsAboutPillarsEditor",
+        items: () => aboutPillars,
+        fields: [["titleEn", "Title (EN)"], ["titleAr", "العنوان (AR)"], ["descEn", "Description (EN)", "textarea"], ["descAr", "الوصف (AR)", "textarea"]],
+        create: () => ({ titleEn: "", titleAr: "", descEn: "", descAr: "", icon: aboutPillars[0]?.icon || "" }),
+        heading: (item) => item.titleEn || item.titleAr || "New section"
+      },
+      aboutTag: {
+        title: "About tag",
+        editorId: "cmsAboutTagsEditor",
+        items: () => aboutTags,
+        fields: [["value", "Tag"]],
+        create: () => ({ value: "" }),
+        heading: (item) => item.value || "New tag"
+      }
+    };
+
+    function escapeCmsHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      })[char]);
+    }
+
+    function renderCmsCollectionEditor(collectionKey, containerId) {
+      const schema = cmsCollectionSchemas[collectionKey];
+      const container = document.getElementById(containerId);
+      if (!schema || !container) return;
+      const items = schema.items();
+
+      container.innerHTML = `
+        <div class="space-y-4">
+          ${items.map((item, index) => `
+            <article class="ios-subcard rounded-2xl p-4">
+              <div class="mb-3 flex items-center justify-between gap-3">
+                <h4 class="truncate text-sm font-bold text-obsidian">${escapeCmsHtml(schema.heading(item))}</h4>
+                <button type="button" onclick="removeCmsCollectionItem('${collectionKey}', ${index})" class="shrink-0 rounded-full bg-red-500/10 px-3 py-1.5 text-[11px] font-semibold text-red-700 hover:bg-red-500/20">Remove</button>
+              </div>
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                ${schema.fields.map(([field, label, type]) => `
+                  <label class="block text-[11px] font-semibold text-obsidian">
+                    ${label}
+                    ${type === "textarea"
+                      ? `<textarea rows="2" oninput="updateCmsCollectionField('${collectionKey}', ${index}, '${field}', this.value)" class="mt-1 w-full rounded-xl border border-white bg-white/85 px-3 py-2 text-xs font-normal">${escapeCmsHtml(item[field])}</textarea>`
+                      : `<input type="${type || "text"}" ${type === "number" ? 'min="0" max="100"' : ""} value="${escapeCmsHtml(item[field])}" oninput="updateCmsCollectionField('${collectionKey}', ${index}, '${field}', this.value)" class="mt-1 w-full rounded-xl border border-white bg-white/85 px-3 py-2 text-xs font-normal" />`}
+                  </label>
+                `).join("")}
+              </div>
+            </article>
+          `).join("")}
+          ${items.length === 0 ? '<p class="rounded-xl bg-white/60 p-4 text-sm text-slateText">No entries yet. Add one to get started.</p>' : ""}
+        </div>
+      `;
+    }
+
+    function updateCmsCollectionField(collectionKey, index, field, value) {
+      const schema = cmsCollectionSchemas[collectionKey];
+      const item = schema?.items()[index];
+      if (!item || !schema.fields.some(([key]) => key === field)) return;
+      const type = schema.fields.find(([key]) => key === field)?.[2];
+      item[field] = type === "number" ? Number(value) : value;
+    }
+
+    function addCmsCollectionItem(collectionKey) {
+      const schema = cmsCollectionSchemas[collectionKey];
+      if (!schema) return;
+      schema.items().push(schema.create());
+      renderCmsCollectionEditor(collectionKey, schema.editorId);
+    }
+
+    function removeCmsCollectionItem(collectionKey, index) {
+      const schema = cmsCollectionSchemas[collectionKey];
+      if (!schema || !schema.items()[index]) return;
+      if (!window.confirm(`Remove this ${schema.title.toLowerCase()}?`)) return;
+      schema.items().splice(index, 1);
+      renderCmsCollectionEditor(collectionKey, schema.editorId);
+    }
+
+    function renderCmsPageEditors() {
+      const editorIds = {
+        experience: "cmsExperienceEditor",
+        software: "cmsSoftwareEditor",
+        expertise: "cmsExpertiseEditor",
+        partner: "cmsPartnerEditor",
+        partnerSector: "cmsPartnerSectorEditor",
+        partnerStat: "cmsPartnerStatsEditor",
+        resumeStat: "cmsResumeStatsEditor",
+        aboutStat: "cmsAboutStatsEditor",
+        aboutPillar: "cmsAboutPillarsEditor",
+        aboutTag: "cmsAboutTagsEditor"
+      };
+      Object.entries(editorIds).forEach(([key, id]) => renderCmsCollectionEditor(key, id));
+
+      ["degreeEn", "degreeAr", "universityEn", "universityAr", "period"].forEach((field) => {
+        const input = document.getElementById(`cmsEducation${field[0].toUpperCase()}${field.slice(1)}`);
+        if (input) input.value = educationData[field] || "";
+      });
+    }
+
+    function saveCmsPageCollections(sectionName) {
+      if (sectionName === "resume" && softwareList.some((item) => !Number.isFinite(item.level) || item.level < 0 || item.level > 100)) {
+        showCmsToast("Software skill levels must be numbers from 0 to 100.");
+        return;
+      }
+      if (sectionName === "partners") {
+        const sectorKeys = partnerSectors.map((sector) => String(sector.key ?? "").trim());
+        if (sectorKeys.some((key) => !/^[a-z0-9_-]+$/i.test(key)) || new Set(sectorKeys).size !== sectorKeys.length) {
+          showCmsToast("Partner sector keys may use letters, numbers, dashes, and underscores only, and must be unique.");
+          return;
+        }
+        if (partnersData.some((partner) => !sectorKeys.includes(String(partner.sectorKey ?? "").trim()))) {
+          showCmsToast("Each partner must use one of the saved sector keys.");
+          return;
+        }
+        partnerSectors.forEach((sector, index) => {
+          sector.key = sectorKeys[index];
+        });
+        partnersData.forEach((partner) => {
+          partner.sectorKey = String(partner.sectorKey).trim();
+        });
+        if (partnersSectorFilter !== "ALL" && !sectorKeys.includes(partnersSectorFilter)) {
+          partnersSectorFilter = "ALL";
+        }
+      }
+      if (sectionName === "resume") renderResumeContent();
+      if (sectionName === "partners") renderPartnersContent();
+      if (sectionName === "about") renderAboutContent();
+      if (saveCmsState()) showCmsToast(`${sectionName} page changes saved.`);
+    }
+
+    function saveCmsEducation() {
+      ["degreeEn", "degreeAr", "universityEn", "universityAr", "period"].forEach((field) => {
+        const input = document.getElementById(`cmsEducation${field[0].toUpperCase()}${field.slice(1)}`);
+        if (input) educationData[field] = input.value.trim();
+      });
+      renderResumeContent();
+      if (saveCmsState()) showCmsToast("Education details saved.");
+    }
 
     let portfolioProjects = [
       {
@@ -1074,6 +1451,37 @@
       }
     ];
 
+    const defaultCmsContentData = JSON.parse(JSON.stringify({
+      projects: portfolioProjects,
+      experience: experienceData,
+      software: softwareList,
+      education: educationData,
+      expertise: expertiseTags,
+      partners: partnersData,
+      partnerSectors,
+      partnerStats,
+      resumeStats,
+      aboutStats,
+      aboutPillars,
+      aboutTags
+    }));
+
+    function restoreCmsContentDefaults() {
+      const defaults = JSON.parse(JSON.stringify(defaultCmsContentData));
+      portfolioProjects = defaults.projects;
+      experienceData = defaults.experience;
+      softwareList = defaults.software;
+      educationData = defaults.education;
+      expertiseTags = defaults.expertise;
+      partnersData = defaults.partners;
+      partnerSectors = defaults.partnerSectors;
+      partnerStats = defaults.partnerStats;
+      resumeStats = defaults.resumeStats;
+      aboutStats = defaults.aboutStats;
+      aboutPillars = defaults.aboutPillars;
+      aboutTags = defaults.aboutTags;
+    }
+
     let cardElements = [];
     let virtualIndex = 0;
     let targetIndex = 0;
@@ -1086,6 +1494,10 @@
     let pointerDownCardId = null;
 
     // ==================== CAROUSEL & PROJECT BROWSING ====================
+    function getNextProjectId() {
+      return portfolioProjects.reduce((max, project) => Math.max(max, Number(project.id) || 0), 0) + 1;
+    }
+
     function wrapIndex(idx, len) { return ((idx % len) + len) % len; }
     function shortestDelta(index, center, len) {
       let d = index - center;
@@ -1220,33 +1632,8 @@
       const filteredExp = resumeCountryFilter === "ALL"
         ? experienceData
         : experienceData.filter((item) => item.countryCode === resumeCountryFilter);
-
-      const stats = [
-        {
-          value: "+06",
-          label: isAr ? "سنوات الخبرة العملية" : "Years of Experience",
-          sub: isAr ? "السوق السعودي والمصري" : "KSA & Egypt Markets",
-          icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`
-        },
-        {
-          value: "+180",
-          label: isAr ? "مشروع وهوية بصرية" : "Projects & Identities",
-          sub: isAr ? "تصميم 2D و 3D و CGI" : "2D, 3D & CGI Visuals",
-          icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`
-        },
-        {
-          value: "+09",
-          label: isAr ? "شركات ووكالات كبرى" : "Agencies & Brands",
-          sub: isAr ? "قيادة وتنفيذ إبداعي" : "Creative Direction",
-          icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`
-        },
-        {
-          value: "95%",
-          label: isAr ? "دقة الإخراج البصري" : "Visual Craft Precision",
-          sub: isAr ? "إتقان Photoshop و Blender" : "Photoshop & Blender Mastery",
-          icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`
-        }
-      ];
+      const ksaCount = experienceData.filter((item) => item.countryCode === "KSA").length;
+      const egyptCount = experienceData.filter((item) => item.countryCode === "Egypt").length;
 
       container.innerHTML = `
         <div class="glass-card inner-anim-card rounded-[32px] p-6 sm:p-10" style="animation-delay: 0.04s">
@@ -1257,23 +1644,21 @@
                 <span>${isAr ? "السيرة الذاتية التنفيذية • 2026" : "Executive Curriculum Vitae • 2026"}</span>
               </div>
               <h2 class="text-2xl sm:text-4xl font-bold text-[#111214] tracking-tight">
-                ${isAr ? "مصطفى خالد — مصمم جرافيك أول ومصمم 3D" : "Mostafa Khaled — Senior 2D & 3D Designer"}
+                ${escapeCmsHtml(isAr ? cmsConfig.resumeTitleAr : cmsConfig.resumeTitleEn)}
               </h2>
               <p class="mt-2 text-xs sm:text-sm text-[#5A5C60] max-w-2xl leading-relaxed">
-                ${isAr
-                  ? "خبرة واسعة في بناء الهويات البصرية وتصميم المنتجات ثلاثية الأبعاد والـ CGI للوكالات والشركات في المملكة العربية السعودية ومصر."
-                  : "Extensive creative leadership in brand identity systems, 3D product visualization, and photorealistic CGI across Saudi Arabia and Egypt."}
+                ${escapeCmsHtml(isAr ? cmsConfig.resumeIntroAr : cmsConfig.resumeIntroEn)}
               </p>
             </div>
             <div class="flex flex-wrap gap-2 inner-anim-text" style="animation-delay: 0.18s">
               <button type="button" onclick="setResumeCountry('ALL')" class="px-4 py-2 rounded-full text-xs font-semibold transition-all ${resumeCountryFilter === 'ALL' ? 'bg-[#111214] text-white shadow' : 'bg-white/80 text-[#5A5C60] hover:text-[#111214]'}">
-                ${isAr ? "الكل (9)" : "All Markets (9)"}
+                ${isAr ? `الكل (${experienceData.length})` : `All Markets (${experienceData.length})`}
               </button>
               <button type="button" onclick="setResumeCountry('KSA')" class="px-4 py-2 rounded-full text-xs font-semibold transition-all ${resumeCountryFilter === 'KSA' ? 'bg-[#111214] text-white shadow' : 'bg-white/80 text-[#5A5C60] hover:text-[#111214]'}">
-                ${isAr ? "السعودية (6)" : "Saudi Arabia (6)"}
+                ${isAr ? `السعودية (${ksaCount})` : `Saudi Arabia (${ksaCount})`}
               </button>
               <button type="button" onclick="setResumeCountry('Egypt')" class="px-4 py-2 rounded-full text-xs font-semibold transition-all ${resumeCountryFilter === 'Egypt' ? 'bg-[#111214] text-white shadow' : 'bg-white/80 text-[#5A5C60] hover:text-[#111214]'}">
-                ${isAr ? "مصر (3)" : "Egypt (3)"}
+                ${isAr ? `مصر (${egyptCount})` : `Egypt (${egyptCount})`}
               </button>
             </div>
           </div>
@@ -1285,9 +1670,9 @@
                   ${st.icon}
                 </div>
                 <div>
-                  <div class="text-2xl font-bold text-[#111214] leading-none">${st.value}</div>
-                  <div class="text-xs font-semibold text-[#111214] mt-1.5">${st.label}</div>
-                  <div class="text-[11px] text-[#5A5C60] mt-0.5">${st.sub}</div>
+                  <div class="text-2xl font-bold text-[#111214] leading-none">${escapeCmsHtml(st.value)}</div>
+                  <div class="text-xs font-semibold text-[#111214] mt-1.5">${escapeCmsHtml(isAr ? st.labelAr : st.labelEn)}</div>
+                  <div class="text-[11px] text-[#5A5C60] mt-0.5">${escapeCmsHtml(isAr ? st.subAr : st.subEn)}</div>
                 </div>
               </div>
             `).join("")}
@@ -1310,15 +1695,15 @@
                 <div class="relative ios-subcard inner-anim-card rounded-2xl p-4 sm:p-5" style="animation-delay: ${(0.28 + idx * 0.05).toFixed(2)}s">
                   <span class="absolute -start-[31px] top-6 w-3.5 h-3.5 rounded-full bg-[#111214] ring-4 ring-white"></span>
                   <div class="flex flex-wrap items-center justify-between gap-2">
-                    <h4 class="text-sm sm:text-base font-bold text-[#111214]">${isAr ? exp.roleAr : exp.roleEn}</h4>
-                    <span class="px-3 py-1 rounded-full bg-[#111214]/5 text-[11px] font-semibold text-[#111214]">${exp.period}</span>
+                    <h4 class="text-sm sm:text-base font-bold text-[#111214]">${escapeCmsHtml(isAr ? exp.roleAr : exp.roleEn)}</h4>
+                    <span class="px-3 py-1 rounded-full bg-[#111214]/5 text-[11px] font-semibold text-[#111214]">${escapeCmsHtml(exp.period)}</span>
                   </div>
                   <div class="flex flex-wrap items-center gap-3 text-xs font-medium text-[#5A5C60] mt-1">
-                    <span class="text-[#111214] font-semibold">${exp.company}</span>
+                    <span class="text-[#111214] font-semibold">${escapeCmsHtml(exp.company)}</span>
                     <span>•</span>
-                    <span>${isAr ? exp.locationAr : exp.locationEn}</span>
+                    <span>${escapeCmsHtml(isAr ? exp.locationAr : exp.locationEn)}</span>
                   </div>
-                  <p class="text-xs text-[#45474A] mt-2.5 leading-relaxed">${isAr ? exp.summaryAr : exp.summaryEn}</p>
+                  <p class="text-xs text-[#45474A] mt-2.5 leading-relaxed">${escapeCmsHtml(isAr ? exp.summaryAr : exp.summaryEn)}</p>
                 </div>
               `).join("")}
             </div>
@@ -1339,15 +1724,15 @@
                   <div class="inner-anim-text" style="animation-delay: ${(0.34 + idx * 0.04).toFixed(2)}s">
                     <div class="flex items-center justify-between text-xs mb-1.5">
                       <div class="flex items-center gap-2">
-                        <span class="px-2 py-0.5 rounded-md bg-[#111214] text-white font-bold text-[10px]">${sw.code}</span>
-                        <span class="font-semibold text-[#111214]">${sw.name}</span>
+                        <span class="px-2 py-0.5 rounded-md bg-[#111214] text-white font-bold text-[10px]">${escapeCmsHtml(sw.code)}</span>
+                        <span class="font-semibold text-[#111214]">${escapeCmsHtml(sw.name)}</span>
                       </div>
-                      <span class="font-bold text-[#111214]">${sw.level}%</span>
+                      <span class="font-bold text-[#111214]">${escapeCmsHtml(sw.level)}%</span>
                     </div>
                     <div class="w-full h-2 rounded-full bg-black/10 overflow-hidden">
-                      <div class="h-full rounded-full bg-[#111214] inner-skill-bar" style="width: ${sw.level}%; animation-delay: ${(0.4 + idx * 0.05).toFixed(2)}s"></div>
+                      <div class="h-full rounded-full bg-[#111214] inner-skill-bar" style="width: ${Math.min(100, Math.max(0, Number(sw.level) || 0))}%; animation-delay: ${(0.4 + idx * 0.05).toFixed(2)}s"></div>
                     </div>
-                    <span class="block text-[10px] text-[#5A5C60] mt-1">${isAr ? sw.roleAr : sw.roleEn}</span>
+                    <span class="block text-[10px] text-[#5A5C60] mt-1">${escapeCmsHtml(isAr ? sw.roleAr : sw.roleEn)}</span>
                   </div>
                 `).join("")}
               </div>
@@ -1363,14 +1748,14 @@
                 </h3>
               </div>
               <div class="p-4 rounded-2xl ios-subcard mb-5">
-                <div class="text-xs font-bold text-[#111214]">${isAr ? educationData.degreeAr : educationData.degreeEn}</div>
-                <div class="text-xs text-[#5A5C60] mt-0.5">${isAr ? educationData.universityAr : educationData.universityEn}</div>
-                <span class="inline-block mt-2 px-2.5 py-0.5 rounded-full bg-[#111214]/5 text-[11px] font-semibold text-[#111214]">${educationData.period}</span>
+                <div class="text-xs font-bold text-[#111214]">${escapeCmsHtml(isAr ? educationData.degreeAr : educationData.degreeEn)}</div>
+                <div class="text-xs text-[#5A5C60] mt-0.5">${escapeCmsHtml(isAr ? educationData.universityAr : educationData.universityEn)}</div>
+                <span class="inline-block mt-2 px-2.5 py-0.5 rounded-full bg-[#111214]/5 text-[11px] font-semibold text-[#111214]">${escapeCmsHtml(educationData.period)}</span>
               </div>
               <div class="flex flex-wrap gap-2">
                 ${expertiseTags.map((tag, idx) => `
                   <span class="inner-anim-text px-3 py-1.5 rounded-full bg-white/85 border border-white text-xs font-medium text-[#111214] shadow-sm hover:-translate-y-0.5 transition-transform" style="animation-delay: ${(0.44 + idx * 0.03).toFixed(2)}s">
-                    ${isAr ? tag.ar : tag.en}
+                    ${escapeCmsHtml(isAr ? tag.ar : tag.en)}
                   </span>
                 `).join("")}
               </div>
@@ -1393,21 +1778,7 @@
         ? partnersData
         : partnersData.filter((p) => p.sectorKey === partnersSectorFilter);
 
-      const partnerStats = [
-        { value: "+09", label: isAr ? "شركاء نجاح استراتيجيين" : "Strategic Success Partners", sub: isAr ? "علامات تجارية رائدة" : "Leading Regional Brands" },
-        { value: "05", label: isAr ? "قطاعات اقتصادية متنوعة" : "Diverse Industry Sectors", sub: isAr ? "صناعي، غذائي، لوجستي، عناية" : "Industrial, F&B, Logistics, Spa" },
-        { value: "+25", label: isAr ? "عاماً من عراقة الشركاء" : "Years Partner Heritage", sub: isAr ? "مؤسسات راسخة في الخليج" : "Established Gulf Enterprises" },
-        { value: "100%", label: isAr ? "تطابق الهوية البصرية" : "Brand Consistency", sub: isAr ? "حلول مصممة خصيصاً" : "Tailored Visual Systems" }
-      ];
-
-      const sectors = [
-        { key: "ALL", en: "All Partners", ar: "جميع الشركاء" },
-        { key: "enterprise", en: "Enterprise & Industry", ar: "المؤسسات والصناعة" },
-        { key: "fnb", en: "Food & Hospitality", ar: "الأغذية والضيافة" },
-        { key: "wellness", en: "Beauty & Wellness", ar: "الجمال والعناية" },
-        { key: "logistics", en: "Logistics & Delivery", ar: "التوصيل واللوجستيات" },
-        { key: "advertising", en: "Advertising & Events", ar: "الدعاية والمعارض" }
-      ];
+      const sectors = [{ key: "ALL", en: "All Partners", ar: "جميع الشركاء" }, ...partnerSectors];
 
       container.innerHTML = `
         <div class="glass-card inner-anim-card rounded-[32px] p-6 sm:p-10" style="animation-delay: 0.04s">
@@ -1417,13 +1788,13 @@
                 ${isAr ? "شركاء النجاح • السعودية والمنطقة" : "Partners of Success • KSA & Regional"}
               </span>
               <h2 class="text-2xl sm:text-4xl font-bold text-[#111214] tracking-tight">
-                ${isAr ? "علامات تجارية وثقت برؤيتنا الإبداعية" : "Brands That Trusted Our Visual Craft"}
+                ${escapeCmsHtml(isAr ? cmsConfig.partnersTitleAr : cmsConfig.partnersTitleEn)}
               </h2>
             </div>
             <div class="flex flex-wrap gap-2 inner-anim-text" style="animation-delay: 0.16s">
               ${sectors.map(sec => `
                 <button type="button" onclick="setPartnersSector('${sec.key}')" class="px-3.5 py-2 rounded-full text-xs font-semibold transition-all ${partnersSectorFilter === sec.key ? 'bg-[#111214] text-white shadow' : 'bg-white/80 text-[#5A5C60] hover:text-[#111214]'}">
-                  ${isAr ? sec.ar : sec.en}
+                  ${escapeCmsHtml(isAr ? sec.ar : sec.en)}
                 </button>
               `).join("")}
             </div>
@@ -1432,9 +1803,9 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
             ${partnerStats.map((st, idx) => `
               <div class="ios-subcard inner-anim-card rounded-2xl p-5" style="animation-delay: ${(0.18 + idx * 0.05).toFixed(2)}s">
-                <div class="text-2xl font-bold text-[#111214]">${st.value}</div>
-                <div class="text-xs font-semibold text-[#111214] mt-1">${st.label}</div>
-                <div class="text-[11px] text-[#5A5C60] mt-0.5">${st.sub}</div>
+                <div class="text-2xl font-bold text-[#111214]">${escapeCmsHtml(st.value)}</div>
+                <div class="text-xs font-semibold text-[#111214] mt-1">${escapeCmsHtml(isAr ? st.labelAr : st.labelEn)}</div>
+                <div class="text-[11px] text-[#5A5C60] mt-0.5">${escapeCmsHtml(isAr ? st.subAr : st.subEn)}</div>
               </div>
             `).join("")}
           </div>
@@ -1449,15 +1820,15 @@
                     ${partner.icon}
                   </div>
                   <span class="px-3 py-1 rounded-full bg-white text-[11px] font-semibold text-[#111214] border border-black/5">
-                    ${isAr ? partner.badgeAr : partner.badgeEn}
+                    ${escapeCmsHtml(isAr ? partner.badgeAr : partner.badgeEn)}
                   </span>
                 </div>
-                <h3 class="text-lg font-bold text-[#111214]">${partner.name}</h3>
-                <span class="block text-[11px] font-semibold text-[#5A5C60] mt-0.5">${isAr ? partner.sectorLabelAr : partner.sectorLabelEn}</span>
-                <p class="text-xs text-[#45474A] mt-3 leading-relaxed">${isAr ? partner.descAr : partner.descEn}</p>
+                <h3 class="text-lg font-bold text-[#111214]">${escapeCmsHtml(partner.name)}</h3>
+                <span class="block text-[11px] font-semibold text-[#5A5C60] mt-0.5">${escapeCmsHtml(isAr ? partner.sectorLabelAr : partner.sectorLabelEn)}</span>
+                <p class="text-xs text-[#45474A] mt-3 leading-relaxed">${escapeCmsHtml(isAr ? partner.descAr : partner.descEn)}</p>
               </div>
               <div class="mt-5 pt-4 border-t border-black/5 flex items-center justify-between text-[11px] font-medium text-[#5A5C60]">
-                <span>${isAr ? partner.countryAr : partner.countryEn}</span>
+                <span>${escapeCmsHtml(isAr ? partner.countryAr : partner.countryEn)}</span>
                 <span class="text-[#111214] font-semibold">${isAr ? "شريك نجاح معتمد" : "Verified Partner"}</span>
               </div>
             </article>
@@ -1471,57 +1842,22 @@
       if (!container) return;
       const isAr = currentLang === "ar";
 
-      const aboutStats = [
-        { value: "+06", label: isAr ? "سنوات من الإبداع" : "Years of Craft", sub: isAr ? "خبرة متواصلة في السوق" : "Continuous Market Mastery" },
-        { value: "2D+3D", label: isAr ? "تخصص مزدوج متكامل" : "Dual Specialization", sub: isAr ? "هويات بصرية ونمذجة 3D" : "Brand Systems & 3D CGI" },
-        { value: "02", label: isAr ? "أسواق إقليمية رئيسية" : "Regional Markets", sub: isAr ? "السعودية ومصر" : "Saudi Arabia & Egypt" },
-        { value: "100%", label: isAr ? "التزام بالجودة والتسليم" : "Delivery Commitment", sub: isAr ? "دقة التفاصيل والابتكار" : "Attention to Detail" }
-      ];
-
-      const pillars = [
-        {
-          titleEn: "Strategic Brand Identity",
-          titleAr: "بناء الهويات البصرية الاستراتيجية",
-          descEn: "Crafting memorable logos, packaging, and cohesive visual systems tailored to position brands distinctly in competitive markets.",
-          descAr: "تصميم شعارات وأنظمة هوية بصرية متكاملة وتغليف احترافي يمنح العلامات التجارية حضوراً قوياً ومتميزاً في الأسواق التنافسية.",
-          icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>`
-        },
-        {
-          titleEn: "Photorealistic 3D & CGI",
-          titleAr: "الواقعية الفائقة في الـ 3D والـ CGI",
-          descEn: "Specializing in 3D product modeling, studio lighting, architectural visualization, and outdoor CGI billboard integration using Blender & Substance.",
-          descAr: "التخصص في نمذجة المنتجات ثلاثية الأبعاد وإضاءة الاستوديو ودمج إعلانات الشوارع بتقنية CGI باستخدام Blender و Substance.",
-          icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`
-        },
-        {
-          titleEn: "AI-Enhanced Creative Workflow",
-          titleAr: "التكامل التقني والذكاء الاصطناعي",
-          descEn: "Combining traditional design principles with modern AI generative tools, Runway, and motion graphics to accelerate visual storytelling.",
-          descAr: "دمج قواعد التصميم الأكاديمية مع أدوات الذكاء الاصطناعي التوليدي والموشن جرافيك لتقديم حلول بصرية مبتكرة وسريعة التنفيذ.",
-          icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`
-        }
-      ];
-
       container.innerHTML = `
         <div class="glass-card inner-anim-card rounded-[32px] p-6 sm:p-10" style="animation-delay: 0.04s">
           <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div class="max-w-3xl inner-anim-text" style="animation-delay: 0.1s">
               <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 text-xs font-semibold text-[#111214] mb-3 shadow-sm">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>${isAr ? "MK STUDIO • متاح للمشاريع والاستشارات الإبداعية" : "MK STUDIO • Available for Projects & Creative Direction"}</span>
+                <span>${escapeCmsHtml(isAr ? cmsConfig.aboutStatusAr : cmsConfig.aboutStatusEn)}</span>
               </div>
               <h2 class="text-2xl sm:text-4xl font-bold text-[#111214] tracking-tight">
-                ${isAr ? "مرحباً، أنا مصطفى خالد" : "Hello, I'm Mostafa Khaled"}
+                ${escapeCmsHtml(isAr ? cmsConfig.aboutTitleAr : cmsConfig.aboutTitleEn)}
               </h2>
               <p class="mt-3 text-xs sm:text-sm text-[#45474A] leading-relaxed">
-                ${isAr ? cmsConfig.aboutBioAr : cmsConfig.aboutBioEn}
+                ${escapeCmsHtml(isAr ? cmsConfig.aboutBioAr : cmsConfig.aboutBioEn)}
               </p>
               <div class="flex flex-wrap gap-2 mt-4">
-                <span class="px-3 py-1 rounded-full bg-[#111214] text-white text-[11px] font-semibold">#BRANDING</span>
-                <span class="px-3 py-1 rounded-full bg-white text-[#111214] text-[11px] font-semibold">#3D_DESIGN</span>
-                <span class="px-3 py-1 rounded-full bg-white text-[#111214] text-[11px] font-semibold">#3D_PRODUCT</span>
-                <span class="px-3 py-1 rounded-full bg-white text-[#111214] text-[11px] font-semibold">#PRINT_DESIGN</span>
-                <span class="px-3 py-1 rounded-full bg-white text-[#111214] text-[11px] font-semibold">#MOTION_GRAPHIC</span>
+                ${aboutTags.map((tag, idx) => `<span class="px-3 py-1 rounded-full ${idx === 0 ? "bg-[#111214] text-white" : "bg-white text-[#111214]"} text-[11px] font-semibold">#${escapeCmsHtml(tag.value)}</span>`).join("")}
               </div>
             </div>
             <div class="flex flex-wrap gap-3 shrink-0 inner-anim-text" style="animation-delay: 0.16s">
@@ -1537,9 +1873,9 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
             ${aboutStats.map((st, idx) => `
               <div class="ios-subcard inner-anim-card rounded-2xl p-5" style="animation-delay: ${(0.2 + idx * 0.05).toFixed(2)}s">
-                <div class="text-2xl font-bold text-[#111214]">${st.value}</div>
-                <div class="text-xs font-semibold text-[#111214] mt-1">${st.label}</div>
-                <div class="text-[11px] text-[#5A5C60] mt-0.5">${st.sub}</div>
+                <div class="text-2xl font-bold text-[#111214]">${escapeCmsHtml(st.value)}</div>
+                <div class="text-xs font-semibold text-[#111214] mt-1">${escapeCmsHtml(isAr ? st.labelAr : st.labelEn)}</div>
+                <div class="text-[11px] text-[#5A5C60] mt-0.5">${escapeCmsHtml(isAr ? st.subAr : st.subEn)}</div>
               </div>
             `).join("")}
           </div>
@@ -1551,8 +1887,8 @@
               <div class="w-11 h-11 rounded-2xl bg-[#111214] text-white flex items-center justify-center mb-4">
                 ${pil.icon}
               </div>
-              <h3 class="text-base sm:text-lg font-bold text-[#111214]">${isAr ? pil.titleAr : pil.titleEn}</h3>
-              <p class="text-xs sm:text-sm text-[#45474A] mt-2 leading-relaxed">${isAr ? pil.descAr : pil.descEn}</p>
+              <h3 class="text-base sm:text-lg font-bold text-[#111214]">${escapeCmsHtml(isAr ? pil.titleAr : pil.titleEn)}</h3>
+              <p class="text-xs sm:text-sm text-[#45474A] mt-2 leading-relaxed">${escapeCmsHtml(isAr ? pil.descAr : pil.descEn)}</p>
             </div>
           `).join("")}
         </div>
@@ -1564,6 +1900,7 @@
         openAdminLoginModal();
         return;
       }
+      document.body.classList.toggle("admin-dashboard-active", pageName === "admin");
       const pages = {
         home: document.getElementById("homePortfolioView"),
         resume: document.getElementById("resumeView"),
@@ -2355,23 +2692,31 @@
             mediaBlocks: validMediaBlocks,
             gallery: galleryUrls
           };
+          const successMessage = editId
+            ? "Project updated with all custom media frames!"
+            : "Precision project published to platform!";
 
           if (editId) {
             const idx = portfolioProjects.findIndex((p) => p.id === Number(editId));
-            if (idx !== -1) {
-              portfolioProjects[idx] = { ...portfolioProjects[idx], ...projectPayload };
+            if (idx === -1) {
+              showCmsToast("The selected project record no longer exists. Refresh the project list and try again.");
+              return;
             }
-            showCmsToast("Project updated with all custom media frames!");
+            if (portfolioProjects.some((project, index) => index !== idx && project.id === Number(editId))) {
+              showCmsToast("This project ID is shared by multiple records. Reload the page to repair the duplicates first.");
+              return;
+            }
+            portfolioProjects[idx] = { ...portfolioProjects[idx], ...projectPayload };
           } else {
-            const nextId = portfolioProjects.reduce((max, p) => Math.max(max, p.id), 0) + 1;
+            const nextId = getNextProjectId();
             portfolioProjects.unshift({ id: nextId, ...projectPayload });
-            showCmsToast("Precision project published to platform!");
           }
 
           resetCmsProjectForm();
-          saveCmsState();
+          const saved = saveCmsState();
           buildCarouselCards();
           renderAdminDashboard();
+          if (saved) showCmsToast(successMessage);
         });
       }
 
@@ -2391,9 +2736,19 @@
           cmsConfig.heroSubAr = document.getElementById("cmsHeroSubAr").value;
           cmsConfig.aboutBioEn = document.getElementById("cmsAboutBioEn").value;
           cmsConfig.aboutBioAr = document.getElementById("cmsAboutBioAr").value;
-          saveCmsState();
+          cmsConfig.aboutTitleEn = document.getElementById("cmsAboutTitleEn").value;
+          cmsConfig.aboutTitleAr = document.getElementById("cmsAboutTitleAr").value;
+          cmsConfig.aboutStatusEn = document.getElementById("cmsAboutStatusEn").value;
+          cmsConfig.aboutStatusAr = document.getElementById("cmsAboutStatusAr").value;
+          cmsConfig.resumeTitleEn = document.getElementById("cmsResumeTitleEn").value;
+          cmsConfig.resumeTitleAr = document.getElementById("cmsResumeTitleAr").value;
+          cmsConfig.resumeIntroEn = document.getElementById("cmsResumeIntroEn").value;
+          cmsConfig.resumeIntroAr = document.getElementById("cmsResumeIntroAr").value;
+          cmsConfig.partnersTitleEn = document.getElementById("cmsPartnersTitleEn").value;
+          cmsConfig.partnersTitleAr = document.getElementById("cmsPartnersTitleAr").value;
+          const saved = saveCmsState();
           applyLanguageUI();
-          showCmsToast("Platform content & texts updated!");
+          if (saved) showCmsToast("Platform content & texts updated!");
         });
       }
 
@@ -2409,9 +2764,9 @@
           cmsConfig.socialHandle = document.getElementById("cmsSocialHandle").value;
           const newPass = document.getElementById("cmsNewPasscode").value.trim();
           if (newPass) cmsConfig.passcode = newPass;
-          saveCmsState();
+          const saved = saveCmsState();
           applyCmsThemeAndContact();
-          showCmsToast("Contact & social details saved!");
+          if (saved) showCmsToast("Contact & social details saved!");
         });
       }
 
@@ -2436,8 +2791,7 @@
           reader.onload = () => {
             cmsConfig.customLogoDataUrl = reader.result;
             applyCmsThemeAndContact();
-            saveCmsState();
-            showCmsToast("Custom logo uploaded!");
+            if (saveCmsState()) showCmsToast("Custom logo uploaded!");
           };
           reader.readAsDataURL(file);
         });
@@ -2448,8 +2802,7 @@
         useSigLogoBtn.addEventListener("click", () => {
           cmsConfig.customLogoDataUrl = "";
           applyCmsThemeAndContact();
-          saveCmsState();
-          showCmsToast("Restored signature calligraphy logo.");
+          if (saveCmsState()) showCmsToast("Restored signature calligraphy logo.");
         });
       }
 
@@ -2462,8 +2815,7 @@
           cmsConfig.mutedColor = document.getElementById("cmsColorMuted").value;
           cmsConfig.customLogoText = document.getElementById("cmsCustomLogoBrandText").value;
           applyCmsThemeAndContact();
-          saveCmsState();
-          showCmsToast("Brand identity & colors applied!");
+          if (saveCmsState()) showCmsToast("Brand identity & colors applied!");
         });
       }
 
@@ -2479,8 +2831,10 @@
       const cmsResetDefaultsBtn = document.getElementById("cmsResetDefaultsBtn");
       if (cmsResetDefaultsBtn) {
         cmsResetDefaultsBtn.addEventListener("click", () => {
+          if (!window.confirm("Reset all portfolio content and settings to their defaults?")) return;
           localStorage.removeItem(CMS_STORAGE_KEY);
           cmsConfig = { ...defaultCmsConfig };
+          restoreCmsContentDefaults();
           applyCmsThemeAndContact();
           applyLanguageUI();
           renderAdminDashboard();

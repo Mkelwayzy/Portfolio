@@ -263,6 +263,8 @@
             <h3 id="solutionHeading" class="text-base sm:text-lg font-bold text-[#111214]">Visual Direction &amp; Execution</h3>
           </div>
           <p id="modalProjectSolution" class="text-xs sm:text-sm text-[#45474A] leading-relaxed"></p>
+        </div>
+      </div>
       <!-- Project Gallery Shots (Supports Multi-Size Editorial Blocks & Captions) -->
       <div class="glass-card inner-anim-card rounded-[32px] p-6 sm:p-8" style="animation-delay: 0.38s">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -334,6 +336,58 @@
           <span class="text-slateText group-hover:translate-x-1 transition-transform">→</span>
         </a>
         <a id="contactEmailLink" href="mailto:Mkalwayzy@gmail.com" class="flex items-center justify-between p-4 rounded-2xl bg-white/80 hover:bg-white border border-white transition-all shadow-sm group">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#111214] text-white flex items-center justify-center font-bold text-sm">@</div>
+            <div>
+              <div class="text-sm font-semibold text-obsidian">Email</div>
+              <div id="contactEmailDisplay" class="text-xs text-slateText">Mkalwayzy@gmail.com</div>
+            </div>
+          </div>
+          <span class="text-slateText">→</span>
+        </a>
+        <a id="contactBeLink" href="https://www.behance.net/Mkelwayzy" target="_blank" rel="noopener" class="flex items-center justify-between p-4 rounded-2xl bg-white/80 hover:bg-white border border-white transition-all shadow-sm group">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#1769ff] text-white flex items-center justify-center font-bold text-sm">Be</div>
+            <div>
+              <div id="contactBeTitle" class="text-sm font-semibold text-obsidian">Behance &amp; Socials (@MKELWAYZY)</div>
+              <div id="contactBeDisplay" class="text-xs text-slateText">behance.net/Mkelwayzy</div>
+            </div>
+          </div>
+          <span class="text-slateText">↗</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ADMIN DASHBOARD ==================== -->
+  <section id="adminDashboardView" class="hidden min-h-screen w-full px-5 pb-24 pt-28 sm:px-10 lg:px-16">
+    <div class="mx-auto max-w-7xl space-y-6">
+      <header class="glass-card flex flex-wrap items-center justify-between gap-4 rounded-[28px] p-5 sm:p-7">
+        <div>
+          <span class="text-[10px] font-semibold uppercase tracking-[0.2em] text-slateText">Portfolio Management</span>
+          <h1 class="mt-1 text-2xl font-bold text-obsidian sm:text-3xl">Admin Dashboard</h1>
+          <p class="mt-1 text-xs text-slateText">Manage projects, content, contact details, and brand identity.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button id="cmsResetDefaultsBtn" type="button" class="rounded-full bg-white/80 px-4 py-2 text-xs font-semibold text-obsidian transition hover:bg-white">Reset Defaults</button>
+          <button id="cmsLogoutBtn" type="button" class="rounded-full bg-obsidian px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90">Log Out</button>
+        </div>
+      </header>
+
+      <div id="cmsToastBanner" role="status" aria-live="polite" class="hidden rounded-2xl bg-obsidian px-5 py-3 text-sm font-medium text-white shadow-lg">
+        <span id="cmsToastText"></span>
+      </div>
+
+      <nav aria-label="Dashboard sections" class="glass-pill flex flex-wrap gap-2 rounded-2xl p-2">
+        <button type="button" data-cms-tab="projects" class="cms-tab-btn active rounded-full bg-obsidian px-4 py-2 text-xs font-bold text-white">Projects</button>
+        <button type="button" data-cms-tab="content" class="cms-tab-btn rounded-full px-4 py-2 text-xs font-semibold text-slateText">Content</button>
+        <button type="button" data-cms-tab="resume" class="cms-tab-btn rounded-full px-4 py-2 text-xs font-semibold text-slateText">Resume &amp; Experience</button>
+        <button type="button" data-cms-tab="partners" class="cms-tab-btn rounded-full px-4 py-2 text-xs font-semibold text-slateText">Partners</button>
+        <button type="button" data-cms-tab="about" class="cms-tab-btn rounded-full px-4 py-2 text-xs font-semibold text-slateText">About Me</button>
+        <button type="button" data-cms-tab="contact" class="cms-tab-btn rounded-full px-4 py-2 text-xs font-semibold text-slateText">Contact &amp; Security</button>
+        <button type="button" data-cms-tab="identity" class="cms-tab-btn rounded-full px-4 py-2 text-xs font-semibold text-slateText">Brand Identity</button>
+      </nav>
+
       <!-- TAB 1: PRECISION PROJECT PUBLISHING STUDIO -->
       <div id="cmsTabProjects" class="cms-tab-panel space-y-6">
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
@@ -351,6 +405,11 @@
 
             <form id="cmsProjectForm" class="space-y-6">
               <input type="hidden" id="cmsEditProjectId" value="" />
+              <div class="rounded-2xl bg-white/70 px-4 py-3">
+                <label for="cmsProjectIdDisplay" class="block text-[11px] font-semibold text-obsidian">Project record ID</label>
+                <input id="cmsProjectIdDisplay" type="text" readonly aria-describedby="cmsProjectIdHelp" class="mt-1 w-full cursor-not-allowed rounded-xl border border-white bg-white/80 px-3 py-2 text-xs font-semibold text-slateText" />
+                <p id="cmsProjectIdHelp" class="mt-1 text-[10px] text-slateText">Assigned automatically and kept unique to prevent records from overwriting one another.</p>
+              </div>
 
               <!-- Step 1: Core Bilingual Titles & Classification -->
               <div class="ios-subcard rounded-2xl p-4 sm:p-5 space-y-4">
@@ -571,6 +630,52 @@
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">About page title (EN)</label>
+              <input id="cmsAboutTitleEn" type="text" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">عنوان صفحة من أنا (AR)</label>
+              <input id="cmsAboutTitleAr" type="text" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">Availability line (EN)</label>
+              <input id="cmsAboutStatusEn" type="text" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">سطر حالة التوفر (AR)</label>
+              <input id="cmsAboutStatusAr" type="text" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">Resume page title (EN)</label>
+              <input id="cmsResumeTitleEn" type="text" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">عنوان صفحة الخبرات (AR)</label>
+              <input id="cmsResumeTitleAr" type="text" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">Resume introduction (EN)</label>
+              <textarea id="cmsResumeIntroEn" rows="2" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">مقدمة صفحة الخبرات (AR)</label>
+              <textarea id="cmsResumeIntroAr" rows="2" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">Partners page title (EN)</label>
+              <input id="cmsPartnersTitleEn" type="text" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-obsidian mb-1.5">عنوان صفحة الشركاء (AR)</label>
+              <input id="cmsPartnersTitleAr" type="text" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
               <label class="block text-xs font-semibold text-obsidian mb-1.5">About Me Bio (English)</label>
               <textarea id="cmsAboutBioEn" rows="3" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian"></textarea>
             </div>
@@ -696,6 +801,87 @@
             Apply Brand Identity &amp; Colors
           </button>
         </form>
+      </div>
+
+      <div id="cmsTabResume" class="cms-tab-panel hidden space-y-6">
+        <div class="glass-card rounded-[28px] p-6 sm:p-8">
+          <div class="mb-5">
+            <h3 class="text-lg font-bold text-obsidian">Professional experience</h3>
+            <p class="mt-1 text-xs text-slateText">Manage the resume timeline. Use KSA or Egypt as the country filter.</p>
+          </div>
+          <div id="cmsExperienceEditor" class="space-y-4"></div>
+          <button type="button" onclick="addCmsCollectionItem('experience')" class="mt-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-obsidian shadow-sm hover:bg-white/80">+ Add experience</button>
+        </div>
+
+        <div class="glass-card rounded-[28px] p-6 sm:p-8">
+          <h3 class="mb-4 text-lg font-bold text-obsidian">Resume statistics</h3>
+          <div id="cmsResumeStatsEditor" class="space-y-4"></div>
+          <button type="button" onclick="addCmsCollectionItem('resumeStat')" class="mt-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-obsidian shadow-sm hover:bg-white/80">+ Add statistic</button>
+        </div>
+
+        <div class="glass-card rounded-[28px] p-6 sm:p-8">
+          <h3 class="mb-4 text-lg font-bold text-obsidian">Software and tools</h3>
+          <div id="cmsSoftwareEditor" class="space-y-4"></div>
+          <button type="button" onclick="addCmsCollectionItem('software')" class="mt-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-obsidian shadow-sm hover:bg-white/80">+ Add software</button>
+        </div>
+
+        <div class="glass-card rounded-[28px] p-6 sm:p-8">
+          <h3 class="mb-4 text-lg font-bold text-obsidian">Education</h3>
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label class="text-xs font-semibold text-obsidian">Degree (EN)<input id="cmsEducationDegreeEn" type="text" class="mt-1 w-full rounded-xl border border-white bg-white/85 px-3 py-2 font-normal" /></label>
+            <label class="text-xs font-semibold text-obsidian">الدرجة العلمية (AR)<input id="cmsEducationDegreeAr" type="text" class="mt-1 w-full rounded-xl border border-white bg-white/85 px-3 py-2 font-normal" /></label>
+            <label class="text-xs font-semibold text-obsidian">University (EN)<input id="cmsEducationUniversityEn" type="text" class="mt-1 w-full rounded-xl border border-white bg-white/85 px-3 py-2 font-normal" /></label>
+            <label class="text-xs font-semibold text-obsidian">الجامعة (AR)<input id="cmsEducationUniversityAr" type="text" class="mt-1 w-full rounded-xl border border-white bg-white/85 px-3 py-2 font-normal" /></label>
+            <label class="text-xs font-semibold text-obsidian">Period<input id="cmsEducationPeriod" type="text" class="mt-1 w-full rounded-xl border border-white bg-white/85 px-3 py-2 font-normal" /></label>
+          </div>
+          <button type="button" onclick="saveCmsEducation()" class="mt-4 rounded-full bg-obsidian px-5 py-2.5 text-xs font-semibold text-white hover:opacity-90">Save education</button>
+        </div>
+
+        <div class="glass-card rounded-[28px] p-6 sm:p-8">
+          <h3 class="mb-4 text-lg font-bold text-obsidian">Areas of expertise</h3>
+          <div id="cmsExpertiseEditor" class="space-y-4"></div>
+          <button type="button" onclick="addCmsCollectionItem('expertise')" class="mt-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-obsidian shadow-sm hover:bg-white/80">+ Add expertise</button>
+        </div>
+
+        <button type="button" onclick="saveCmsPageCollections('resume')" class="rounded-2xl bg-obsidian px-6 py-3 text-sm font-bold text-white shadow hover:opacity-90">Save resume and experience changes</button>
+      </div>
+
+      <div id="cmsTabPartners" class="cms-tab-panel hidden space-y-6">
+        <div class="glass-card rounded-[28px] p-6 sm:p-8">
+          <h3 class="mb-4 text-lg font-bold text-obsidian">Partner page statistics</h3>
+          <div id="cmsPartnerStatsEditor" class="space-y-4"></div>
+          <button type="button" onclick="addCmsCollectionItem('partnerStat')" class="mt-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-obsidian shadow-sm hover:bg-white/80">+ Add statistic</button>
+        </div>
+        <div class="glass-card rounded-[28px] p-6 sm:p-8">
+          <h3 class="mb-4 text-lg font-bold text-obsidian">Partner sectors</h3>
+          <div id="cmsPartnerSectorEditor" class="space-y-4"></div>
+          <button type="button" onclick="addCmsCollectionItem('partnerSector')" class="mt-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-obsidian shadow-sm hover:bg-white/80">+ Add sector</button>
+        </div>
+        <div class="glass-card rounded-[28px] p-6 sm:p-8">
+          <h3 class="mb-4 text-lg font-bold text-obsidian">Partners</h3>
+          <div id="cmsPartnerEditor" class="space-y-4"></div>
+          <button type="button" onclick="addCmsCollectionItem('partner')" class="mt-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-obsidian shadow-sm hover:bg-white/80">+ Add partner</button>
+        </div>
+        <button type="button" onclick="saveCmsPageCollections('partners')" class="rounded-2xl bg-obsidian px-6 py-3 text-sm font-bold text-white shadow hover:opacity-90">Save partner page changes</button>
+      </div>
+
+      <div id="cmsTabAbout" class="cms-tab-panel hidden space-y-6">
+        <div class="glass-card rounded-[28px] p-6 sm:p-8">
+          <h3 class="mb-4 text-lg font-bold text-obsidian">About page statistics</h3>
+          <div id="cmsAboutStatsEditor" class="space-y-4"></div>
+          <button type="button" onclick="addCmsCollectionItem('aboutStat')" class="mt-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-obsidian shadow-sm hover:bg-white/80">+ Add statistic</button>
+        </div>
+        <div class="glass-card rounded-[28px] p-6 sm:p-8">
+          <h3 class="mb-4 text-lg font-bold text-obsidian">About page sections</h3>
+          <div id="cmsAboutPillarsEditor" class="space-y-4"></div>
+          <button type="button" onclick="addCmsCollectionItem('aboutPillar')" class="mt-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-obsidian shadow-sm hover:bg-white/80">+ Add section</button>
+        </div>
+        <div class="glass-card rounded-[28px] p-6 sm:p-8">
+          <h3 class="mb-4 text-lg font-bold text-obsidian">About page tags</h3>
+          <div id="cmsAboutTagsEditor" class="space-y-4"></div>
+          <button type="button" onclick="addCmsCollectionItem('aboutTag')" class="mt-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-obsidian shadow-sm hover:bg-white/80">+ Add tag</button>
+        </div>
+        <button type="button" onclick="saveCmsPageCollections('about')" class="rounded-2xl bg-obsidian px-6 py-3 text-sm font-bold text-white shadow hover:opacity-90">Save About page changes</button>
       </div>
     </div>
   </section>
