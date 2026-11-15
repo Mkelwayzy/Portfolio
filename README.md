@@ -27,6 +27,8 @@ The admin dashboard reads public portfolio content from Supabase and requires an
 
 In the project editor, select a cover image and optionally select multiple gallery images. They appear as large full-width previews, need no URLs or captions, and show upload progress when the project is published. Each image can be up to 15 MB.
 
+Project case studies also support optional outcome and impact text in English and Arabic. Include measurable claims only when you can verify them.
+
 ### Supabase setup
 
 1. In the SQL Editor for the same Supabase project configured in the website, run [`supabase/setup.sql`](./supabase/setup.sql).

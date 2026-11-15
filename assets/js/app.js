@@ -653,6 +653,8 @@
       document.getElementById("cmsProjChallengeAr").value = proj.challengeAr || "";
       document.getElementById("cmsProjSolutionEn").value = proj.solutionEn || "";
       document.getElementById("cmsProjSolutionAr").value = proj.solutionAr || "";
+      document.getElementById("cmsProjOutcomeEn").value = proj.outcomeEn || "";
+      document.getElementById("cmsProjOutcomeAr").value = proj.outcomeAr || "";
 
       if (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0) {
         cmsDraftBlocks = proj.mediaBlocks.map((b) => ({
@@ -2282,6 +2284,35 @@
       document.getElementById("modalProjectSlugPill").textContent = `#project/${proj.id}`;
       document.getElementById("modalProjectTitle").textContent = isAr ? proj.titleAr : proj.titleEn;
       document.getElementById("modalProjectDescription").textContent = isAr ? proj.descriptionAr : proj.descriptionEn;
+      document.getElementById("metaClientLbl").textContent = isAr ? "العميل" : "Client";
+      document.getElementById("modalProjectClient").textContent = proj.client || "";
+      document.getElementById("metaYearLbl").textContent = isAr ? "السنة والسوق" : "Year & Market";
+      document.getElementById("modalProjectYear").textContent = [proj.year, isAr ? (proj.locationAr || proj.location) : proj.location].filter(Boolean).join(" • ");
+      document.getElementById("metaRoleLbl").textContent = isAr ? "الدور" : "Role";
+      document.getElementById("modalProjectRole").textContent = isAr ? (proj.roleAr || proj.roleEn || "") : (proj.roleEn || proj.roleAr || "");
+      document.getElementById("metaDeliverablesLbl").textContent = isAr ? "أبرز المخرجات" : "Key Deliverables";
+      document.getElementById("modalProjectDeliverables").textContent = isAr
+        ? (proj.deliverablesAr || proj.deliverablesEn || "")
+        : (proj.deliverablesEn || proj.deliverablesAr || "");
+      document.getElementById("metaToolsLbl").textContent = isAr ? "الأدوات وسير العمل" : "Tools & Pipeline";
+      document.getElementById("modalProjectTools").innerHTML = (proj.tools || []).map((tool) => `
+        <span class="rounded-full bg-white/80 px-3 py-1 text-[10px] font-semibold text-[#111214]">${escapeCmsHtml(tool)}</span>
+      `).join("");
+      document.getElementById("challengeHeading").textContent = isAr ? "التحدي ومتطلبات المشروع" : "Project Brief & Challenge";
+      document.getElementById("modalProjectChallenge").textContent = isAr
+        ? (proj.challengeAr || proj.challengeEn || proj.descriptionAr || proj.descriptionEn || "")
+        : (proj.challengeEn || proj.challengeAr || proj.descriptionEn || proj.descriptionAr || "");
+      document.getElementById("solutionHeading").textContent = isAr ? "التوجه البصري والتنفيذ" : "Visual Direction & Execution";
+      document.getElementById("modalProjectSolution").textContent = isAr
+        ? (proj.solutionAr || proj.solutionEn || "")
+        : (proj.solutionEn || proj.solutionAr || "");
+      const outcomeCard = document.getElementById("projectOutcomeCard");
+      const outcome = isAr
+        ? (proj.outcomeAr || proj.outcomeEn || "")
+        : (proj.outcomeEn || proj.outcomeAr || "");
+      document.getElementById("outcomeHeading").textContent = isAr ? "النتيجة والأثر" : "Outcome & Impact";
+      document.getElementById("modalProjectOutcome").textContent = outcome;
+      outcomeCard.classList.toggle("hidden", !outcome);
       // Gallery Shots (Supports Multi-Size Editorial Grid Blocks & Captions)
       document.getElementById("gallerySubHeading").textContent = isAr ? "معرض الصور والتفاصيل متعدد المقاسات" : "Multi-Size Visual Showcase & Details";
       document.getElementById("galleryHeading").textContent = isAr ? "لقطات ومخرجات المشروع" : "Project Visual Frames";
@@ -3048,6 +3079,8 @@
             challengeAr: document.getElementById("cmsProjChallengeAr").value.trim() || descAr,
             solutionEn: document.getElementById("cmsProjSolutionEn").value.trim() || "Executed with high-precision visual craft, balanced typography, and studio lighting.",
             solutionAr: document.getElementById("cmsProjSolutionAr").value.trim() || "تم التنفيذ بدقة بصرية عالية وتوازن في الخطوط وإضاءة استوديو احترافية.",
+            outcomeEn: document.getElementById("cmsProjOutcomeEn").value.trim(),
+            outcomeAr: document.getElementById("cmsProjOutcomeAr").value.trim(),
             imageUrl: imgUrl,
             coverAspect: document.getElementById("cmsProjCoverAspect").value || "aspect-[4/3]",
             mediaBlocks: validMediaBlocks,
