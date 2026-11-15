@@ -399,7 +399,7 @@
 
   <!-- ==================== ADMIN DASHBOARD ==================== -->
   <section id="adminDashboardView" class="hidden fixed inset-0 z-[10000] h-screen w-full overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-[1600px] space-y-5">
+    <div class="cms-dashboard-frame mx-auto max-w-[1600px] space-y-3">
       <header class="glass-card sticky top-0 z-40 flex flex-wrap items-center justify-between gap-4 rounded-[24px] p-4 sm:p-5">
         <div>
           <span class="text-[10px] font-semibold uppercase tracking-[0.2em] text-slateText">Portfolio Management</span>
@@ -413,43 +413,38 @@
         </div>
       </header>
 
-      <div id="cmsToastBanner" role="status" aria-live="polite" class="hidden rounded-2xl bg-obsidian px-5 py-3 text-sm font-medium text-white shadow-lg">
-        <span id="cmsToastText"></span>
-      </div>
+      <div class="cms-dashboard-layout">
+        <nav aria-label="Dashboard sections" class="cms-dashboard-nav">
+          <button type="button" data-cms-tab="projects" class="cms-tab-btn active bg-obsidian text-white font-bold" aria-pressed="true">
+            <span class="cms-tab-number">01</span><span class="cms-tab-label">Projects</span>
+          </button>
+          <button type="button" data-cms-tab="content" class="cms-tab-btn text-slateText font-semibold" aria-pressed="false">
+            <span class="cms-tab-number">02</span><span class="cms-tab-label">Page Content</span>
+          </button>
+          <button type="button" data-cms-tab="resume" class="cms-tab-btn text-slateText font-semibold" aria-pressed="false">
+            <span class="cms-tab-number">03</span><span class="cms-tab-label">Resume</span>
+          </button>
+          <button type="button" data-cms-tab="partners" class="cms-tab-btn text-slateText font-semibold" aria-pressed="false">
+            <span class="cms-tab-number">04</span><span class="cms-tab-label">Partners</span>
+          </button>
+          <button type="button" data-cms-tab="about" class="cms-tab-btn text-slateText font-semibold" aria-pressed="false">
+            <span class="cms-tab-number">05</span><span class="cms-tab-label">About Me</span>
+          </button>
+          <button type="button" data-cms-tab="contact" class="cms-tab-btn text-slateText font-semibold" aria-pressed="false">
+            <span class="cms-tab-number">06</span><span class="cms-tab-label">Contact &amp; Security</span>
+          </button>
+          <button type="button" data-cms-tab="identity" class="cms-tab-btn text-slateText font-semibold" aria-pressed="false">
+            <span class="cms-tab-number">07</span><span class="cms-tab-label">Brand Identity</span>
+          </button>
+        </nav>
 
-      <nav aria-label="Dashboard sections" class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
-        <button type="button" data-cms-tab="projects" class="cms-tab-btn active flex min-h-20 items-start gap-3 rounded-2xl border border-white bg-obsidian p-3.5 text-start text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/80 text-xs font-bold text-obsidian">01</span>
-          <span><span class="block text-sm font-bold">Projects</span><span class="mt-1 block text-[11px] text-current opacity-70">Publish and organize work</span></span>
-        </button>
-        <button type="button" data-cms-tab="content" class="cms-tab-btn flex min-h-20 items-start gap-3 rounded-2xl border border-white bg-white/70 p-3.5 text-start text-slateText shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/80 text-xs font-bold text-obsidian">02</span>
-          <span><span class="block text-sm font-bold">Page Content</span><span class="mt-1 block text-[11px] text-current opacity-70">Edit titles, text, and bio</span></span>
-        </button>
-        <button type="button" data-cms-tab="resume" class="cms-tab-btn flex min-h-20 items-start gap-3 rounded-2xl border border-white bg-white/70 p-3.5 text-start text-slateText shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/80 text-xs font-bold text-obsidian">03</span>
-          <span><span class="block text-sm font-bold">Resume</span><span class="mt-1 block text-[11px] text-current opacity-70">Experience, skills, education</span></span>
-        </button>
-        <button type="button" data-cms-tab="partners" class="cms-tab-btn flex min-h-20 items-start gap-3 rounded-2xl border border-white bg-white/70 p-3.5 text-start text-slateText shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/80 text-xs font-bold text-obsidian">04</span>
-          <span><span class="block text-sm font-bold">Partners</span><span class="mt-1 block text-[11px] text-current opacity-70">Brands, sectors, and stats</span></span>
-        </button>
-        <button type="button" data-cms-tab="about" class="cms-tab-btn flex min-h-20 items-start gap-3 rounded-2xl border border-white bg-white/70 p-3.5 text-start text-slateText shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/80 text-xs font-bold text-obsidian">05</span>
-          <span><span class="block text-sm font-bold">About Me</span><span class="mt-1 block text-[11px] text-current opacity-70">Highlights, strengths, tags</span></span>
-        </button>
-        <button type="button" data-cms-tab="contact" class="cms-tab-btn flex min-h-20 items-start gap-3 rounded-2xl border border-white bg-white/70 p-3.5 text-start text-slateText shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/80 text-xs font-bold text-obsidian">06</span>
-          <span><span class="block text-sm font-bold">Contact &amp; Security</span><span class="mt-1 block text-[11px] text-current opacity-70">Contact channels and access</span></span>
-        </button>
-        <button type="button" data-cms-tab="identity" class="cms-tab-btn flex min-h-20 items-start gap-3 rounded-2xl border border-white bg-white/70 p-3.5 text-start text-slateText shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/80 text-xs font-bold text-obsidian">07</span>
-          <span><span class="block text-sm font-bold">Brand Identity</span><span class="mt-1 block text-[11px] text-current opacity-70">Logo and color palette</span></span>
-        </button>
-      </nav>
+        <div class="cms-dashboard-content">
+          <div id="cmsToastBanner" role="status" aria-live="polite" class="hidden mb-4 rounded-2xl bg-obsidian px-5 py-3 text-sm font-medium text-white shadow-lg">
+            <span id="cmsToastText"></span>
+          </div>
 
-      <!-- TAB 1: PRECISION PROJECT PUBLISHING STUDIO -->
-      <div id="cmsTabProjects" class="cms-tab-panel space-y-6">
+          <!-- TAB 1: PRECISION PROJECT PUBLISHING STUDIO -->
+          <div id="cmsTabProjects" class="cms-tab-panel space-y-6">
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
           <!-- Precision Case Study Builder Form -->
           <div class="xl:col-span-8 glass-card rounded-[28px] p-6 sm:p-8">
@@ -933,7 +928,7 @@
         <button type="button" onclick="saveCmsPageCollections('partners')" class="rounded-2xl bg-obsidian px-6 py-3 text-sm font-bold text-white shadow hover:opacity-90">Save partner page changes</button>
       </div>
 
-      <div id="cmsTabAbout" class="cms-tab-panel hidden space-y-6">
+          <div id="cmsTabAbout" class="cms-tab-panel hidden space-y-6">
         <div class="glass-card rounded-[28px] p-6 sm:p-8">
           <h3 class="mb-4 text-lg font-bold text-obsidian">About page statistics</h3>
           <div id="cmsAboutStatsEditor" class="space-y-4"></div>
@@ -950,6 +945,8 @@
           <button type="button" onclick="addCmsCollectionItem('aboutTag')" class="mt-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-obsidian shadow-sm hover:bg-white/80">+ Add tag</button>
         </div>
         <button type="button" onclick="saveCmsPageCollections('about')" class="rounded-2xl bg-obsidian px-6 py-3 text-sm font-bold text-white shadow hover:opacity-90">Save About page changes</button>
+          </div>
+        </div>
       </div>
     </div>
   </section>

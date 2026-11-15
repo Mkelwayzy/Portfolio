@@ -3242,9 +3242,11 @@
           document.querySelectorAll(".cms-tab-btn").forEach((b) => {
             b.classList.remove("active", "bg-obsidian", "text-white", "font-bold");
             b.classList.add("text-slateText", "font-semibold");
+            b.setAttribute("aria-pressed", "false");
           });
           btn.classList.add("active", "bg-obsidian", "text-white", "font-bold");
           btn.classList.remove("text-slateText", "font-semibold");
+          btn.setAttribute("aria-pressed", "true");
 
           document.querySelectorAll(".cms-tab-panel").forEach((panel) => panel.classList.add("hidden"));
           const activePanel = document.getElementById(`cmsTab${targetTab.charAt(0).toUpperCase() + targetTab.slice(1)}`);
