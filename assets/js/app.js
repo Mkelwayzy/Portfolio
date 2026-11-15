@@ -1664,7 +1664,7 @@
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-            ${stats.map((st, idx) => `
+            ${resumeStats.map((st, idx) => `
               <div class="ios-subcard inner-anim-card rounded-2xl p-5 flex items-start gap-4" style="animation-delay: ${(0.18 + idx * 0.06).toFixed(2)}s">
                 <div class="w-11 h-11 rounded-xl bg-[#111214] text-white flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105">
                   ${st.icon}
@@ -1882,7 +1882,7 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-          ${pillars.map((pil, idx) => `
+          ${aboutPillars.map((pil, idx) => `
             <div class="glass-card inner-anim-card rounded-[28px] p-6 sm:p-7" style="animation-delay: ${(0.26 + idx * 0.06).toFixed(2)}s">
               <div class="w-11 h-11 rounded-2xl bg-[#111214] text-white flex items-center justify-center mb-4">
                 ${pil.icon}
