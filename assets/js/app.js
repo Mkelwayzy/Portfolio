@@ -160,6 +160,7 @@
       const uploadUrl = `${supabaseConfig.url.replace(/\/+$/, "")}/storage/v1/object/${encodeURIComponent(CMS_MEDIA_BUCKET)}/${encodeURIComponent(path)}`;
       await new Promise((resolve, reject) => {
         const request = new XMLHttpRequest();
+        request.timeout = 60000;
         request.open("POST", uploadUrl);
         request.setRequestHeader("apikey", supabaseConfig.publishableKey);
         request.setRequestHeader("Authorization", `Bearer ${sessionData.session.access_token}`);
@@ -184,6 +185,7 @@
         });
         request.addEventListener("error", () => reject(new Error("Network error while uploading a project file.")));
         request.addEventListener("abort", () => reject(new Error("Project file upload was cancelled.")));
+        request.addEventListener("timeout", () => reject(new Error("Project file upload timed out. Try a smaller image or a stronger connection.")));
         request.send(blob);
       });
       const { data } = supabaseClient.storage.from(CMS_MEDIA_BUCKET).getPublicUrl(path);
@@ -267,7 +269,12 @@
         return false;
       }
       try {
-        const content = await prepareCmsStateForRemote(onUploadProgress);
+        const content = await Promise.race([
+          prepareCmsStateForRemote(onUploadProgress),
+          new Promise((_, reject) => {
+            setTimeout(() => reject(new Error("Publishing timed out. Check the image sizes and network connection.")), 90000);
+          })
+        ]);
         const { error } = await supabaseClient
           .from(CMS_CONTENT_TABLE)
           .upsert({ id: 1, content, updated_at: new Date().toISOString() }, { onConflict: "id" });
@@ -601,6 +608,30 @@
       return true;
     }
 
+    async function compressCmsImageFile(file) {
+      if (!file || !file.type || !file.type.startsWith("image/") || file.type === "image/svg+xml") return file;
+      if (file.size <= 2 * 1024 * 1024) return file;
+      try {
+        const imageBitmap = await createImageBitmap(file);
+        const maxSide = 1800;
+        const scale = Math.min(1, maxSide / Math.max(imageBitmap.width, imageBitmap.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(imageBitmap.width * scale));
+        canvas.height = Math.max(1, Math.round(imageBitmap.height * scale));
+        const context = canvas.getContext("2d");
+        if (!context) return file;
+        context.drawImage(imageBitmap, 0, 0, canvas.width, canvas.height);
+        const compressedBlob = await new Promise((resolve) => {
+          canvas.toBlob((blob) => resolve(blob || file), "image/jpeg", file.size > 6 * 1024 * 1024 ? 0.72 : 0.82);
+        });
+        imageBitmap.close?.();
+        return compressedBlob instanceof Blob ? compressedBlob : file;
+      } catch (error) {
+        console.warn("Could not compress the project image before publishing.", error);
+        return file;
+      }
+    }
+
     function readCmsFileAsDataUrl(file, onProgress) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -759,15 +790,15 @@
       document.getElementById("cmsCancelEditProjectBtn").classList.remove("hidden");
 
       document.getElementById("cmsProjTitleEn").value = proj.titleEn || "";
-      document.getElementById("cmsProjTitleAr").value = proj.titleAr || "";
+      document.getElementById("cmsProjTitleAr").value = proj.titleAr || proj.titleEn || "";
       document.getElementById("cmsProjCountry").value = getCmsProjectCountry(proj);
       populateCmsProjectYearOptions(Number(proj.year) || new Date().getFullYear());
       setCmsProjectCoverImage(proj.imageUrl || "");
       document.getElementById("cmsProjCoverAspect").value = proj.coverAspect || "aspect-[4/3]";
       setCmsProjectTools(proj.tools || []);
       document.getElementById("cmsProjDeliverables").value = proj.deliverablesEn || proj.deliverablesAr || "";
-      document.getElementById("cmsProjDescEn").value = proj.descriptionEn || "";
-      document.getElementById("cmsProjDescAr").value = proj.descriptionAr || "";
+      document.getElementById("cmsProjDescEn").value = proj.descriptionEn || proj.descriptionAr || "";
+      document.getElementById("cmsProjDescAr").value = proj.descriptionAr || proj.descriptionEn || "";
       setCmsProjectPdfUrl(proj.pdfUrl || "");
 
       if (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0) {
@@ -3407,8 +3438,12 @@
               }
 
               const draft = data?.project;
-              const textFields = ["titleEn", "titleAr", "deliverables", "descriptionEn", "descriptionAr"];
-              if (!draft || textFields.some((field) => typeof draft[field] !== "string")) {
+              const requiredTextFields = ["titleEn", "deliverables", "descriptionEn"];
+              const optionalTextFields = ["titleAr", "descriptionAr"];
+              if (!draft || requiredTextFields.some((field) => typeof draft[field] !== "string")) {
+                throw new Error("استجابة المساعد غير مكتملة. حاول مرة أخرى.");
+              }
+              if (optionalTextFields.some((field) => field in draft && typeof draft[field] !== "string")) {
                 throw new Error("استجابة المساعد غير مكتملة. حاول مرة أخرى.");
               }
               const validCountries = new Set(CMS_PROJECT_COUNTRIES.map((country) => country.value));
@@ -3425,11 +3460,11 @@
               }
 
               document.getElementById("cmsProjTitleEn").value = draft.titleEn;
-              document.getElementById("cmsProjTitleAr").value = draft.titleAr;
+              document.getElementById("cmsProjTitleAr").value = draft.titleAr || draft.titleEn;
               document.getElementById("cmsProjCountry").value = draft.country;
               document.getElementById("cmsProjYear").value = draft.year;
               document.getElementById("cmsProjDescEn").value = draft.descriptionEn;
-              document.getElementById("cmsProjDescAr").value = draft.descriptionAr;
+              document.getElementById("cmsProjDescAr").value = draft.descriptionAr || draft.descriptionEn;
               document.getElementById("cmsProjDeliverables").value = draft.deliverables;
               setCmsProjectTools(draft.tools);
               aiStatus.textContent = "تم ملء المسودة. راجع العنوان والوصف والدولة والسنة والبرامج قبل النشر.";
@@ -3478,11 +3513,11 @@
             : [imgUrl];
 
           const descEn = document.getElementById("cmsProjDescEn").value.trim();
-          const descAr = document.getElementById("cmsProjDescAr").value.trim();
+          const descAr = document.getElementById("cmsProjDescAr").value.trim() || descEn;
           const deliverables = document.getElementById("cmsProjDeliverables").value.trim();
           const primaryDeliverable = deliverables.split(/[,،;]/, 1)[0].trim();
           const titleEn = document.getElementById("cmsProjTitleEn").value.trim();
-          const titleAr = document.getElementById("cmsProjTitleAr").value.trim();
+          const titleAr = document.getElementById("cmsProjTitleAr").value.trim() || titleEn;
 
           const projectPayload = {
             titleEn,
