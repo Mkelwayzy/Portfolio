@@ -10,7 +10,6 @@
     const CMS_MEDIA_BUCKET = "portfolio-assets";
     const CMS_ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif", "image/svg+xml"]);
     const CMS_PROJECT_PDF_TYPE = "application/pdf";
-    const CMS_MEDIA_LAYOUTS = ["cms-media-width-full", "cms-media-width-two-thirds", "cms-media-width-half", "cms-media-width-third", "cms-media-width-quarter"];
     const CMS_MEDIA_ASPECTS = ["aspect-auto", "aspect-[4/3]", "aspect-video", "aspect-square", "aspect-[3/4]", "aspect-[21/9]"];
     const CMS_PROJECT_COUNTRIES = [
       { value: "Egypt", arabic: "مصر" },
@@ -512,39 +511,14 @@
       return {
         uid: "blk_" + Math.random().toString(36).slice(2, 9),
         url,
-        layout: "cms-media-width-third",
         aspect: "aspect-auto",
         captionEn,
         captionAr
       };
     }
 
-    function normalizeCmsMediaLayout(layout) {
-      if (CMS_MEDIA_LAYOUTS.includes(layout)) return layout;
-      const legacyLayout = typeof layout === "string" ? layout.match(/^col-span-(12|8|6|4|3)$/) : null;
-      const legacyLayouts = {
-        12: "cms-media-width-full",
-        8: "cms-media-width-two-thirds",
-        6: "cms-media-width-half",
-        4: "cms-media-width-third",
-        3: "cms-media-width-quarter"
-      };
-      return legacyLayout ? legacyLayouts[legacyLayout[1]] : "cms-media-width-third";
-    }
-
     function normalizeCmsMediaAspect(aspect) {
       return CMS_MEDIA_ASPECTS.includes(aspect) ? aspect : "aspect-auto";
-    }
-
-    function getCmsMediaLayoutLabel(layout, isAr) {
-      const labels = {
-        "cms-media-width-full": isAr ? "العرض الكامل" : "Full width",
-        "cms-media-width-two-thirds": isAr ? "ثلثان" : "Two-thirds",
-        "cms-media-width-half": isAr ? "النصف" : "Half width",
-        "cms-media-width-third": isAr ? "الثلث" : "One-third",
-        "cms-media-width-quarter": isAr ? "الربع" : "One-quarter"
-      };
-      return labels[layout] || labels["cms-media-width-third"];
     }
 
     function getCmsMediaAspectLabel(aspect, isAr) {
@@ -566,28 +540,24 @@
 
       if (cmsDraftBlocks.length === 0) {
         container.innerHTML = `
-          <div class="col-span-1 rounded-2xl border border-dashed border-black/15 bg-white/40 p-6 text-center md:col-span-12">
+          <div class="rounded-2xl border border-dashed border-black/15 bg-white/40 p-6 text-center sm:col-span-2 lg:col-span-3">
             <p class="text-xs font-semibold text-obsidian">${isAr ? "لم يتم اختيار صور للمشروع بعد." : "No project images selected."}</p>
-            <p class="text-[11px] text-slateText mt-1">${isAr ? "اختر صورًا ثم رتّبها وحدد عرض ونسبة كل صورة." : "Choose images, then set their order, grid width, and display ratio."}</p>
+            <p class="text-[11px] text-slateText mt-1">${isAr ? "اختر صورًا ثم اسحبها لترتيبها، وحدد نسبة العرض المناسبة لكل صورة." : "Choose images, drag them to reorder, and select a suitable aspect ratio for each."}</p>
           </div>
         `;
         return;
       }
 
       container.innerHTML = cmsDraftBlocks.map((blk, idx) => {
-        const layout = normalizeCmsMediaLayout(blk.layout);
         const aspect = normalizeCmsMediaAspect(blk.aspect);
         const imageClass = aspect === "aspect-auto"
           ? "w-full max-h-[28rem] object-contain"
           : "h-full w-full object-cover";
-        const layoutOptions = CMS_MEDIA_LAYOUTS.map((value) =>
-          `<option value="${value}" ${layout === value ? "selected" : ""}>${getCmsMediaLayoutLabel(value, isAr)}</option>`
-        ).join("");
         const aspectOptions = CMS_MEDIA_ASPECTS.map((value) =>
           `<option value="${value}" ${aspect === value ? "selected" : ""}>${getCmsMediaAspectLabel(value, isAr)}</option>`
         ).join("");
         return `
-        <article class="cms-media-block col-span-1 ${layout} rounded-2xl border border-white bg-white/80 p-3.5 shadow-sm" data-media-block data-block-uid="${escapeCmsHtml(blk.uid)}">
+        <article class="cms-media-block rounded-2xl border border-white bg-white/80 p-3.5 shadow-sm" data-media-block data-block-uid="${escapeCmsHtml(blk.uid)}">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-2">
               <button type="button" draggable="true" data-media-drag-handle aria-label="${isAr ? "اسحب لإعادة ترتيب الصورة" : "Drag to reorder image"}" title="${isAr ? "اسحب لترتيب الصورة" : "Drag to reorder"}" class="cms-media-drag-handle touch-none rounded-lg bg-black/5 px-2 py-1 text-base font-bold text-obsidian cursor-grab active:cursor-grabbing">⠿</button>
@@ -609,31 +579,13 @@
                   <div data-image-read-progress-bar class="h-full rounded-full bg-obsidian transition-[width] duration-150" style="width:${Math.round(blk.readProgress || 0)}%"></div>
                 </div>
               </div>`}
-          <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <label class="block text-[10px] font-semibold text-obsidian">${isAr ? "عرض الصورة في التخطيط" : "Image layout width"}
-              <select data-media-layout data-media-index="${idx}" class="mt-1 w-full rounded-lg px-2.5 py-2 text-[11px]">${layoutOptions}</select>
-            </label>
-            <label class="block text-[10px] font-semibold text-obsidian">${isAr ? "نسبة عرض الصورة" : "Image aspect ratio"}
-              <select data-media-aspect data-media-index="${idx}" class="mt-1 w-full rounded-lg px-2.5 py-2 text-[11px]">${aspectOptions}</select>
-            </label>
-          </div>
+          <label class="mt-3 block text-[10px] font-semibold text-obsidian">${isAr ? "نسبة عرض الصورة" : "Image aspect ratio"}
+            <select data-media-aspect data-media-index="${idx}" class="mt-1 w-full rounded-lg px-2.5 py-2 text-[11px]">${aspectOptions}</select>
+          </label>
         </article>
       `;
       }).join("");
 
-      container.querySelectorAll("[data-media-layout]").forEach((select) => {
-        select.addEventListener("change", () => {
-          const index = Number(select.dataset.mediaIndex);
-          const block = cmsDraftBlocks[index];
-          if (!block) return;
-          block.layout = normalizeCmsMediaLayout(select.value);
-          const card = select.closest("[data-media-block]");
-          if (card) {
-            card.classList.remove(...CMS_MEDIA_LAYOUTS);
-            card.classList.add(block.layout);
-          }
-        });
-      });
       container.querySelectorAll("[data-media-aspect]").forEach((select) => {
         select.addEventListener("change", () => {
           const index = Number(select.dataset.mediaIndex);
@@ -959,10 +911,11 @@
 
       if (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0) {
         cmsDraftBlocks = proj.mediaBlocks.map((b) => ({
-          ...b,
           uid: b.uid || `blk_${Math.random().toString(36).slice(2, 9)}`,
-          layout: normalizeCmsMediaLayout(b.layout),
-          aspect: normalizeCmsMediaAspect(b.aspect)
+          url: b.url || "",
+          aspect: normalizeCmsMediaAspect(b.aspect),
+          captionEn: b.captionEn || "",
+          captionAr: b.captionAr || ""
         }));
       } else {
         cmsDraftBlocks = (proj.gallery || []).map((url) => createDefaultMediaBlock(url));
@@ -2753,7 +2706,6 @@
         ? proj.mediaBlocks
         : (Array.isArray(proj.gallery) && proj.gallery.length > 0 ? proj.gallery : [proj.imageUrl]).map((imgSrc) => ({
             url: imgSrc,
-            layout: "cms-media-width-third",
             aspect: "aspect-auto",
             captionEn: "",
             captionAr: ""
@@ -2764,10 +2716,9 @@
         .map((blk, idx) => {
         const cap = isAr ? (blk.captionAr || blk.captionEn) : (blk.captionEn || blk.captionAr);
         const aspectCls = normalizeCmsMediaAspect(blk.aspect);
-        const layoutCls = normalizeCmsMediaLayout(blk.layout);
         const imgFitCls = aspectCls === "aspect-auto" ? "w-full h-auto object-contain" : "w-full h-full object-cover";
         return `
-          <figure class="col-span-1 ${layoutCls} flex flex-col justify-between rounded-2xl overflow-hidden bg-white/55 border border-white/85 shadow-sm group cursor-pointer" data-gallery-image-index="${idx}" role="button" tabindex="0" aria-label="${isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size"} ${idx + 1}">
+          <figure class="min-w-0 flex flex-col overflow-hidden rounded-2xl bg-white/55 border border-white/85 shadow-sm group cursor-pointer" data-gallery-image-index="${idx}" role="button" tabindex="0" aria-label="${isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size"} ${idx + 1}">
             <div class="overflow-hidden bg-[#E5E6E8] ${aspectCls} w-full">
               <img src="${escapeCmsHtml(blk.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${idx + 1}" loading="${idx === 0 ? "eager" : "lazy"}" decoding="async" class="${imgFitCls} transition-transform duration-500 group-hover:scale-[1.03]" />
             </div>
@@ -3675,7 +3626,6 @@
             .map((b) => ({
               ...b,
               url: b.url.trim(),
-              layout: normalizeCmsMediaLayout(b.layout),
               aspect: normalizeCmsMediaAspect(b.aspect),
               captionEn: b.captionEn || "",
               captionAr: b.captionAr || ""
