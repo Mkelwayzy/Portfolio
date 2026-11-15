@@ -47,7 +47,7 @@ To enable it:
 
 Before each request, the admin must consent to sending the narrative to Google. Under Google's [current free-tier terms](https://ai.google.dev/gemini-api/docs/pricing), submitted content may be used to improve Google products; avoid confidential client information. The portfolio does not save the narrative or API key. Access and quotas can change; the function does not choose a paid model, but Google controls whether an API project is on a free or paid tier, so do not link a billing account if zero charges are required.
 
-In the project editor, enter the project name and problem summary in English and Arabic, choose a country (Egypt, Saudi Arabia, Kuwait, or Oman) and a year (2018 onward), type the deliverables, and select software from the available list. Select a cover image and optionally add gallery images or a PDF. Project images and PDFs can each be up to 15 MB.
+In the project editor, enter the project name and problem summary in English and Arabic, choose a country (Egypt, Saudi Arabia, Kuwait, or Oman) and a year (2018 onward), type the deliverables, and select software from the available list. Select a cover image to see its separate live card preview with the country, title, details, and selected crop ratio; the cover remains separate from gallery images. Optionally add gallery images or a PDF. Project images and PDFs can each be up to 15 MB.
 
 Project case studies also support optional outcome and impact text in English and Arabic. Include measurable claims only when you can verify them.
 

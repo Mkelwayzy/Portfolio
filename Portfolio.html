@@ -557,8 +557,17 @@
                         <div id="cmsProjCoverReadProgressBar" class="h-full rounded-full bg-obsidian transition-[width] duration-150" style="width:0%"></div>
                       </div>
                     </div>
-                    <div id="cmsProjCoverPreview" class="hidden overflow-hidden rounded-2xl border border-white bg-white/60 p-2">
-                      <img id="cmsProjCoverPreviewImage" alt="Project cover preview" class="w-full max-h-[32rem] rounded-xl bg-black/5 object-contain" />
+                    <div id="cmsProjCoverPreview" class="cms-cover-preview relative mt-3 aspect-[4/3] overflow-hidden rounded-2xl border border-white bg-[#dfe3e8] shadow-sm">
+                      <img id="cmsProjCoverPreviewImage" alt="Project cover preview" class="hidden absolute inset-0 h-full w-full object-cover" />
+                      <div id="cmsProjCoverPreviewPlaceholder" class="absolute inset-0 flex items-center justify-center px-6 text-center text-xs font-medium text-slateText">
+                        Select a cover image to preview the project card.
+                      </div>
+                      <span id="cmsProjCoverPreviewCountry" class="absolute left-3 top-3 rounded-full border border-white/60 bg-white/85 px-3 py-1 text-[10px] font-semibold text-obsidian shadow-sm backdrop-blur-md">Country</span>
+                      <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-4 pb-4 pt-12 text-white">
+                        <span id="cmsProjCoverPreviewLabel" class="mb-1 block text-[9px] font-semibold uppercase tracking-[0.16em] text-white/75">Project cover preview</span>
+                        <h5 id="cmsProjCoverPreviewTitle" class="line-clamp-2 text-sm font-bold leading-snug">Project title</h5>
+                        <p id="cmsProjCoverPreviewDetails" class="mt-1 line-clamp-1 text-[10px] text-white/80">Project details will appear here</p>
+                      </div>
                     </div>
                   </div>
                   <div class="sm:col-span-4">

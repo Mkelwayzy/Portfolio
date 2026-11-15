@@ -841,16 +841,50 @@
 
     function setCmsProjectCoverImage(imageUrl) {
       document.getElementById("cmsProjImgUrl").value = imageUrl || "";
-      const preview = document.getElementById("cmsProjCoverPreview");
       const image = document.getElementById("cmsProjCoverPreviewImage");
-      if (!preview || !image) return;
       if (imageUrl) {
         image.src = imageUrl;
-        preview.classList.remove("hidden");
       } else {
         image.removeAttribute("src");
-        preview.classList.add("hidden");
       }
+      updateCmsCoverPreviewCard();
+    }
+
+    function updateCmsCoverPreviewCard() {
+      const isAr = currentLang === "ar";
+      const image = document.getElementById("cmsProjCoverPreviewImage");
+      const placeholder = document.getElementById("cmsProjCoverPreviewPlaceholder");
+      const preview = document.getElementById("cmsProjCoverPreview");
+      const countrySelect = document.getElementById("cmsProjCountry");
+      const title = document.getElementById("cmsProjCoverPreviewTitle");
+      const details = document.getElementById("cmsProjCoverPreviewDetails");
+      const countryBadge = document.getElementById("cmsProjCoverPreviewCountry");
+      const previewLabel = document.getElementById("cmsProjCoverPreviewLabel");
+      const aspectSelect = document.getElementById("cmsProjCoverAspect");
+      if (!image || !placeholder || !preview || !countrySelect || !title || !details || !countryBadge || !previewLabel || !aspectSelect) return;
+
+      const imageUrl = document.getElementById("cmsProjImgUrl").value;
+      const country = CMS_PROJECT_COUNTRIES.find((item) => item.value === countrySelect.value);
+      const projectTitle = isAr
+        ? (document.getElementById("cmsProjTitleAr").value.trim() || document.getElementById("cmsProjTitleEn").value.trim())
+        : document.getElementById("cmsProjTitleEn").value.trim();
+      const projectDetails = document.getElementById("cmsProjDeliverables").value.trim();
+      const aspectRatios = {
+        "aspect-[4/3]": "4 / 3",
+        "aspect-video": "16 / 9",
+        "aspect-square": "1 / 1",
+        "aspect-[3/4]": "3 / 4",
+        "aspect-[21/9]": "21 / 9"
+      };
+
+      image.classList.toggle("hidden", !imageUrl);
+      placeholder.classList.toggle("hidden", Boolean(imageUrl));
+      placeholder.textContent = isAr ? "اختر صورة الغلاف لمعاينة بطاقة المشروع." : "Select a cover image to preview the project card.";
+      preview.style.aspectRatio = aspectRatios[aspectSelect.value] || "4 / 3";
+      countryBadge.textContent = country ? (isAr ? country.arabic : country.value) : (isAr ? "الدولة" : "Country");
+      title.textContent = projectTitle || (isAr ? "اسم المشروع" : "Project title");
+      details.textContent = projectDetails || (isAr ? "تفاصيل المشروع" : "Project details will appear here");
+      previewLabel.textContent = isAr ? "معاينة غلاف المشروع" : "Project cover preview";
     }
 
     function updateCmsProjectUploadProgress(progress) {
@@ -908,6 +942,7 @@
       document.getElementById("cmsProjDescEn").value = proj.descriptionEn || proj.descriptionAr || "";
       document.getElementById("cmsProjDescAr").value = proj.descriptionAr || proj.descriptionEn || "";
       setCmsProjectPdfUrl(proj.pdfUrl || "");
+      updateCmsCoverPreviewCard();
 
       if (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0) {
         cmsDraftBlocks = proj.mediaBlocks.map((b) => ({
@@ -2853,6 +2888,7 @@
       }
       if (contactLabel) contactLabel.textContent = isAr ? "تواصل الآن" : "Contact Now";
       if (pdfLabel) pdfLabel.textContent = isAr ? "تحميل البورتفوليو PDF" : "Download PDF";
+      updateCmsCoverPreviewCard();
 
       const navLabels = {
         home: isAr ? "الأعمال" : "All Work",
@@ -3410,6 +3446,14 @@
         });
       }
 
+      ["cmsProjTitleEn", "cmsProjTitleAr", "cmsProjDeliverables", "cmsProjCountry"].forEach((id) => {
+        const field = document.getElementById(id);
+        field?.addEventListener("input", updateCmsCoverPreviewCard);
+        field?.addEventListener("change", updateCmsCoverPreviewCard);
+      });
+      document.getElementById("cmsProjCoverAspect")?.addEventListener("change", updateCmsCoverPreviewCard);
+      updateCmsCoverPreviewCard();
+
       const projPdfFile = document.getElementById("cmsProjPdfFile");
       if (projPdfFile) {
         projPdfFile.addEventListener("change", async (event) => {
@@ -3591,6 +3635,7 @@
               document.getElementById("cmsProjDescAr").value = draft.descriptionAr || draft.descriptionEn;
               document.getElementById("cmsProjDeliverables").value = draft.deliverables;
               setCmsProjectTools(draft.tools);
+              updateCmsCoverPreviewCard();
               aiStatus.textContent = "تم ملء المسودة. راجع العنوان والوصف والدولة والسنة والبرامج قبل النشر.";
             } catch (error) {
               console.error("Unable to draft project fields with Gemini.", error);
