@@ -8,6 +8,7 @@
     const CMS_STORAGE_KEY = "mk_studio_cms_state_v1";
     const CMS_CONTENT_TABLE = "portfolio_content";
     const CMS_MEDIA_BUCKET = "portfolio-assets";
+    const CMS_ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif", "image/svg+xml"]);
     const supabaseConfig = window.PORTFOLIO_SUPABASE_CONFIG;
     const supabaseClient = window.supabase?.createClient && supabaseConfig?.url && supabaseConfig?.publishableKey
       ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.publishableKey)
@@ -113,14 +114,22 @@
       return repairedProjectIds;
     }
 
-    async function uploadCmsDataUrl(dataUrl) {
+    function getDataUrlByteLength(dataUrl) {
+      const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+      const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+      return Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
+    }
+
+    async function uploadCmsDataUrl(dataUrl, onProgress) {
       if (!supabaseClient || !isAdminAuthenticated) {
         throw new Error("Sign in as an authorized administrator before uploading images.");
       }
       const response = await fetch(dataUrl);
       if (!response.ok) throw new Error("Unable to read an uploaded image.");
       const blob = await response.blob();
-      if (!blob.type.startsWith("image/")) throw new Error("Only image files can be uploaded.");
+      if (!CMS_ALLOWED_IMAGE_TYPES.has(blob.type)) {
+        throw new Error("Use a JPEG, PNG, WebP, AVIF, GIF, or SVG image.");
+      }
       const extensions = {
         "image/jpeg": "jpg",
         "image/png": "png",
@@ -135,42 +144,104 @@
       const extension = extensions[blob.type] || "img";
       const randomId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const path = `${randomId}.${extension}`;
-      const { error } = await supabaseClient.storage.from(CMS_MEDIA_BUCKET).upload(path, blob, {
-        cacheControl: "31536000",
-        contentType: blob.type,
-        upsert: false
+      const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!sessionData.session?.access_token) {
+        throw new Error("Your administrator session expired. Sign in again before uploading images.");
+      }
+      const uploadUrl = `${supabaseConfig.url.replace(/\/+$/, "")}/storage/v1/object/${encodeURIComponent(CMS_MEDIA_BUCKET)}/${encodeURIComponent(path)}`;
+      await new Promise((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open("POST", uploadUrl);
+        request.setRequestHeader("apikey", supabaseConfig.publishableKey);
+        request.setRequestHeader("Authorization", `Bearer ${sessionData.session.access_token}`);
+        request.setRequestHeader("Content-Type", blob.type);
+        request.setRequestHeader("cache-control", "max-age=31536000");
+        request.setRequestHeader("x-upsert", "false");
+        request.upload.addEventListener("progress", (event) => {
+          if (onProgress) onProgress(event.loaded, event.lengthComputable ? event.total : blob.size);
+        });
+        request.addEventListener("load", () => {
+          if (request.status >= 200 && request.status < 300) {
+            resolve();
+            return;
+          }
+          let response = {};
+          try {
+            response = JSON.parse(request.responseText);
+          } catch {
+            // Use the HTTP status when Storage returns a non-JSON error.
+          }
+          reject(new Error(response.message || response.error || `Image upload failed (HTTP ${request.status}).`));
+        });
+        request.addEventListener("error", () => reject(new Error("Network error while uploading an image.")));
+        request.addEventListener("abort", () => reject(new Error("Image upload was cancelled.")));
+        request.send(blob);
       });
-      if (error) throw error;
       const { data } = supabaseClient.storage.from(CMS_MEDIA_BUCKET).getPublicUrl(path);
       return data.publicUrl;
     }
 
-    async function prepareCmsStateForRemote() {
+    async function prepareCmsStateForRemote(onImageUploadProgress) {
       const snapshot = JSON.parse(JSON.stringify(getCmsStateSnapshot()));
       const uploadedImages = new Map();
-      const prepareImage = async (value) => {
-        if (typeof value !== "string" || !value.startsWith("data:image/")) return value;
-        if (!uploadedImages.has(value)) uploadedImages.set(value, await uploadCmsDataUrl(value));
-        return uploadedImages.get(value);
+      const imageDataUrls = new Set();
+      const collectImage = (value) => {
+        if (typeof value === "string" && value.startsWith("data:image/")) imageDataUrls.add(value);
       };
-
-      snapshot.config.customLogoDataUrl = await prepareImage(snapshot.config.customLogoDataUrl);
+      collectImage(snapshot.config.customLogoDataUrl);
       for (const project of snapshot.projects) {
-        project.imageUrl = await prepareImage(project.imageUrl);
-        if (Array.isArray(project.gallery)) {
-          project.gallery = await Promise.all(project.gallery.map(prepareImage));
+        collectImage(project.imageUrl);
+        if (Array.isArray(project.gallery)) project.gallery.forEach(collectImage);
+        if (Array.isArray(project.mediaBlocks)) project.mediaBlocks.forEach((block) => collectImage(block.url));
+      }
+
+      const totalBytes = Array.from(imageDataUrls).reduce((sum, dataUrl) => sum + getDataUrlByteLength(dataUrl), 0);
+      let completedBytes = 0;
+      let imageIndex = 0;
+      for (const dataUrl of imageDataUrls) {
+        imageIndex += 1;
+        const imageSize = getDataUrlByteLength(dataUrl);
+        if (onImageUploadProgress) {
+          onImageUploadProgress({
+            loaded: completedBytes,
+            total: totalBytes,
+            imageIndex,
+            imageCount: imageDataUrls.size
+          });
         }
+        uploadedImages.set(dataUrl, await uploadCmsDataUrl(dataUrl, (loaded) => {
+          if (onImageUploadProgress) {
+            onImageUploadProgress({
+              loaded: completedBytes + loaded,
+              total: totalBytes,
+              imageIndex,
+              imageCount: imageDataUrls.size
+            });
+          }
+        }));
+        completedBytes += imageSize;
+      }
+
+      const prepareImage = (value) => uploadedImages.get(value) || value;
+      snapshot.config.customLogoDataUrl = prepareImage(snapshot.config.customLogoDataUrl);
+      for (const project of snapshot.projects) {
+        project.imageUrl = prepareImage(project.imageUrl);
+        if (Array.isArray(project.gallery)) project.gallery = project.gallery.map(prepareImage);
         if (Array.isArray(project.mediaBlocks)) {
-          project.mediaBlocks = await Promise.all(project.mediaBlocks.map(async (block) => ({
+          project.mediaBlocks = project.mediaBlocks.map((block) => ({
             ...block,
-            url: await prepareImage(block.url)
-          })));
+            url: prepareImage(block.url)
+          }));
         }
+      }
+      if (imageDataUrls.size && onImageUploadProgress) {
+        onImageUploadProgress({ loaded: totalBytes, total: totalBytes, imageIndex: imageDataUrls.size, imageCount: imageDataUrls.size, saving: true });
       }
       return snapshot;
     }
 
-    async function saveCmsState() {
+    async function saveCmsState(onImageUploadProgress) {
       if (!supabaseClient) {
         showCmsToast("Supabase is not configured. Portfolio changes were not published.");
         return false;
@@ -184,7 +255,7 @@
         return false;
       }
       try {
-        const content = await prepareCmsStateForRemote();
+        const content = await prepareCmsStateForRemote(onImageUploadProgress);
         const { error } = await supabaseClient
           .from(CMS_CONTENT_TABLE)
           .upsert({ id: 1, content, updated_at: new Date().toISOString() }, { onConflict: "id" });
@@ -374,15 +445,17 @@
       if (await saveCmsState()) showCmsToast("Theme colors updated!");
     }
 
-    // ==================== DYNAMIC MULTI-SIZE MEDIA & DETAIL BLOCKS BUILDER ====================
+    // ==================== PROJECT IMAGE GALLERY ====================
     let cmsDraftBlocks = [];
+    let cmsCoverReadPending = false;
+    let cmsCoverReadVersion = 0;
 
-    function createDefaultMediaBlock(url = "", layout = "col-span-12", aspect = "aspect-[16/9]", captionEn = "", captionAr = "") {
+    function createDefaultMediaBlock(url = "", captionEn = "", captionAr = "") {
       return {
         uid: "blk_" + Math.random().toString(36).slice(2, 9),
         url,
-        layout,   // "col-span-12" (Full 100%) | "md:col-span-6" (Half 50%) | "md:col-span-4" (Third 33%) | "md:col-span-8" (Wide 66%)
-        aspect,   // "aspect-auto" (Natural Original Size) | "aspect-[16/9]" | "aspect-[4/3]" | "aspect-square" | "aspect-[3/4]" | "aspect-[21/9]"
+        layout: "col-span-12",
+        aspect: "aspect-auto",
         captionEn,
         captionAr
       };
@@ -395,8 +468,8 @@
       if (cmsDraftBlocks.length === 0) {
         container.innerHTML = `
           <div class="rounded-2xl border border-dashed border-black/15 bg-white/40 p-6 text-center">
-            <p class="text-xs font-semibold text-obsidian">No additional media frames added yet.</p>
-            <p class="text-[11px] text-slateText mt-1">Click "+ Add Image / Detail Block" or "+ Batch Upload Multiple Images" to build a rich multi-size project showcase.</p>
+            <p class="text-xs font-semibold text-obsidian">No project images selected.</p>
+            <p class="text-[11px] text-slateText mt-1">Choose one or more images above. They will appear here in large previews; no links or captions are needed.</p>
           </div>
         `;
         return;
@@ -405,79 +478,31 @@
       container.innerHTML = cmsDraftBlocks.map((blk, idx) => `
         <div class="rounded-2xl bg-white/80 border border-white p-3.5 shadow-sm space-y-3" data-block-uid="${blk.uid}">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
-              <span class="px-2.5 py-0.5 rounded-full bg-obsidian text-white text-[10px] font-bold">Frame #${idx + 1}</span>
-              ${blk.url ? `<img src="${blk.url}" alt="Preview" class="w-8 h-8 rounded-lg object-cover border border-black/10" />` : ""}
-            </div>
+            <span class="px-2.5 py-0.5 rounded-full bg-obsidian text-white text-[10px] font-bold">Image #${idx + 1}</span>
             <div class="flex items-center gap-1">
-              <button type="button" onclick="moveCmsMediaBlock(${idx}, -1)" ${idx === 0 ? "disabled" : ""} class="px-2 py-1 rounded-lg bg-black/5 hover:bg-black/10 disabled:opacity-30 text-[10px] font-bold text-obsidian">↑</button>
-              <button type="button" onclick="moveCmsMediaBlock(${idx}, 1)" ${idx === cmsDraftBlocks.length - 1 ? "disabled" : ""} class="px-2 py-1 rounded-lg bg-black/5 hover:bg-black/10 disabled:opacity-30 text-[10px] font-bold text-obsidian">↓</button>
-              <button type="button" onclick="removeCmsMediaBlock(${idx})" class="px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-700 text-[10px] font-bold">Remove</button>
+              <button type="button" data-media-action="move-up" data-media-index="${idx}" ${idx === 0 ? "disabled" : ""} class="px-2 py-1 rounded-lg bg-black/5 hover:bg-black/10 disabled:opacity-30 text-[10px] font-bold text-obsidian" aria-label="Move image up">↑</button>
+              <button type="button" data-media-action="move-down" data-media-index="${idx}" ${idx === cmsDraftBlocks.length - 1 ? "disabled" : ""} class="px-2 py-1 rounded-lg bg-black/5 hover:bg-black/10 disabled:opacity-30 text-[10px] font-bold text-obsidian" aria-label="Move image down">↓</button>
+              <button type="button" data-media-action="remove" data-media-index="${idx}" class="px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-700 text-[10px] font-bold">Remove</button>
             </div>
           </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
-            <div class="sm:col-span-6">
-              <label class="block text-[10px] font-semibold text-slateText mb-1">Image URL or File Upload</label>
-              <div class="flex gap-1.5">
-                <input type="text" value="${blk.url}" oninput="updateCmsMediaBlockField(${idx}, 'url', this.value)" placeholder="https://..." class="flex-1 px-3 py-2 rounded-xl bg-white border border-black/10 text-[11px] text-obsidian" />
-                <label class="px-2.5 py-2 rounded-xl bg-obsidian text-white text-[10px] font-bold cursor-pointer shrink-0">
-                  File
-                  <input type="file" accept="image/*" onchange="uploadCmsMediaBlockFile(${idx}, this)" class="hidden" />
-                </label>
-              </div>
-            </div>
-
-            <div class="sm:col-span-3">
-              <label class="block text-[10px] font-semibold text-slateText mb-1">Grid Width Size</label>
-              <select onchange="updateCmsMediaBlockField(${idx}, 'layout', this.value)" class="w-full px-2.5 py-2 rounded-xl bg-white border border-black/10 text-[11px] font-semibold text-obsidian">
-                <option value="col-span-12" ${blk.layout === "col-span-12" ? "selected" : ""}>Full Width (100%)</option>
-                <option value="md:col-span-8" ${blk.layout === "md:col-span-8" ? "selected" : ""}>Large Feature (66%)</option>
-                <option value="md:col-span-6" ${blk.layout === "md:col-span-6" ? "selected" : ""}>Half Width (50%)</option>
-                <option value="md:col-span-4" ${blk.layout === "md:col-span-4" ? "selected" : ""}>Third Grid (33%)</option>
-              </select>
-            </div>
-
-            <div class="sm:col-span-3">
-              <label class="block text-[10px] font-semibold text-slateText mb-1">Aspect Ratio / Height</label>
-              <select onchange="updateCmsMediaBlockField(${idx}, 'aspect', this.value)" class="w-full px-2.5 py-2 rounded-xl bg-white border border-black/10 text-[11px] font-semibold text-obsidian">
-                <option value="aspect-auto" ${blk.aspect === "aspect-auto" ? "selected" : ""}>Natural Original Size</option>
-                <option value="aspect-[16/9]" ${blk.aspect === "aspect-[16/9]" ? "selected" : ""}>16:9 Widescreen</option>
-                <option value="aspect-[4/3]" ${blk.aspect === "aspect-[4/3]" ? "selected" : ""}>4:3 Standard</option>
-                <option value="aspect-square" ${blk.aspect === "aspect-square" ? "selected" : ""}>1:1 Square</option>
-                <option value="aspect-[3/4]" ${blk.aspect === "aspect-[3/4]" ? "selected" : ""}>3:4 Tall Portrait</option>
-                <option value="aspect-[21/9]" ${blk.aspect === "aspect-[21/9]" ? "selected" : ""}>21:9 Panoramic</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <div>
-              <input type="text" value="${blk.captionEn}" oninput="updateCmsMediaBlockField(${idx}, 'captionEn', this.value)" placeholder="Frame detail / caption (English)..." class="w-full px-3 py-1.5 rounded-xl bg-white border border-black/10 text-[11px] text-obsidian" />
-            </div>
-            <div>
-              <input type="text" value="${blk.captionAr}" oninput="updateCmsMediaBlockField(${idx}, 'captionAr', this.value)" placeholder="شرح تفصيلي للصورة (عربي)..." class="w-full px-3 py-1.5 rounded-xl bg-white border border-black/10 text-[11px] text-obsidian" />
-            </div>
-          </div>
+          ${blk.url
+            ? `<img src="${blk.url}" alt="Project image ${idx + 1}" class="w-full max-h-[36rem] rounded-xl border border-black/10 bg-black/5 object-contain" />`
+            : `<div class="flex min-h-56 flex-col items-center justify-center gap-3 rounded-xl border border-black/10 bg-black/5 p-6">
+                <span data-image-read-progress-text class="text-xs font-semibold text-slateText">Reading image… ${Math.round(blk.readProgress || 0)}%</span>
+                <div class="h-2 w-full max-w-md overflow-hidden rounded-full bg-black/10" role="progressbar" aria-valuenow="${Math.round(blk.readProgress || 0)}" aria-valuemin="0" aria-valuemax="100">
+                  <div data-image-read-progress-bar class="h-full rounded-full bg-obsidian transition-[width] duration-150" style="width:${Math.round(blk.readProgress || 0)}%"></div>
+                </div>
+              </div>`}
         </div>
       `).join("");
-    }
-
-    function updateCmsMediaBlockField(idx, field, val) {
-      if (!cmsDraftBlocks[idx]) return;
-      cmsDraftBlocks[idx][field] = val;
-      if (field === "url") renderCmsMediaBlocksEditor();
-    }
-
-    function uploadCmsMediaBlockFile(idx, inputEl) {
-      const file = inputEl.files && inputEl.files[0];
-      if (!file || !cmsDraftBlocks[idx]) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        cmsDraftBlocks[idx].url = reader.result;
-        renderCmsMediaBlocksEditor();
-      };
-      reader.readAsDataURL(file);
+      container.querySelectorAll("[data-media-action]").forEach((button) => {
+        button.addEventListener("click", () => {
+              const index = Number(button.dataset.mediaIndex);
+              if (button.dataset.mediaAction === "move-up") moveCmsMediaBlock(index, -1);
+              if (button.dataset.mediaAction === "move-down") moveCmsMediaBlock(index, 1);
+              if (button.dataset.mediaAction === "remove") removeCmsMediaBlock(index);
+        });
+      });
     }
 
     function moveCmsMediaBlock(idx, dir) {
@@ -494,9 +519,113 @@
       renderCmsMediaBlocksEditor();
     }
 
+    function validateCmsImageFile(file) {
+      if (!CMS_ALLOWED_IMAGE_TYPES.has(file.type)) {
+        showCmsToast("Choose a JPEG, PNG, WebP, AVIF, GIF, or SVG image.");
+        return false;
+      }
+      if (file.size === 0) {
+        showCmsToast("The selected image file is empty.");
+        return false;
+      }
+      if (file.size > 15 * 1024 * 1024) {
+        showCmsToast("Images must be 15 MB or smaller.");
+        return false;
+      }
+      return true;
+    }
+
+    function readCmsImageFile(file, onProgress) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.addEventListener("progress", (event) => {
+          if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100));
+        });
+        reader.addEventListener("load", () => {
+          if (typeof reader.result === "string") resolve(reader.result);
+          else reject(new Error("Unable to read the selected image."));
+        });
+        reader.addEventListener("error", () => reject(reader.error || new Error("Unable to read the selected image.")));
+        reader.addEventListener("abort", () => reject(new Error("Image reading was cancelled.")));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function updateCmsCoverReadProgress(percent, label = "Reading cover image…") {
+      const wrapper = document.getElementById("cmsProjCoverReadProgress");
+      const text = document.getElementById("cmsProjCoverReadProgressText");
+      const percentLabel = document.getElementById("cmsProjCoverReadProgressPercent");
+      const bar = document.getElementById("cmsProjCoverReadProgressBar");
+      if (!wrapper || !text || !percentLabel || !bar) return;
+      wrapper.classList.remove("hidden");
+      text.textContent = label;
+      percentLabel.textContent = `${percent}%`;
+      bar.style.width = `${percent}%`;
+      wrapper.querySelector('[role="progressbar"]')?.setAttribute("aria-valuenow", String(percent));
+    }
+
+    function updateCmsMediaBlockReadProgress(uid, percent) {
+      const container = document.getElementById("cmsMediaBlocksContainer");
+      const card = Array.from(container?.children || []).find((item) => item.dataset.blockUid === uid);
+      if (!card) return;
+      const text = card.querySelector("[data-image-read-progress-text]");
+      const bar = card.querySelector("[data-image-read-progress-bar]");
+      const progress = card.querySelector('[role="progressbar"]');
+      if (text) text.textContent = `Reading image… ${percent}%`;
+      if (bar) bar.style.width = `${percent}%`;
+      if (progress) progress.setAttribute("aria-valuenow", String(percent));
+    }
+
+    function setCmsProjectCoverImage(imageUrl) {
+      document.getElementById("cmsProjImgUrl").value = imageUrl || "";
+      const preview = document.getElementById("cmsProjCoverPreview");
+      const image = document.getElementById("cmsProjCoverPreviewImage");
+      if (!preview || !image) return;
+      if (imageUrl) {
+        image.src = imageUrl;
+        preview.classList.remove("hidden");
+      } else {
+        image.removeAttribute("src");
+        preview.classList.add("hidden");
+      }
+    }
+
+    function updateCmsProjectUploadProgress(progress) {
+      const wrapper = document.getElementById("cmsProjectUploadProgress");
+      const text = document.getElementById("cmsProjectUploadProgressText");
+      const percentLabel = document.getElementById("cmsProjectUploadProgressPercent");
+      const bar = document.getElementById("cmsProjectUploadProgressBar");
+      if (!wrapper || !text || !percentLabel || !bar || !progress?.total) return;
+      const percent = Math.min(100, Math.round((progress.loaded / progress.total) * 100));
+      wrapper.classList.remove("hidden");
+      text.textContent = progress.saving
+        ? "Saving project details…"
+        : `Uploading image ${progress.imageIndex} of ${progress.imageCount}…`;
+      percentLabel.textContent = `${percent}%`;
+      bar.style.width = `${percent}%`;
+      wrapper.querySelector('[role="progressbar"]')?.setAttribute("aria-valuenow", String(percent));
+    }
+
+    function resetCmsProjectUploadProgress() {
+      const wrapper = document.getElementById("cmsProjectUploadProgress");
+      if (!wrapper) return;
+      wrapper.classList.add("hidden");
+      const text = document.getElementById("cmsProjectUploadProgressText");
+      const percentLabel = document.getElementById("cmsProjectUploadProgressPercent");
+      const bar = document.getElementById("cmsProjectUploadProgressBar");
+      if (text) text.textContent = "Uploading project images…";
+      if (percentLabel) percentLabel.textContent = "0%";
+      if (bar) bar.style.width = "0%";
+      wrapper.querySelector('[role="progressbar"]')?.setAttribute("aria-valuenow", "0");
+    }
+
     function editCmsProject(id) {
       const proj = portfolioProjects.find((p) => p.id === id);
       if (!proj) return;
+      cmsCoverReadVersion += 1;
+      cmsCoverReadPending = false;
+      document.getElementById("cmsProjImgFile").value = "";
+      document.getElementById("cmsProjCoverReadProgress").classList.add("hidden");
       document.getElementById("cmsEditProjectId").value = proj.id;
       document.getElementById("cmsProjectIdDisplay").value = `#${String(proj.id).padStart(3, "0")} (existing project)`;
       document.getElementById("cmsProjectFormHeading").textContent = `Edit Project #0${proj.id} — ${proj.titleEn}`;
@@ -513,7 +642,7 @@
       document.getElementById("cmsProjLocAr").value = proj.locationAr || proj.location || "";
       document.getElementById("cmsProjRoleEn").value = proj.roleEn || "Lead Brand & 3D Designer";
       document.getElementById("cmsProjRoleAr").value = proj.roleAr || "مصمم هويات ومنتجات 3D أول";
-      document.getElementById("cmsProjImgUrl").value = proj.imageUrl || "";
+      setCmsProjectCoverImage(proj.imageUrl || "");
       document.getElementById("cmsProjCoverAspect").value = proj.coverAspect || "aspect-[4/3]";
       document.getElementById("cmsProjTools").value = (proj.tools || []).join(", ");
       document.getElementById("cmsProjDelivEn").value = proj.deliverablesEn || "";
@@ -526,17 +655,14 @@
       document.getElementById("cmsProjSolutionAr").value = proj.solutionAr || "";
 
       if (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0) {
-        cmsDraftBlocks = proj.mediaBlocks.map((b) => ({ ...b }));
+        cmsDraftBlocks = proj.mediaBlocks.map((b) => ({
+          ...b,
+          uid: b.uid || `blk_${Math.random().toString(36).slice(2, 9)}`,
+          layout: "col-span-12",
+          aspect: "aspect-auto"
+        }));
       } else {
-        cmsDraftBlocks = (proj.gallery || []).map((url, idx) =>
-          createDefaultMediaBlock(
-            url,
-            idx === 0 ? "col-span-12" : "md:col-span-6",
-            idx === 0 ? "aspect-[16/9]" : "aspect-[4/3]",
-            "",
-            ""
-          )
-        );
+        cmsDraftBlocks = (proj.gallery || []).map((url) => createDefaultMediaBlock(url));
       }
       renderCmsMediaBlocksEditor();
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -549,11 +675,14 @@
       document.getElementById("cmsProjectFormHeading").textContent = "Publish New Precision Project";
       document.getElementById("cmsProjectSubmitBtn").textContent = "Publish Complete Project to Platform";
       document.getElementById("cmsCancelEditProjectBtn").classList.add("hidden");
-      cmsDraftBlocks = [
-        createDefaultMediaBlock("", "col-span-12", "aspect-[16/9]", "", ""),
-        createDefaultMediaBlock("", "md:col-span-6", "aspect-[4/3]", "", ""),
-        createDefaultMediaBlock("", "md:col-span-6", "aspect-[3/4]", "", "")
-      ];
+      cmsCoverReadVersion += 1;
+      cmsCoverReadPending = false;
+      setCmsProjectCoverImage("");
+      document.getElementById("cmsProjCoverReadProgress").classList.add("hidden");
+      document.getElementById("cmsProjImgFile").value = "";
+      document.getElementById("cmsBatchImagesInput").value = "";
+      resetCmsProjectUploadProgress();
+      cmsDraftBlocks = [];
       renderCmsMediaBlocksEditor();
     }
 
@@ -575,13 +704,6 @@
     }
 
     function renderAdminDashboard() {
-      if (cmsDraftBlocks.length === 0 && !document.getElementById("cmsEditProjectId").value) {
-        cmsDraftBlocks = [
-          createDefaultMediaBlock("", "col-span-12", "aspect-[16/9]", "", ""),
-          createDefaultMediaBlock("", "md:col-span-6", "aspect-[4/3]", "", ""),
-          createDefaultMediaBlock("", "md:col-span-6", "aspect-[3/4]", "", "")
-        ];
-      }
       renderCmsMediaBlocksEditor();
 
       // Populate Content Form
@@ -2811,60 +2933,62 @@
       // Project Image File Upload to Data URL
       const projImgFile = document.getElementById("cmsProjImgFile");
       if (projImgFile) {
-        projImgFile.addEventListener("change", (e) => {
+        projImgFile.addEventListener("change", async (e) => {
           const file = e.target.files && e.target.files[0];
           if (!file) return;
-          const reader = new FileReader();
-          reader.onload = () => {
-            document.getElementById("cmsProjImgUrl").value = reader.result;
-          };
-          reader.readAsDataURL(file);
+          const readVersion = ++cmsCoverReadVersion;
+          if (!validateCmsImageFile(file)) {
+            cmsCoverReadPending = false;
+            document.getElementById("cmsProjCoverReadProgress").classList.add("hidden");
+            e.target.value = "";
+            return;
+          }
+          cmsCoverReadPending = true;
+          updateCmsCoverReadProgress(0);
+          try {
+            const imageUrl = await readCmsImageFile(file, (percent) => updateCmsCoverReadProgress(percent));
+            if (readVersion !== cmsCoverReadVersion) return;
+            setCmsProjectCoverImage(imageUrl);
+            updateCmsCoverReadProgress(100, "Cover image ready.");
+          } catch (error) {
+            if (readVersion !== cmsCoverReadVersion) return;
+            console.error("Unable to read the project cover image.", error);
+            showCmsToast(error.message || "Unable to read the selected cover image.");
+          } finally {
+            if (readVersion === cmsCoverReadVersion) {
+              cmsCoverReadPending = false;
+              document.getElementById("cmsProjCoverReadProgress").classList.add("hidden");
+              e.target.value = "";
+            }
+          }
         });
       }
 
-      // Add Single Media Block Button
-      const addMediaBlockBtn = document.getElementById("addMediaBlockBtn");
-      if (addMediaBlockBtn) {
-        addMediaBlockBtn.addEventListener("click", () => {
-          cmsDraftBlocks.push(createDefaultMediaBlock("", "md:col-span-6", "aspect-auto", "", ""));
-          renderCmsMediaBlocksEditor();
-        });
-      }
-
-      // Batch Upload Multiple Images with Auto-Detected Natural Aspect Ratios
+      // Read multiple selected images and show a large preview for each one.
       const batchImagesInput = document.getElementById("cmsBatchImagesInput");
       if (batchImagesInput) {
         batchImagesInput.addEventListener("change", (e) => {
           const files = Array.from(e.target.files || []);
           if (!files.length) return;
           files.forEach((file) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              const dataUrl = reader.result;
-              const probe = new Image();
-              probe.onload = () => {
-                const ratio = probe.naturalWidth / (probe.naturalHeight || 1);
-                let autoLayout = "md:col-span-6";
-                let autoAspect = "aspect-auto";
-                if (ratio >= 1.8) {
-                  autoLayout = "col-span-12";
-                  autoAspect = "aspect-[21/9]";
-                } else if (ratio >= 1.25) {
-                  autoLayout = "md:col-span-6";
-                  autoAspect = "aspect-[16/9]";
-                } else if (ratio <= 0.85) {
-                  autoLayout = "md:col-span-4";
-                  autoAspect = "aspect-[3/4]";
-                } else {
-                  autoLayout = "md:col-span-6";
-                  autoAspect = "aspect-square";
-                }
-                cmsDraftBlocks.push(createDefaultMediaBlock(dataUrl, autoLayout, autoAspect, "", ""));
-                renderCmsMediaBlocksEditor();
-              };
-              probe.src = dataUrl;
-            };
-            reader.readAsDataURL(file);
+            if (!validateCmsImageFile(file)) return;
+            const block = createDefaultMediaBlock();
+            block.readProgress = 0;
+            cmsDraftBlocks.push(block);
+            renderCmsMediaBlocksEditor();
+            readCmsImageFile(file, (percent) => {
+              block.readProgress = percent;
+              updateCmsMediaBlockReadProgress(block.uid, percent);
+            }).then((dataUrl) => {
+              block.url = dataUrl;
+              delete block.readProgress;
+              renderCmsMediaBlocksEditor();
+            }).catch((error) => {
+              cmsDraftBlocks = cmsDraftBlocks.filter((item) => item.uid !== block.uid);
+              renderCmsMediaBlocksEditor();
+              console.error(`Unable to read project image "${file.name}".`, error);
+              showCmsToast(`Unable to read "${file.name}": ${error.message || "image file error."}`);
+            });
           });
           e.target.value = "";
         });
@@ -2875,12 +2999,27 @@
       if (cmsProjectForm) {
         cmsProjectForm.addEventListener("submit", async (e) => {
           e.preventDefault();
+          if (cmsCoverReadPending || cmsDraftBlocks.some((block) => !block.url)) {
+            showCmsToast("Wait for all selected images to finish loading before publishing.");
+            return;
+          }
           const editId = document.getElementById("cmsEditProjectId").value;
           const toolsArr = document.getElementById("cmsProjTools").value.split(",").map((s) => s.trim()).filter(Boolean);
           const imgUrl = document.getElementById("cmsProjImgUrl").value.trim();
+          if (!imgUrl) {
+            showCmsToast("Select a cover image before publishing the project.");
+            return;
+          }
           const validMediaBlocks = cmsDraftBlocks
             .filter((b) => b.url && b.url.trim() !== "")
-            .map((b) => ({ ...b, url: b.url.trim() }));
+            .map((b) => ({
+              ...b,
+              url: b.url.trim(),
+              layout: "col-span-12",
+              aspect: "aspect-auto",
+              captionEn: b.captionEn || "",
+              captionAr: b.captionAr || ""
+            }));
 
           const galleryUrls = validMediaBlocks.length > 0
             ? validMediaBlocks.map((b) => b.url)
@@ -2915,8 +3054,8 @@
             gallery: galleryUrls
           };
           const successMessage = editId
-            ? "Project updated with all custom media frames!"
-            : "Precision project published to platform!";
+            ? "Project and images updated."
+            : "Project and images published.";
           const previousProjects = [...portfolioProjects];
 
           if (editId) {
@@ -2935,7 +3074,16 @@
             portfolioProjects.unshift({ id: nextId, ...projectPayload });
           }
 
-          const saved = await saveCmsState();
+          const submitButton = document.getElementById("cmsProjectSubmitBtn");
+          submitButton.disabled = true;
+          submitButton.textContent = "Publishing project…";
+          let saved = false;
+          try {
+            saved = await saveCmsState(updateCmsProjectUploadProgress);
+          } finally {
+            submitButton.disabled = false;
+            resetCmsProjectUploadProgress();
+          }
           if (!saved) {
             portfolioProjects = previousProjects;
             return;

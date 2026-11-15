@@ -499,15 +499,26 @@
                   <span class="w-6 h-6 rounded-lg bg-obsidian text-white text-[11px] font-bold flex items-center justify-center">2</span>
                   <h4 class="text-xs sm:text-sm font-bold text-obsidian">Main Cover Visual &amp; Display Proportions</h4>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-end">
-                  <div class="sm:col-span-8">
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Cover Image URL or Direct File Upload *</label>
-                    <div class="flex gap-2">
-                      <input id="cmsProjImgUrl" type="text" required placeholder="https://images.unsplash.com/..." class="flex-1 px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
-                      <label class="px-3.5 py-2.5 rounded-xl bg-obsidian text-white text-[11px] font-bold cursor-pointer shrink-0 hover:opacity-90">
-                        Upload Image
-                        <input id="cmsProjImgFile" type="file" accept="image/*" class="hidden" />
-                      </label>
+                <input id="cmsProjImgUrl" type="hidden" />
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-start">
+                  <div class="sm:col-span-8 space-y-3">
+                    <label class="block text-[11px] font-semibold text-obsidian">Choose Cover Image *</label>
+                    <label class="inline-flex px-4 py-3 rounded-xl bg-obsidian text-white text-xs font-bold cursor-pointer hover:opacity-90">
+                      Select Cover Image
+                      <input id="cmsProjImgFile" type="file" accept="image/*" class="hidden" />
+                    </label>
+                    <p class="text-[10px] text-slateText">Select an image file; no image URL is needed. Maximum file size: 15 MB.</p>
+                    <div id="cmsProjCoverReadProgress" class="hidden rounded-xl bg-white/70 p-3" aria-live="polite">
+                      <div class="mb-2 flex justify-between gap-3 text-[10px] font-semibold text-slateText">
+                        <span id="cmsProjCoverReadProgressText">Reading cover image…</span>
+                        <span id="cmsProjCoverReadProgressPercent">0%</span>
+                      </div>
+                      <div class="h-2 overflow-hidden rounded-full bg-black/10" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                        <div id="cmsProjCoverReadProgressBar" class="h-full rounded-full bg-obsidian transition-[width] duration-150" style="width:0%"></div>
+                      </div>
+                    </div>
+                    <div id="cmsProjCoverPreview" class="hidden overflow-hidden rounded-2xl border border-white bg-white/60 p-2">
+                      <img id="cmsProjCoverPreviewImage" alt="Project cover preview" class="w-full max-h-[32rem] rounded-xl bg-black/5 object-contain" />
                     </div>
                   </div>
                   <div class="sm:col-span-4">
@@ -529,23 +540,27 @@
                   <div class="flex items-center gap-2">
                     <span class="w-6 h-6 rounded-lg bg-obsidian text-white text-[11px] font-bold flex items-center justify-center">3</span>
                     <div>
-                      <h4 class="text-xs sm:text-sm font-bold text-obsidian">Multi-Size Images &amp; Detail Blocks (Behance-Style Layout)</h4>
-                      <p class="text-[10px] text-slateText">Add unlimited images in Full-Width, Half, Third, Portrait, Square, or Panoramic sizes with custom captions.</p>
+                      <h4 class="text-xs sm:text-sm font-bold text-obsidian">Project Images</h4>
+                      <p class="text-[10px] text-slateText">Upload multiple images for large, full-width previews. No links or image captions required.</p>
                     </div>
                   </div>
-                  <div class="flex flex-wrap gap-1.5">
-                    <button type="button" id="addMediaBlockBtn" class="px-3.5 py-2 rounded-full bg-obsidian text-white text-[11px] font-bold hover:opacity-90 shadow-sm">
-                      + Add Image / Detail Block
-                    </button>
-                    <label class="px-3.5 py-2 rounded-full bg-white hover:bg-white/90 border border-white text-[11px] font-bold text-obsidian cursor-pointer shadow-sm">
-                      + Batch Upload Multiple Images
-                      <input id="cmsBatchImagesInput" type="file" accept="image/*" multiple class="hidden" />
-                    </label>
-                  </div>
+                  <label class="px-4 py-2.5 rounded-full bg-obsidian text-[11px] font-bold text-white cursor-pointer shadow-sm transition hover:opacity-90">
+                    + Select Project Images
+                    <input id="cmsBatchImagesInput" type="file" accept="image/*" multiple class="hidden" />
+                  </label>
                 </div>
 
                 <!-- Dynamic Blocks List -->
                 <div id="cmsMediaBlocksContainer" class="space-y-3"></div>
+                <div id="cmsProjectUploadProgress" class="hidden rounded-xl border border-black/5 bg-white/70 p-4" aria-live="polite">
+                  <div class="mb-2 flex justify-between gap-3 text-[10px] font-semibold text-slateText">
+                    <span id="cmsProjectUploadProgressText">Uploading project images…</span>
+                    <span id="cmsProjectUploadProgressPercent">0%</span>
+                  </div>
+                  <div class="h-2 overflow-hidden rounded-full bg-black/10" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    <div id="cmsProjectUploadProgressBar" class="h-full rounded-full bg-obsidian transition-[width] duration-150" style="width:0%"></div>
+                  </div>
+                </div>
               </div>
 
               <!-- Step 4: Deep Case Study Narrative, Deliverables & Tools -->

@@ -25,6 +25,8 @@ The page loads Tailwind CSS, IBM Plex fonts, jsPDF, and Supabase JS from externa
 
 The admin dashboard reads public portfolio content from Supabase and requires an authorized Supabase Auth account to publish changes. Project images and uploaded logos are stored in the public `portfolio-assets` bucket; only an allowlisted admin can upload or change content.
 
+In the project editor, select a cover image and optionally select multiple gallery images. They appear as large full-width previews, need no URLs or captions, and show upload progress when the project is published. Each image can be up to 15 MB.
+
 ### Supabase setup
 
 1. In the SQL Editor for the same Supabase project configured in the website, run [`supabase/setup.sql`](./supabase/setup.sql).
