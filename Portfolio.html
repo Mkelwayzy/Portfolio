@@ -214,6 +214,9 @@
               </div>
               <h2 id="modalProjectTitle" class="text-2xl sm:text-4xl font-bold tracking-tight text-[#111214] leading-tight"></h2>
               <p id="modalProjectDescription" class="mt-4 text-sm sm:text-base leading-relaxed text-[#45474A]"></p>
+              <a id="modalProjectPdfLink" href="#" target="_blank" rel="noopener noreferrer" type="application/pdf" class="hidden mt-5 inline-flex items-center gap-2 rounded-full bg-[#111214] px-5 py-3 text-xs font-semibold text-white shadow-sm transition hover:opacity-90">
+                Open project PDF ↗
+              </a>
             </div>
 
             <!-- Metadata Grid -->
@@ -562,11 +565,28 @@
                 <div id="cmsMediaBlocksContainer" class="space-y-3"></div>
                 <div id="cmsProjectUploadProgress" class="hidden rounded-xl border border-black/5 bg-white/70 p-4" aria-live="polite">
                   <div class="mb-2 flex justify-between gap-3 text-[10px] font-semibold text-slateText">
-                    <span id="cmsProjectUploadProgressText">Uploading project images…</span>
+                    <span id="cmsProjectUploadProgressText">Uploading project files…</span>
                     <span id="cmsProjectUploadProgressPercent">0%</span>
                   </div>
                   <div class="h-2 overflow-hidden rounded-full bg-black/10" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                     <div id="cmsProjectUploadProgressBar" class="h-full rounded-full bg-obsidian transition-[width] duration-150" style="width:0%"></div>
+                  </div>
+                </div>
+                <div class="rounded-2xl border border-dashed border-black/10 bg-white/50 p-4">
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h4 class="text-xs font-bold text-obsidian">Project PDF (optional)</h4>
+                      <p class="mt-1 text-[10px] text-slateText">Attach a PDF that visitors can open from the project details. Maximum file size: 15 MB.</p>
+                    </div>
+                    <label class="inline-flex cursor-pointer rounded-full bg-obsidian px-4 py-2.5 text-[11px] font-bold text-white transition hover:opacity-90">
+                      Select PDF
+                      <input id="cmsProjPdfFile" type="file" accept=".pdf,application/pdf" class="hidden" />
+                    </label>
+                  </div>
+                  <input id="cmsProjPdfUrl" type="hidden" value="" />
+                  <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <p id="cmsProjectPdfStatus" role="status" aria-live="polite" class="text-[11px] font-medium text-slateText">No PDF attached.</p>
+                    <button id="cmsRemoveProjectPdfBtn" type="button" class="hidden rounded-full bg-red-500/10 px-3 py-1.5 text-[10px] font-bold text-red-700 transition hover:bg-red-500/20">Remove PDF</button>
                   </div>
                 </div>
               </div>
@@ -640,7 +660,7 @@
             <div class="flex items-center justify-between mb-4">
               <div>
                 <h3 class="text-lg font-bold text-obsidian">Published Works (<span id="cmsProjectsCount">9</span>)</h3>
-                <p class="text-[11px] text-slateText">Click Edit to customize multi-size frames</p>
+                <p class="text-[11px] text-slateText">Drag projects or use the arrows to change their display order.</p>
               </div>
             </div>
             <div id="cmsProjectsList" class="space-y-3 max-h-[960px] overflow-y-auto pe-1"></div>

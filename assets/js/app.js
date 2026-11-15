@@ -9,6 +9,7 @@
     const CMS_CONTENT_TABLE = "portfolio_content";
     const CMS_MEDIA_BUCKET = "portfolio-assets";
     const CMS_ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif", "image/svg+xml"]);
+    const CMS_PROJECT_PDF_TYPE = "application/pdf";
     const supabaseConfig = window.PORTFOLIO_SUPABASE_CONFIG;
     const supabaseClient = window.supabase?.createClient && supabaseConfig?.url && supabaseConfig?.publishableKey
       ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.publishableKey)
@@ -122,13 +123,13 @@
 
     async function uploadCmsDataUrl(dataUrl, onProgress) {
       if (!supabaseClient || !isAdminAuthenticated) {
-        throw new Error("Sign in as an authorized administrator before uploading images.");
+        throw new Error("Sign in as an authorized administrator before uploading project files.");
       }
       const response = await fetch(dataUrl);
-      if (!response.ok) throw new Error("Unable to read an uploaded image.");
+      if (!response.ok) throw new Error("Unable to read an uploaded project file.");
       const blob = await response.blob();
-      if (!CMS_ALLOWED_IMAGE_TYPES.has(blob.type)) {
-        throw new Error("Use a JPEG, PNG, WebP, AVIF, GIF, or SVG image.");
+      if (!CMS_ALLOWED_IMAGE_TYPES.has(blob.type) && blob.type !== CMS_PROJECT_PDF_TYPE) {
+        throw new Error("Use a JPEG, PNG, WebP, AVIF, GIF, SVG image, or PDF document.");
       }
       const extensions = {
         "image/jpeg": "jpg",
@@ -136,10 +137,11 @@
         "image/svg+xml": "svg",
         "image/webp": "webp",
         "image/gif": "gif",
-        "image/avif": "avif"
+        "image/avif": "avif",
+        [CMS_PROJECT_PDF_TYPE]: "pdf"
       };
       if (blob.size > 15 * 1024 * 1024) {
-        throw new Error("Images must be 15 MB or smaller.");
+        throw new Error("Images and PDFs must be 15 MB or smaller.");
       }
       const extension = extensions[blob.type] || "img";
       const randomId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -147,7 +149,7 @@
       const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
       if (sessionError) throw sessionError;
       if (!sessionData.session?.access_token) {
-        throw new Error("Your administrator session expired. Sign in again before uploading images.");
+        throw new Error("Your administrator session expired. Sign in again before uploading project files.");
       }
       const uploadUrl = `${supabaseConfig.url.replace(/\/+$/, "")}/storage/v1/object/${encodeURIComponent(CMS_MEDIA_BUCKET)}/${encodeURIComponent(path)}`;
       await new Promise((resolve, reject) => {
@@ -172,76 +174,80 @@
           } catch {
             // Use the HTTP status when Storage returns a non-JSON error.
           }
-          reject(new Error(response.message || response.error || `Image upload failed (HTTP ${request.status}).`));
+          reject(new Error(response.message || response.error || `Project file upload failed (HTTP ${request.status}).`));
         });
-        request.addEventListener("error", () => reject(new Error("Network error while uploading an image.")));
-        request.addEventListener("abort", () => reject(new Error("Image upload was cancelled.")));
+        request.addEventListener("error", () => reject(new Error("Network error while uploading a project file.")));
+        request.addEventListener("abort", () => reject(new Error("Project file upload was cancelled.")));
         request.send(blob);
       });
       const { data } = supabaseClient.storage.from(CMS_MEDIA_BUCKET).getPublicUrl(path);
       return data.publicUrl;
     }
 
-    async function prepareCmsStateForRemote(onImageUploadProgress) {
+    async function prepareCmsStateForRemote(onUploadProgress) {
       const snapshot = JSON.parse(JSON.stringify(getCmsStateSnapshot()));
-      const uploadedImages = new Map();
-      const imageDataUrls = new Set();
-      const collectImage = (value) => {
-        if (typeof value === "string" && value.startsWith("data:image/")) imageDataUrls.add(value);
+      const uploadedFiles = new Map();
+      const mediaDataUrls = new Set();
+      const collectMedia = (value) => {
+        if (typeof value === "string" && (value.startsWith("data:image/") || value.startsWith("data:application/pdf;"))) {
+          mediaDataUrls.add(value);
+        }
       };
-      collectImage(snapshot.config.customLogoDataUrl);
+      collectMedia(snapshot.config.customLogoDataUrl);
       for (const project of snapshot.projects) {
-        collectImage(project.imageUrl);
-        if (Array.isArray(project.gallery)) project.gallery.forEach(collectImage);
-        if (Array.isArray(project.mediaBlocks)) project.mediaBlocks.forEach((block) => collectImage(block.url));
+        collectMedia(project.imageUrl);
+        collectMedia(project.pdfUrl);
+        if (Array.isArray(project.gallery)) project.gallery.forEach(collectMedia);
+        if (Array.isArray(project.mediaBlocks)) project.mediaBlocks.forEach((block) => collectMedia(block.url));
       }
 
-      const totalBytes = Array.from(imageDataUrls).reduce((sum, dataUrl) => sum + getDataUrlByteLength(dataUrl), 0);
+      const totalBytes = Array.from(mediaDataUrls).reduce((sum, dataUrl) => sum + getDataUrlByteLength(dataUrl), 0);
       let completedBytes = 0;
-      let imageIndex = 0;
-      for (const dataUrl of imageDataUrls) {
-        imageIndex += 1;
+      let fileIndex = 0;
+      for (const dataUrl of mediaDataUrls) {
+        fileIndex += 1;
         const imageSize = getDataUrlByteLength(dataUrl);
-        if (onImageUploadProgress) {
-          onImageUploadProgress({
+        if (onUploadProgress) {
+          onUploadProgress({
             loaded: completedBytes,
             total: totalBytes,
-            imageIndex,
-            imageCount: imageDataUrls.size
+            fileIndex,
+            fileCount: mediaDataUrls.size
           });
         }
-        uploadedImages.set(dataUrl, await uploadCmsDataUrl(dataUrl, (loaded) => {
-          if (onImageUploadProgress) {
-            onImageUploadProgress({
+        uploadedFiles.set(dataUrl, await uploadCmsDataUrl(dataUrl, (loaded) => {
+          if (onUploadProgress) {
+            onUploadProgress({
               loaded: completedBytes + loaded,
               total: totalBytes,
-              imageIndex,
-              imageCount: imageDataUrls.size
+              fileIndex,
+              fileCount: mediaDataUrls.size
             });
           }
         }));
         completedBytes += imageSize;
       }
 
-      const prepareImage = (value) => uploadedImages.get(value) || value;
-      snapshot.config.customLogoDataUrl = prepareImage(snapshot.config.customLogoDataUrl);
+      const prepareMedia = (value) => uploadedFiles.get(value) || value;
+      snapshot.config.customLogoDataUrl = prepareMedia(snapshot.config.customLogoDataUrl);
       for (const project of snapshot.projects) {
-        project.imageUrl = prepareImage(project.imageUrl);
-        if (Array.isArray(project.gallery)) project.gallery = project.gallery.map(prepareImage);
+        project.imageUrl = prepareMedia(project.imageUrl);
+        project.pdfUrl = prepareMedia(project.pdfUrl);
+        if (Array.isArray(project.gallery)) project.gallery = project.gallery.map(prepareMedia);
         if (Array.isArray(project.mediaBlocks)) {
           project.mediaBlocks = project.mediaBlocks.map((block) => ({
             ...block,
-            url: prepareImage(block.url)
+            url: prepareMedia(block.url)
           }));
         }
       }
-      if (imageDataUrls.size && onImageUploadProgress) {
-        onImageUploadProgress({ loaded: totalBytes, total: totalBytes, imageIndex: imageDataUrls.size, imageCount: imageDataUrls.size, saving: true });
+      if (mediaDataUrls.size && onUploadProgress) {
+        onUploadProgress({ loaded: totalBytes, total: totalBytes, fileIndex: mediaDataUrls.size, fileCount: mediaDataUrls.size, saving: true });
       }
       return snapshot;
     }
 
-    async function saveCmsState(onImageUploadProgress) {
+    async function saveCmsState(onUploadProgress) {
       if (!supabaseClient) {
         showCmsToast("Supabase is not configured. Portfolio changes were not published.");
         return false;
@@ -255,7 +261,7 @@
         return false;
       }
       try {
-        const content = await prepareCmsStateForRemote(onImageUploadProgress);
+        const content = await prepareCmsStateForRemote(onUploadProgress);
         const { error } = await supabaseClient
           .from(CMS_CONTENT_TABLE)
           .upsert({ id: 1, content, updated_at: new Date().toISOString() }, { onConflict: "id" });
@@ -449,6 +455,9 @@
     let cmsDraftBlocks = [];
     let cmsCoverReadPending = false;
     let cmsCoverReadVersion = 0;
+    let cmsPdfReadPending = false;
+    let cmsPdfReadVersion = 0;
+    let cmsProjectOrderSaving = false;
 
     function createDefaultMediaBlock(url = "", captionEn = "", captionAr = "") {
       return {
@@ -535,7 +544,24 @@
       return true;
     }
 
-    function readCmsImageFile(file, onProgress) {
+    function validateCmsPdfFile(file) {
+      const hasPdfExtension = file.name.toLowerCase().endsWith(".pdf");
+      if ((file.type && file.type !== CMS_PROJECT_PDF_TYPE) || (!file.type && !hasPdfExtension)) {
+        showCmsToast("Choose a PDF document.");
+        return false;
+      }
+      if (file.size === 0) {
+        showCmsToast("The selected PDF file is empty.");
+        return false;
+      }
+      if (file.size > 15 * 1024 * 1024) {
+        showCmsToast("PDF files must be 15 MB or smaller.");
+        return false;
+      }
+      return true;
+    }
+
+    function readCmsFileAsDataUrl(file, onProgress) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.addEventListener("progress", (event) => {
@@ -543,12 +569,19 @@
         });
         reader.addEventListener("load", () => {
           if (typeof reader.result === "string") resolve(reader.result);
-          else reject(new Error("Unable to read the selected image."));
+          else reject(new Error("Unable to read the selected file."));
         });
-        reader.addEventListener("error", () => reject(reader.error || new Error("Unable to read the selected image.")));
-        reader.addEventListener("abort", () => reject(new Error("Image reading was cancelled.")));
+        reader.addEventListener("error", () => reject(reader.error || new Error("Unable to read the selected file.")));
+        reader.addEventListener("abort", () => reject(new Error("File reading was cancelled.")));
         reader.readAsDataURL(file);
       });
+    }
+
+    function setCmsProjectPdfUrl(url, statusMessage = "") {
+      document.getElementById("cmsProjPdfUrl").value = url || "";
+      document.getElementById("cmsProjectPdfStatus").textContent = statusMessage
+        || (url ? "A PDF is attached and will open from the project details." : "No PDF attached.");
+      document.getElementById("cmsRemoveProjectPdfBtn").classList.toggle("hidden", !url);
     }
 
     function updateCmsCoverReadProgress(percent, label = "Reading cover image…") {
@@ -600,7 +633,7 @@
       wrapper.classList.remove("hidden");
       text.textContent = progress.saving
         ? "Saving project details…"
-        : `Uploading image ${progress.imageIndex} of ${progress.imageCount}…`;
+        : `Uploading file ${progress.fileIndex} of ${progress.fileCount}…`;
       percentLabel.textContent = `${percent}%`;
       bar.style.width = `${percent}%`;
       wrapper.querySelector('[role="progressbar"]')?.setAttribute("aria-valuenow", String(percent));
@@ -613,7 +646,7 @@
       const text = document.getElementById("cmsProjectUploadProgressText");
       const percentLabel = document.getElementById("cmsProjectUploadProgressPercent");
       const bar = document.getElementById("cmsProjectUploadProgressBar");
-      if (text) text.textContent = "Uploading project images…";
+      if (text) text.textContent = "Uploading project files…";
       if (percentLabel) percentLabel.textContent = "0%";
       if (bar) bar.style.width = "0%";
       wrapper.querySelector('[role="progressbar"]')?.setAttribute("aria-valuenow", "0");
@@ -624,7 +657,10 @@
       if (!proj) return;
       cmsCoverReadVersion += 1;
       cmsCoverReadPending = false;
+      cmsPdfReadVersion += 1;
+      cmsPdfReadPending = false;
       document.getElementById("cmsProjImgFile").value = "";
+      document.getElementById("cmsProjPdfFile").value = "";
       document.getElementById("cmsProjCoverReadProgress").classList.add("hidden");
       document.getElementById("cmsEditProjectId").value = proj.id;
       document.getElementById("cmsProjectIdDisplay").value = `#${String(proj.id).padStart(3, "0")} (existing project)`;
@@ -655,6 +691,7 @@
       document.getElementById("cmsProjSolutionAr").value = proj.solutionAr || "";
       document.getElementById("cmsProjOutcomeEn").value = proj.outcomeEn || "";
       document.getElementById("cmsProjOutcomeAr").value = proj.outcomeAr || "";
+      setCmsProjectPdfUrl(proj.pdfUrl || "");
 
       if (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0) {
         cmsDraftBlocks = proj.mediaBlocks.map((b) => ({
@@ -679,10 +716,14 @@
       document.getElementById("cmsCancelEditProjectBtn").classList.add("hidden");
       cmsCoverReadVersion += 1;
       cmsCoverReadPending = false;
+      cmsPdfReadVersion += 1;
+      cmsPdfReadPending = false;
       setCmsProjectCoverImage("");
       document.getElementById("cmsProjCoverReadProgress").classList.add("hidden");
       document.getElementById("cmsProjImgFile").value = "";
       document.getElementById("cmsBatchImagesInput").value = "";
+      document.getElementById("cmsProjPdfFile").value = "";
+      setCmsProjectPdfUrl("");
       resetCmsProjectUploadProgress();
       cmsDraftBlocks = [];
       renderCmsMediaBlocksEditor();
@@ -703,6 +744,42 @@
       buildCarouselCards();
       renderAdminDashboard();
       showCmsToast("Project deleted from platform.");
+    }
+
+    async function moveCmsProjectToIndex(projectId, newIndex) {
+      if (cmsProjectOrderSaving) return;
+      const currentIndex = portfolioProjects.findIndex((project) => project.id === projectId);
+      if (currentIndex === -1) return;
+      const destinationIndex = Math.max(0, Math.min(newIndex, portfolioProjects.length - 1));
+      if (currentIndex === destinationIndex) return;
+
+      const previousProjects = [...portfolioProjects];
+      const [project] = portfolioProjects.splice(currentIndex, 1);
+      portfolioProjects.splice(destinationIndex, 0, project);
+      cmsProjectOrderSaving = true;
+      document.querySelectorAll("#cmsProjectsList button").forEach((button) => {
+        button.disabled = true;
+      });
+      document.querySelectorAll("#cmsProjectsList [data-project-order-row]").forEach((row) => {
+        row.setAttribute("draggable", "false");
+      });
+      try {
+        if (!await saveCmsState()) {
+          portfolioProjects = previousProjects;
+          return;
+        }
+        targetIndex = 0;
+        virtualIndex = 0;
+        buildCarouselCards();
+        showCmsToast("Project order saved.");
+      } catch (error) {
+        portfolioProjects = previousProjects;
+        console.error("Unable to save the project order.", error);
+        showCmsToast(`Project order could not be saved: ${error.message || "Supabase request failed."}`);
+      } finally {
+        cmsProjectOrderSaving = false;
+        renderAdminDashboard();
+      }
     }
 
     function renderAdminDashboard() {
@@ -754,13 +831,14 @@
         projectIdInput.value = `#${String(getNextProjectId()).padStart(3, "0")} (assigned on publish)`;
       }
       if (listEl) {
-        listEl.innerHTML = portfolioProjects.map((proj) => `
-          <div class="ios-subcard rounded-2xl p-3.5 flex items-center justify-between gap-3">
+        listEl.innerHTML = portfolioProjects.map((proj, index) => `
+          <div class="ios-subcard rounded-2xl p-3.5 flex items-center justify-between gap-3 cursor-grab active:cursor-grabbing" data-project-order-row="${proj.id}" draggable="true">
             <div class="flex items-center gap-3 min-w-0">
               <img src="${proj.imageUrl}" alt="${proj.titleEn}" class="w-14 h-14 rounded-xl object-cover shrink-0 border border-white" />
               <div class="min-w-0">
                 <div class="flex items-center gap-2">
-                  <span class="px-2 py-0.5 rounded-full bg-obsidian text-white text-[10px] font-bold">0${proj.id}</span>
+                  <span class="px-2 py-0.5 rounded-full bg-obsidian text-white text-[10px] font-bold">Order ${index + 1}</span>
+                  <span class="text-[10px] font-semibold text-slateText">#${proj.id}</span>
                   <span class="text-[10px] font-semibold text-slateText">${proj.categoryEn}</span>
                 </div>
                 <h4 class="text-xs sm:text-sm font-bold text-obsidian truncate mt-0.5">${proj.titleEn}</h4>
@@ -768,12 +846,49 @@
               </div>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" data-project-move="up" data-project-id="${proj.id}" ${index === 0 || cmsProjectOrderSaving ? "disabled" : ""} aria-label="Move project up" class="px-2 py-1.5 rounded-xl bg-white/80 hover:bg-white text-sm font-bold text-obsidian disabled:opacity-30">↑</button>
+              <button type="button" data-project-move="down" data-project-id="${proj.id}" ${index === portfolioProjects.length - 1 || cmsProjectOrderSaving ? "disabled" : ""} aria-label="Move project down" class="px-2 py-1.5 rounded-xl bg-white/80 hover:bg-white text-sm font-bold text-obsidian disabled:opacity-30">↓</button>
               <button type="button" onclick="openProjectPage(${proj.id})" class="px-2.5 py-1.5 rounded-xl bg-white/80 hover:bg-white text-[11px] font-semibold text-obsidian">View</button>
               <button type="button" onclick="editCmsProject(${proj.id})" class="px-2.5 py-1.5 rounded-xl bg-obsidian text-white text-[11px] font-semibold hover:opacity-90">Edit</button>
               <button type="button" onclick="deleteCmsProject(${proj.id})" class="px-2.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-700 text-[11px] font-bold">✕</button>
             </div>
           </div>
         `).join("");
+        listEl.querySelectorAll("[data-project-move]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const projectId = Number(button.dataset.projectId);
+            const currentIndex = portfolioProjects.findIndex((project) => project.id === projectId);
+            const direction = button.dataset.projectMove === "up" ? -1 : 1;
+            moveCmsProjectToIndex(projectId, currentIndex + direction);
+          });
+        });
+        listEl.querySelectorAll("[data-project-order-row]").forEach((row) => {
+          row.addEventListener("dragstart", (event) => {
+            if (cmsProjectOrderSaving) {
+              event.preventDefault();
+              return;
+            }
+            event.dataTransfer?.setData("text/plain", row.dataset.projectOrderRow);
+            if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+            row.classList.add("opacity-50");
+          });
+          row.addEventListener("dragover", (event) => {
+            if (cmsProjectOrderSaving) return;
+            event.preventDefault();
+            if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+          });
+          row.addEventListener("drop", (event) => {
+            event.preventDefault();
+            if (cmsProjectOrderSaving) return;
+            const projectId = Number(event.dataTransfer?.getData("text/plain"));
+            const currentIndex = portfolioProjects.findIndex((project) => project.id === projectId);
+            const destinationIndex = portfolioProjects.findIndex((project) => project.id === Number(row.dataset.projectOrderRow));
+            if (currentIndex !== -1 && destinationIndex !== -1) {
+              moveCmsProjectToIndex(projectId, destinationIndex);
+            }
+          });
+          row.addEventListener("dragend", () => row.classList.remove("opacity-50"));
+        });
       }
     }
 
@@ -1803,7 +1918,7 @@
       stage.innerHTML = "";
       cardElements = [];
 
-      portfolioProjects.forEach((proj) => {
+      portfolioProjects.forEach((proj, index) => {
         const card = document.createElement("article");
         card.className = "carousel-card group";
         card.setAttribute("role", "button");
@@ -1826,7 +1941,7 @@
             <div class="absolute inset-x-0 bottom-0 pt-14 pb-4 px-4 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-white transition-all duration-300 pointer-events-none">
               <div class="flex items-center justify-between gap-2 mb-1">
                 <span class="inline-block px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md border border-white/25 text-[10px] font-semibold uppercase tracking-wider text-white/95">${cat}</span>
-                <span class="text-[10px] font-mono text-white/75">0${proj.id}</span>
+                <span class="text-[10px] font-mono text-white/75">${String(index + 1).padStart(2, "0")}</span>
               </div>
               <h3 class="text-sm sm:text-base font-bold leading-snug text-white drop-shadow-sm line-clamp-1">${title}</h3>
             </div>
@@ -2245,8 +2360,9 @@
     }
 
     function renderProjectPage(projectId) {
-      const projIndex = portfolioProjects.findIndex((p) => p.id === Number(projectId));
-      const proj = portfolioProjects[projIndex !== -1 ? projIndex : 0];
+      const requestedIndex = portfolioProjects.findIndex((p) => p.id === Number(projectId));
+      const projIndex = requestedIndex === -1 ? 0 : requestedIndex;
+      const proj = portfolioProjects[projIndex];
       if (!proj) return;
 
       activeProjectId = proj.id;
@@ -2256,16 +2372,16 @@
       // Labels & Navigation Counter
       document.getElementById("backToWorkArrow").textContent = isAr ? "→" : "←";
       document.getElementById("backToWorkLabel").textContent = isAr ? "العودة لجميع الأعمال" : "Back to All Work";
-      document.getElementById("projectCounterBadge").textContent = `0${proj.id} / 0${portfolioProjects.length}`;
+      document.getElementById("projectCounterBadge").textContent = `${String(projIndex + 1).padStart(2, "0")} / ${String(portfolioProjects.length).padStart(2, "0")}`;
 
       // Quick Number Tabs (01 .. 09)
       const quickTabs = document.getElementById("projectQuickTabs");
       if (quickTabs) {
-        quickTabs.innerHTML = portfolioProjects.map((p) => {
+        quickTabs.innerHTML = portfolioProjects.map((p, index) => {
           const isCurrent = p.id === proj.id;
           return `
             <button type="button" onclick="openProjectPage(${p.id})" title="${isAr ? p.titleAr : p.titleEn}" class="w-7 h-7 rounded-full text-[11px] font-bold transition-all ${isCurrent ? 'bg-[#111214] text-white shadow-sm' : 'text-[#5A5C60] hover:bg-white/80 hover:text-[#111214]'}">
-              0${p.id}
+              ${String(index + 1).padStart(2, "0")}
             </button>
           `;
         }).join("");
@@ -2284,6 +2400,17 @@
       document.getElementById("modalProjectSlugPill").textContent = `#project/${proj.id}`;
       document.getElementById("modalProjectTitle").textContent = isAr ? proj.titleAr : proj.titleEn;
       document.getElementById("modalProjectDescription").textContent = isAr ? proj.descriptionAr : proj.descriptionEn;
+      const projectPdfLink = document.getElementById("modalProjectPdfLink");
+      const projectPdfUrl = typeof proj.pdfUrl === "string" && /^https?:\/\//i.test(proj.pdfUrl)
+        ? proj.pdfUrl
+        : "";
+      if (proj.pdfUrl && !projectPdfUrl) {
+        console.error("Ignoring a project PDF URL that does not use HTTP or HTTPS.");
+      }
+      projectPdfLink.textContent = isAr ? "فتح ملف المشروع PDF ↗" : "Open project PDF ↗";
+      projectPdfLink.classList.toggle("hidden", !projectPdfUrl);
+      if (projectPdfUrl) projectPdfLink.href = projectPdfUrl;
+      else projectPdfLink.removeAttribute("href");
       document.getElementById("metaClientLbl").textContent = isAr ? "العميل" : "Client";
       document.getElementById("modalProjectClient").textContent = proj.client || "";
       document.getElementById("metaYearLbl").textContent = isAr ? "السنة والسوق" : "Year & Market";
@@ -2977,7 +3104,7 @@
           cmsCoverReadPending = true;
           updateCmsCoverReadProgress(0);
           try {
-            const imageUrl = await readCmsImageFile(file, (percent) => updateCmsCoverReadProgress(percent));
+            const imageUrl = await readCmsFileAsDataUrl(file, (percent) => updateCmsCoverReadProgress(percent));
             if (readVersion !== cmsCoverReadVersion) return;
             setCmsProjectCoverImage(imageUrl);
             updateCmsCoverReadProgress(100, "Cover image ready.");
@@ -2995,6 +3122,55 @@
         });
       }
 
+      const projPdfFile = document.getElementById("cmsProjPdfFile");
+      if (projPdfFile) {
+        projPdfFile.addEventListener("change", async (event) => {
+          const file = event.target.files && event.target.files[0];
+          if (!file) return;
+          const readVersion = ++cmsPdfReadVersion;
+          if (!validateCmsPdfFile(file)) {
+            cmsPdfReadPending = false;
+            event.target.value = "";
+            return;
+          }
+
+          cmsPdfReadPending = true;
+          const status = document.getElementById("cmsProjectPdfStatus");
+          status.textContent = `Reading ${file.name}…`;
+          try {
+            const pdfBlob = new Blob([file], { type: CMS_PROJECT_PDF_TYPE });
+            const pdfDataUrl = await readCmsFileAsDataUrl(pdfBlob, (percent) => {
+              if (readVersion === cmsPdfReadVersion) status.textContent = `Reading ${file.name}… ${percent}%`;
+            });
+            if (readVersion !== cmsPdfReadVersion) return;
+            setCmsProjectPdfUrl(pdfDataUrl, `${file.name} is ready to publish.`);
+          } catch (error) {
+            if (readVersion !== cmsPdfReadVersion) return;
+            console.error("Unable to read the project PDF.", error);
+            const previousPdfUrl = document.getElementById("cmsProjPdfUrl").value;
+            setCmsProjectPdfUrl(previousPdfUrl, previousPdfUrl
+              ? `Unable to read ${file.name}; the previous attachment was kept.`
+              : `Unable to read ${file.name}.`);
+            showCmsToast(error.message || "Unable to read the selected PDF.");
+          } finally {
+            if (readVersion === cmsPdfReadVersion) {
+              cmsPdfReadPending = false;
+              event.target.value = "";
+            }
+          }
+        });
+      }
+
+      const removeProjectPdfBtn = document.getElementById("cmsRemoveProjectPdfBtn");
+      if (removeProjectPdfBtn) {
+        removeProjectPdfBtn.addEventListener("click", () => {
+          cmsPdfReadVersion += 1;
+          cmsPdfReadPending = false;
+          document.getElementById("cmsProjPdfFile").value = "";
+          setCmsProjectPdfUrl("");
+        });
+      }
+
       // Read multiple selected images and show a large preview for each one.
       const batchImagesInput = document.getElementById("cmsBatchImagesInput");
       if (batchImagesInput) {
@@ -3007,7 +3183,7 @@
             block.readProgress = 0;
             cmsDraftBlocks.push(block);
             renderCmsMediaBlocksEditor();
-            readCmsImageFile(file, (percent) => {
+            readCmsFileAsDataUrl(file, (percent) => {
               block.readProgress = percent;
               updateCmsMediaBlockReadProgress(block.uid, percent);
             }).then((dataUrl) => {
@@ -3030,8 +3206,8 @@
       if (cmsProjectForm) {
         cmsProjectForm.addEventListener("submit", async (e) => {
           e.preventDefault();
-          if (cmsCoverReadPending || cmsDraftBlocks.some((block) => !block.url)) {
-            showCmsToast("Wait for all selected images to finish loading before publishing.");
+          if (cmsCoverReadPending || cmsPdfReadPending || cmsDraftBlocks.some((block) => !block.url)) {
+            showCmsToast("Wait for all selected images and PDFs to finish loading before publishing.");
             return;
           }
           const editId = document.getElementById("cmsEditProjectId").value;
@@ -3081,14 +3257,15 @@
             solutionAr: document.getElementById("cmsProjSolutionAr").value.trim() || "تم التنفيذ بدقة بصرية عالية وتوازن في الخطوط وإضاءة استوديو احترافية.",
             outcomeEn: document.getElementById("cmsProjOutcomeEn").value.trim(),
             outcomeAr: document.getElementById("cmsProjOutcomeAr").value.trim(),
+            pdfUrl: document.getElementById("cmsProjPdfUrl").value.trim(),
             imageUrl: imgUrl,
             coverAspect: document.getElementById("cmsProjCoverAspect").value || "aspect-[4/3]",
             mediaBlocks: validMediaBlocks,
             gallery: galleryUrls
           };
           const successMessage = editId
-            ? "Project and images updated."
-            : "Project and images published.";
+            ? "Project and files updated."
+            : "Project and files published.";
           const previousProjects = [...portfolioProjects];
 
           if (editId) {

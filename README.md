@@ -23,11 +23,13 @@ The page loads Tailwind CSS, IBM Plex fonts, jsPDF, and Supabase JS from externa
 
 ## Content and publishing
 
-The admin dashboard reads public portfolio content from Supabase and requires an authorized Supabase Auth account to publish changes. Project images and uploaded logos are stored in the public `portfolio-assets` bucket; only an allowlisted admin can upload or change content.
+The admin dashboard reads public portfolio content from Supabase and requires an authorized Supabase Auth account to publish changes. Project images, attached PDFs, and uploaded logos are stored in the public `portfolio-assets` bucket; only an allowlisted admin can upload or change content.
 
 In the project editor, select a cover image and optionally select multiple gallery images. They appear as large full-width previews, need no URLs or captions, and show upload progress when the project is published. Each image can be up to 15 MB.
 
 Project case studies also support optional outcome and impact text in English and Arabic. Include measurable claims only when you can verify them.
+
+Reorder published projects by dragging their cards or using the up/down controls; this order is shared by the homepage carousel and project navigation. Optionally attach one PDF (up to 15 MB) to a project; visitors can open it from the project details. If Supabase was already configured, rerun [`supabase/setup.sql`](./supabase/setup.sql) to allow PDF uploads.
 
 ### Supabase setup
 
