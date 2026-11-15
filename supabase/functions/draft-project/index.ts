@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
-const allowedCountries = new Set(["Egypt", "Saudi Arabia", "Kuwait"]);
+const allowedCountries = new Set(["Egypt", "Saudi Arabia", "Kuwait", "Oman"]);
 const allowedTools = new Set(["Photoshop", "Illustrator", "After Effects", "Comfy", "Blender"]);
 
 function respond(body: Record<string, unknown>, status = 200) {
@@ -87,7 +87,7 @@ Deno.serve(async (request) => {
     "Organize the user's project story into the exact JSON schema.",
     "Write concise Arabic and English project names and problem summaries based only on the story.",
     "Do not invent or infer missing facts. Use an empty string for unknown title, country, year, deliverables, or problem summary; use an empty array for unknown software.",
-    "Country must be exactly Egypt, Saudi Arabia, or Kuwait, and only when explicitly stated.",
+    "Country must be exactly Egypt, Saudi Arabia, Kuwait, or Oman, and only when explicitly stated.",
     `Year must be a four-digit year between 2018 and ${currentYear + 5}, and only when explicitly stated; otherwise use an empty string.`,
     "Include only software explicitly mentioned, using exact values from the schema. Ignore other software.",
     "Keep deliverables in the language used by the user. Do not add outcomes, metrics, or claims absent from the story.",

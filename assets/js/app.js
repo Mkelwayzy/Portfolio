@@ -13,7 +13,8 @@
     const CMS_PROJECT_COUNTRIES = [
       { value: "Egypt", arabic: "مصر" },
       { value: "Saudi Arabia", arabic: "السعودية" },
-      { value: "Kuwait", arabic: "الكويت" }
+      { value: "Kuwait", arabic: "الكويت" },
+      { value: "Oman", arabic: "عُمان" }
     ];
     const supabaseConfig = window.PORTFOLIO_SUPABASE_CONFIG;
     const supabaseClient = window.supabase?.createClient && supabaseConfig?.url && supabaseConfig?.publishableKey
@@ -469,6 +470,7 @@
       if (location.includes("egypt") || location.includes("مصر")) return "Egypt";
       if (location.includes("saudi") || location.includes("السعودية") || location.includes("سعودية")) return "Saudi Arabia";
       if (location.includes("kuwait") || location.includes("الكويت")) return "Kuwait";
+      if (location.includes("oman") || location.includes("عمان") || location.includes("عُمان")) return "Oman";
       return "";
     }
 
