@@ -2746,8 +2746,9 @@
             return;
           }
           if (error) {
+            console.error("Supabase rejected the administrator sign-in.", error);
             if (errEl) {
-              errEl.textContent = "Unable to sign in. Check your credentials and administrator access.";
+              errEl.textContent = `Sign-in failed: ${error.message || "Check your email and password."}`;
               errEl.classList.remove("hidden");
             }
             return;

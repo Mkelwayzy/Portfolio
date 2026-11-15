@@ -33,4 +33,6 @@ The admin dashboard reads public portfolio content from Supabase and requires an
 4. Confirm the website's Supabase project URL and **publishable** key in [`assets/js/supabase-config.js`](./assets/js/supabase-config.js). The publishable key is intended for browser use; never put a `service_role` or secret key in this repository.
 5. Open the portfolio and sign in with the authorized email and password. If the content table is empty, the dashboard publishes the existing portfolio content on first sign-in.
 
+If sign-in fails, the login form displays Supabase's error message. “Invalid login credentials” means the email/password was rejected or the user was not created in **Authentication → Users**; “not authorized” means the account still needs to be added to `portfolio_admins` using step 3.
+
 Row-level security limits content writes and media uploads to IDs in `portfolio_admins`; visitors can only read the published content and images. Do not remove these policies. CMS content is stored centrally and shared with site visitors, rather than only in one browser. Previous browser-saved CMS content is used as a fallback and is migrated when the first remote save succeeds.
