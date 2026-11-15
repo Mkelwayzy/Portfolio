@@ -221,7 +221,7 @@
 
             <!-- Metadata Grid -->
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div class="ios-subcard inner-anim-card rounded-2xl p-3.5" style="animation-delay: 0.16s">
+              <div id="projectClientMeta" class="ios-subcard inner-anim-card rounded-2xl p-3.5" style="animation-delay: 0.16s">
                 <span id="metaClientLbl" class="block text-[#5A5C60] text-[10px] font-semibold uppercase tracking-wider mb-1">Client</span>
                 <span id="modalProjectClient" class="text-xs sm:text-sm font-bold text-[#111214]"></span>
               </div>
@@ -229,7 +229,7 @@
                 <span id="metaYearLbl" class="block text-[#5A5C60] text-[10px] font-semibold uppercase tracking-wider mb-1">Year &amp; Market</span>
                 <span id="modalProjectYear" class="text-xs sm:text-sm font-bold text-[#111214]"></span>
               </div>
-              <div class="col-span-2 sm:col-span-1 ios-subcard inner-anim-card rounded-2xl p-3.5" style="animation-delay: 0.24s">
+              <div id="projectRoleMeta" class="col-span-2 sm:col-span-1 ios-subcard inner-anim-card rounded-2xl p-3.5" style="animation-delay: 0.24s">
                 <span id="metaRoleLbl" class="block text-[#5A5C60] text-[10px] font-semibold uppercase tracking-wider mb-1">Role</span>
                 <span id="modalProjectRole" class="text-xs sm:text-sm font-bold text-[#111214]"></span>
               </div>
@@ -252,7 +252,7 @@
 
       <!-- Case Study Deep-Dive: Challenge & Creative Solution -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div class="lg:col-span-6 glass-card inner-anim-card rounded-[28px] p-6 sm:p-8" style="animation-delay: 0.3s">
+        <div id="projectChallengeCard" class="lg:col-span-6 glass-card inner-anim-card rounded-[28px] p-6 sm:p-8" style="animation-delay: 0.3s">
           <div class="flex items-center gap-2.5 mb-3">
             <span class="w-8 h-8 rounded-xl bg-[#111214] text-white flex items-center justify-center text-xs font-bold">01</span>
             <h3 id="challengeHeading" class="text-base sm:text-lg font-bold text-[#111214]">Project Brief &amp; Challenge</h3>
@@ -260,7 +260,7 @@
           <p id="modalProjectChallenge" class="text-xs sm:text-sm text-[#45474A] leading-relaxed"></p>
         </div>
 
-        <div class="lg:col-span-6 glass-card inner-anim-card rounded-[28px] p-6 sm:p-8" style="animation-delay: 0.34s">
+        <div id="projectSolutionCard" class="lg:col-span-6 glass-card inner-anim-card rounded-[28px] p-6 sm:p-8" style="animation-delay: 0.34s">
           <div class="flex items-center gap-2.5 mb-3">
             <span class="w-8 h-8 rounded-xl bg-[#111214] text-white flex items-center justify-center text-xs font-bold">02</span>
             <h3 id="solutionHeading" class="text-base sm:text-lg font-bold text-[#111214]">Visual Direction &amp; Execution</h3>
@@ -442,64 +442,33 @@
 
             <form id="cmsProjectForm" class="space-y-6">
               <input type="hidden" id="cmsEditProjectId" value="" />
-              <div class="rounded-2xl bg-white/70 px-4 py-3">
-                <label for="cmsProjectIdDisplay" class="block text-[11px] font-semibold text-obsidian">Project record ID</label>
-                <input id="cmsProjectIdDisplay" type="text" readonly aria-describedby="cmsProjectIdHelp" class="mt-1 w-full cursor-not-allowed rounded-xl border border-white bg-white/80 px-3 py-2 text-xs font-semibold text-slateText" />
-                <p id="cmsProjectIdHelp" class="mt-1 text-[10px] text-slateText">Assigned automatically and kept unique to prevent records from overwriting one another.</p>
-              </div>
-
-              <!-- Step 1: Core Bilingual Titles & Classification -->
+              <!-- Step 1: Basic project details -->
               <div class="ios-subcard rounded-2xl p-4 sm:p-5 space-y-4">
                 <div class="flex items-center gap-2">
                   <span class="w-6 h-6 rounded-lg bg-obsidian text-white text-[11px] font-bold flex items-center justify-center">1</span>
-                  <h4 class="text-xs sm:text-sm font-bold text-obsidian">Basic Identity &amp; Bilingual Metadata</h4>
+                  <h4 class="text-xs sm:text-sm font-bold text-obsidian">Project Basics</h4>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Project Title (English) *</label>
-                    <input id="cmsProjTitleEn" type="text" required placeholder="e.g. Royal Oud 3D Packaging & CGI" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Project Name (English) *</label>
+                    <input id="cmsProjTitleEn" type="text" required placeholder="Enter project name" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
                   </div>
                   <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">عنوان المشروع (بالعربية) *</label>
-                    <input id="cmsProjTitleAr" type="text" required placeholder="مثال: تصميم عبوات عود ملكي 3D و CGI" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">اسم المشروع</label>
+                    <input id="cmsProjTitleAr" type="text" required placeholder="اكتب اسم المشروع" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
                   </div>
                   <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Category (English) *</label>
-                    <input id="cmsProjCatEn" type="text" required placeholder="3D Product & Branding" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                    <label for="cmsProjCountry" class="block text-[11px] font-semibold text-obsidian mb-1">الدولة / Country *</label>
+                    <select id="cmsProjCountry" required class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian">
+                      <option value="">اختر الدولة / Select country</option>
+                      <option value="Egypt">مصر / Egypt</option>
+                      <option value="Saudi Arabia">السعودية / Saudi Arabia</option>
+                      <option value="Kuwait">الكويت / Kuwait</option>
+                    </select>
                   </div>
                   <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">التصنيف (بالعربية) *</label>
-                    <input id="cmsProjCatAr" type="text" required placeholder="منتجات ثلاثية الأبعاد وهوية" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Client Name *</label>
-                    <input id="cmsProjClient" type="text" required placeholder="Client / Brand" class="w-full px-3 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Year *</label>
-                    <input id="cmsProjYear" type="text" required value="2026" class="w-full px-3 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Market (EN) *</label>
-                    <input id="cmsProjLoc" type="text" required value="Saudi Arabia" class="w-full px-3 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">السوق / الدولة (AR)</label>
-                    <input id="cmsProjLocAr" type="text" value="المملكة العربية السعودية" class="w-full px-3 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Creative Role (EN)</label>
-                    <input id="cmsProjRoleEn" type="text" value="Lead Brand & 3D Designer" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">الدور الإبداعي (AR)</label>
-                    <input id="cmsProjRoleAr" type="text" value="مصمم هويات ومنتجات 3D أول" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                    <label for="cmsProjYear" class="block text-[11px] font-semibold text-obsidian mb-1">السنة / Year *</label>
+                    <select id="cmsProjYear" required class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></select>
                   </div>
                 </div>
               </div>
@@ -591,61 +560,39 @@
                 </div>
               </div>
 
-              <!-- Step 4: Deep Case Study Narrative, Deliverables & Tools -->
+              <!-- Step 4: Essential project details -->
               <div class="ios-subcard rounded-2xl p-4 sm:p-5 space-y-4">
                 <div class="flex items-center gap-2">
                   <span class="w-6 h-6 rounded-lg bg-obsidian text-white text-[11px] font-bold flex items-center justify-center">4</span>
-                  <h4 class="text-xs sm:text-sm font-bold text-obsidian">Case Study Narrative, Brief, Solution &amp; Tools</h4>
+                  <h4 class="text-xs sm:text-sm font-bold text-obsidian">Project Details</h4>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Overview Description (English) *</label>
-                    <textarea id="cmsProjDescEn" rows="2" required placeholder="Comprehensive project summary..." class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Briefly describe the problem (English) *</label>
+                    <textarea id="cmsProjDescEn" rows="3" required placeholder="What problem or need did the project address?" class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
                   </div>
                   <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">الوصف العام للمشروع (عربي) *</label>
-                    <textarea id="cmsProjDescAr" rows="2" required placeholder="ملخص شامل لفكرة وأهداف المشروع..." class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">01. Project Brief &amp; Challenge (EN)</label>
-                    <textarea id="cmsProjChallengeEn" rows="2" placeholder="What problem or market challenge did this solve?" class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">01. التحدي ومتطلبات العميل (عربي)</label>
-                    <textarea id="cmsProjChallengeAr" rows="2" placeholder="ما التحدي التصميمي أو التسويقي الذي تم حله؟" class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">02. Visual Direction &amp; Execution (EN)</label>
-                    <textarea id="cmsProjSolutionEn" rows="2" placeholder="How did you craft the visual system, 3D lighting, or typography?" class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">02. التوجه البصري وطريقة التنفيذ (عربي)</label>
-                    <textarea id="cmsProjSolutionAr" rows="2" placeholder="كيف تم تنفيذ الهوية البصرية أو الريندر والإضاءة؟" class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">03. Outcome &amp; Impact (EN, optional)</label>
-                    <textarea id="cmsProjOutcomeEn" rows="2" placeholder="What changed or improved? Include measurable results only when verified." class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">03. النتيجة والأثر (عربي، اختياري)</label>
-                    <textarea id="cmsProjOutcomeAr" rows="2" placeholder="ما الذي تغير أو تحسن؟ أضف نتائج قابلة للقياس عند توفرها فقط." class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">نبذة عن المشكلة (عربي) *</label>
+                    <textarea id="cmsProjDescAr" rows="3" required placeholder="ما المشكلة أو الاحتياج الذي عالجه المشروع؟" class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
                   </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Deliverables (EN)</label>
-                    <input id="cmsProjDelivEn" type="text" value="Brand Identity, 3D Visuals, Packaging" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  <div class="sm:col-span-1">
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">المخرجات / Deliverables *</label>
+                    <input id="cmsProjDeliverables" type="text" required placeholder="مثال: هوية بصرية، تغليف، تصاميم سوشيال ميديا" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
                   </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">المخرجات المنفذة (عربي)</label>
-                    <input id="cmsProjDelivAr" type="text" value="هوية بصرية، ريندر 3D، تغليف" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">Software &amp; Tools (comma separated)</label>
-                    <input id="cmsProjTools" type="text" value="Blender 3D, Adobe Substance, Photoshop, Illustrator" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
-                  </div>
+                  <fieldset class="sm:col-span-2">
+                    <legend class="block text-[11px] font-semibold text-obsidian mb-2">البرامج المستخدمة / Software used</legend>
+                    <div class="flex flex-wrap gap-2">
+                      <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="Photoshop" class="accent-[#111214]" /> Photoshop</label>
+                      <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="Illustrator" class="accent-[#111214]" /> Illustrator</label>
+                      <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="After Effects" class="accent-[#111214]" /> After Effects</label>
+                      <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="Comfy" class="accent-[#111214]" /> Comfy</label>
+                      <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="Blender" class="accent-[#111214]" /> Blender</label>
+                    </div>
+                  </fieldset>
                 </div>
               </div>
 

@@ -25,7 +25,7 @@ The page loads Tailwind CSS, IBM Plex fonts, jsPDF, and Supabase JS from externa
 
 The admin dashboard reads public portfolio content from Supabase and requires an authorized Supabase Auth account to publish changes. Project images, attached PDFs, and uploaded logos are stored in the public `portfolio-assets` bucket; only an allowlisted admin can upload or change content.
 
-In the project editor, select a cover image and optionally select multiple gallery images. They appear as large full-width previews, need no URLs or captions, and show upload progress when the project is published. Each image can be up to 15 MB.
+In the project editor, enter the project name and problem summary in English and Arabic, choose a country (Egypt, Saudi Arabia, or Kuwait) and a year (2018 onward), type the deliverables, and select software from the available list. Select a cover image and optionally add gallery images or a PDF. Project images and PDFs can each be up to 15 MB.
 
 Project case studies also support optional outcome and impact text in English and Arabic. Include measurable claims only when you can verify them.
 

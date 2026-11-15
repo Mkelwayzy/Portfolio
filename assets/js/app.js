@@ -10,6 +10,11 @@
     const CMS_MEDIA_BUCKET = "portfolio-assets";
     const CMS_ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif", "image/svg+xml"]);
     const CMS_PROJECT_PDF_TYPE = "application/pdf";
+    const CMS_PROJECT_COUNTRIES = [
+      { value: "Egypt", arabic: "مصر" },
+      { value: "Saudi Arabia", arabic: "السعودية" },
+      { value: "Kuwait", arabic: "الكويت" }
+    ];
     const supabaseConfig = window.PORTFOLIO_SUPABASE_CONFIG;
     const supabaseClient = window.supabase?.createClient && supabaseConfig?.url && supabaseConfig?.publishableKey
       ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.publishableKey)
@@ -459,6 +464,39 @@
     let cmsPdfReadVersion = 0;
     let cmsProjectOrderSaving = false;
 
+    function getCmsProjectCountry(project) {
+      const location = `${project.location || ""} ${project.locationAr || ""}`.toLowerCase();
+      if (location.includes("egypt") || location.includes("مصر")) return "Egypt";
+      if (location.includes("saudi") || location.includes("السعودية") || location.includes("سعودية")) return "Saudi Arabia";
+      if (location.includes("kuwait") || location.includes("الكويت")) return "Kuwait";
+      return "";
+    }
+
+    function populateCmsProjectYearOptions(selectedYear = new Date().getFullYear()) {
+      const yearSelect = document.getElementById("cmsProjYear");
+      if (!yearSelect) return;
+      const currentYear = new Date().getFullYear();
+      const latestYear = Math.max(currentYear + 5, Number(selectedYear) || currentYear);
+      yearSelect.innerHTML = Array.from({ length: latestYear - 2018 + 1 }, (_, index) => {
+        const year = 2018 + index;
+        return `<option value="${year}">${year}</option>`;
+      }).join("");
+      yearSelect.value = String(selectedYear);
+      if (!yearSelect.value) yearSelect.value = String(currentYear);
+    }
+
+    function setCmsProjectTools(selectedTools = []) {
+      const normalizedTools = selectedTools.map((tool) => tool.toLowerCase().replace(/^adobe\s+/, "").replace(/\s+3d$/, "").trim());
+      document.querySelectorAll('input[name="cmsProjTools"]').forEach((checkbox) => {
+        const value = checkbox.value.toLowerCase();
+        checkbox.checked = normalizedTools.some((tool) => tool === value || (value === "comfy" && tool.includes("comfy")));
+      });
+    }
+
+    function getSelectedCmsProjectTools() {
+      return Array.from(document.querySelectorAll('input[name="cmsProjTools"]:checked'), (checkbox) => checkbox.value);
+    }
+
     function createDefaultMediaBlock(url = "", captionEn = "", captionAr = "") {
       return {
         uid: "blk_" + Math.random().toString(36).slice(2, 9),
@@ -663,34 +701,20 @@
       document.getElementById("cmsProjPdfFile").value = "";
       document.getElementById("cmsProjCoverReadProgress").classList.add("hidden");
       document.getElementById("cmsEditProjectId").value = proj.id;
-      document.getElementById("cmsProjectIdDisplay").value = `#${String(proj.id).padStart(3, "0")} (existing project)`;
       document.getElementById("cmsProjectFormHeading").textContent = `Edit Project #0${proj.id} — ${proj.titleEn}`;
       document.getElementById("cmsProjectSubmitBtn").textContent = "Update Published Project";
       document.getElementById("cmsCancelEditProjectBtn").classList.remove("hidden");
 
       document.getElementById("cmsProjTitleEn").value = proj.titleEn || "";
       document.getElementById("cmsProjTitleAr").value = proj.titleAr || "";
-      document.getElementById("cmsProjCatEn").value = proj.categoryEn || "";
-      document.getElementById("cmsProjCatAr").value = proj.categoryAr || "";
-      document.getElementById("cmsProjClient").value = proj.client || "";
-      document.getElementById("cmsProjYear").value = proj.year || "2026";
-      document.getElementById("cmsProjLoc").value = proj.location || "";
-      document.getElementById("cmsProjLocAr").value = proj.locationAr || proj.location || "";
-      document.getElementById("cmsProjRoleEn").value = proj.roleEn || "Lead Brand & 3D Designer";
-      document.getElementById("cmsProjRoleAr").value = proj.roleAr || "مصمم هويات ومنتجات 3D أول";
+      document.getElementById("cmsProjCountry").value = getCmsProjectCountry(proj);
+      populateCmsProjectYearOptions(Number(proj.year) || new Date().getFullYear());
       setCmsProjectCoverImage(proj.imageUrl || "");
       document.getElementById("cmsProjCoverAspect").value = proj.coverAspect || "aspect-[4/3]";
-      document.getElementById("cmsProjTools").value = (proj.tools || []).join(", ");
-      document.getElementById("cmsProjDelivEn").value = proj.deliverablesEn || "";
-      document.getElementById("cmsProjDelivAr").value = proj.deliverablesAr || "";
+      setCmsProjectTools(proj.tools || []);
+      document.getElementById("cmsProjDeliverables").value = proj.deliverablesEn || proj.deliverablesAr || "";
       document.getElementById("cmsProjDescEn").value = proj.descriptionEn || "";
       document.getElementById("cmsProjDescAr").value = proj.descriptionAr || "";
-      document.getElementById("cmsProjChallengeEn").value = proj.challengeEn || "";
-      document.getElementById("cmsProjChallengeAr").value = proj.challengeAr || "";
-      document.getElementById("cmsProjSolutionEn").value = proj.solutionEn || "";
-      document.getElementById("cmsProjSolutionAr").value = proj.solutionAr || "";
-      document.getElementById("cmsProjOutcomeEn").value = proj.outcomeEn || "";
-      document.getElementById("cmsProjOutcomeAr").value = proj.outcomeAr || "";
       setCmsProjectPdfUrl(proj.pdfUrl || "");
 
       if (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0) {
@@ -710,10 +734,11 @@
     function resetCmsProjectForm() {
       document.getElementById("cmsProjectForm").reset();
       document.getElementById("cmsEditProjectId").value = "";
-      document.getElementById("cmsProjectIdDisplay").value = `#${String(getNextProjectId()).padStart(3, "0")} (assigned on publish)`;
       document.getElementById("cmsProjectFormHeading").textContent = "Publish New Precision Project";
       document.getElementById("cmsProjectSubmitBtn").textContent = "Publish Complete Project to Platform";
       document.getElementById("cmsCancelEditProjectBtn").classList.add("hidden");
+      document.getElementById("cmsProjCountry").value = "";
+      populateCmsProjectYearOptions();
       cmsCoverReadVersion += 1;
       cmsCoverReadPending = false;
       cmsPdfReadVersion += 1;
@@ -826,10 +851,6 @@
       const countEl = document.getElementById("cmsProjectsCount");
       if (countEl) countEl.textContent = portfolioProjects.length;
       const listEl = document.getElementById("cmsProjectsList");
-      const projectIdInput = document.getElementById("cmsProjectIdDisplay");
-      if (projectIdInput && !document.getElementById("cmsEditProjectId").value) {
-        projectIdInput.value = `#${String(getNextProjectId()).padStart(3, "0")} (assigned on publish)`;
-      }
       if (listEl) {
         listEl.innerHTML = portfolioProjects.map((proj, index) => `
           <div class="ios-subcard rounded-2xl p-3.5 flex items-center justify-between gap-3 cursor-grab active:cursor-grabbing" data-project-order-row="${proj.id}" draggable="true">
@@ -2413,10 +2434,12 @@
       else projectPdfLink.removeAttribute("href");
       document.getElementById("metaClientLbl").textContent = isAr ? "العميل" : "Client";
       document.getElementById("modalProjectClient").textContent = proj.client || "";
+      document.getElementById("projectClientMeta").classList.toggle("hidden", !proj.client);
       document.getElementById("metaYearLbl").textContent = isAr ? "السنة والسوق" : "Year & Market";
       document.getElementById("modalProjectYear").textContent = [proj.year, isAr ? (proj.locationAr || proj.location) : proj.location].filter(Boolean).join(" • ");
       document.getElementById("metaRoleLbl").textContent = isAr ? "الدور" : "Role";
       document.getElementById("modalProjectRole").textContent = isAr ? (proj.roleAr || proj.roleEn || "") : (proj.roleEn || proj.roleAr || "");
+      document.getElementById("projectRoleMeta").classList.toggle("hidden", !proj.roleEn && !proj.roleAr);
       document.getElementById("metaDeliverablesLbl").textContent = isAr ? "أبرز المخرجات" : "Key Deliverables";
       document.getElementById("modalProjectDeliverables").textContent = isAr
         ? (proj.deliverablesAr || proj.deliverablesEn || "")
@@ -2426,13 +2449,15 @@
         <span class="rounded-full bg-white/80 px-3 py-1 text-[10px] font-semibold text-[#111214]">${escapeCmsHtml(tool)}</span>
       `).join("");
       document.getElementById("challengeHeading").textContent = isAr ? "التحدي ومتطلبات المشروع" : "Project Brief & Challenge";
-      document.getElementById("modalProjectChallenge").textContent = isAr
-        ? (proj.challengeAr || proj.challengeEn || proj.descriptionAr || proj.descriptionEn || "")
-        : (proj.challengeEn || proj.challengeAr || proj.descriptionEn || proj.descriptionAr || "");
+      const challenge = isAr ? (proj.challengeAr || proj.challengeEn || "") : (proj.challengeEn || proj.challengeAr || "");
+      document.getElementById("modalProjectChallenge").textContent = challenge;
+      const hasDistinctChallenge = challenge
+        && (proj.challengeEn !== proj.descriptionEn || proj.challengeAr !== proj.descriptionAr);
+      document.getElementById("projectChallengeCard").classList.toggle("hidden", !hasDistinctChallenge);
       document.getElementById("solutionHeading").textContent = isAr ? "التوجه البصري والتنفيذ" : "Visual Direction & Execution";
-      document.getElementById("modalProjectSolution").textContent = isAr
-        ? (proj.solutionAr || proj.solutionEn || "")
-        : (proj.solutionEn || proj.solutionAr || "");
+      const solution = isAr ? (proj.solutionAr || proj.solutionEn || "") : (proj.solutionEn || proj.solutionAr || "");
+      document.getElementById("modalProjectSolution").textContent = solution;
+      document.getElementById("projectSolutionCard").classList.toggle("hidden", !solution);
       const outcomeCard = document.getElementById("projectOutcomeCard");
       const outcome = isAr
         ? (proj.outcomeAr || proj.outcomeEn || "")
@@ -2845,6 +2870,7 @@
     document.addEventListener("DOMContentLoaded", async () => {
       await restoreAdminSession();
       await loadCmsState();
+      populateCmsProjectYearOptions();
       applyCmsThemeAndContact();
 
       // Load saved visitor cookie preferences if present
@@ -3211,8 +3237,13 @@
             return;
           }
           const editId = document.getElementById("cmsEditProjectId").value;
-          const toolsArr = document.getElementById("cmsProjTools").value.split(",").map((s) => s.trim()).filter(Boolean);
+          const toolsArr = getSelectedCmsProjectTools();
           const imgUrl = document.getElementById("cmsProjImgUrl").value.trim();
+          const projectCountry = CMS_PROJECT_COUNTRIES.find((country) => country.value === document.getElementById("cmsProjCountry").value);
+          if (!projectCountry) {
+            showCmsToast("Choose a country from the available options.");
+            return;
+          }
           if (!imgUrl) {
             showCmsToast("Select a cover image before publishing the project.");
             return;
@@ -3234,29 +3265,26 @@
 
           const descEn = document.getElementById("cmsProjDescEn").value.trim();
           const descAr = document.getElementById("cmsProjDescAr").value.trim();
+          const deliverables = document.getElementById("cmsProjDeliverables").value.trim();
+          const primaryDeliverable = deliverables.split(/[,،;]/, 1)[0].trim();
+          const titleEn = document.getElementById("cmsProjTitleEn").value.trim();
+          const titleAr = document.getElementById("cmsProjTitleAr").value.trim();
 
           const projectPayload = {
-            titleEn: document.getElementById("cmsProjTitleEn").value.trim(),
-            titleAr: document.getElementById("cmsProjTitleAr").value.trim(),
-            categoryEn: document.getElementById("cmsProjCatEn").value.trim(),
-            categoryAr: document.getElementById("cmsProjCatAr").value.trim(),
-            client: document.getElementById("cmsProjClient").value.trim(),
+            titleEn,
+            titleAr,
+            categoryEn: primaryDeliverable || "Project",
+            categoryAr: primaryDeliverable || "مشروع",
             year: document.getElementById("cmsProjYear").value.trim(),
-            location: document.getElementById("cmsProjLoc").value.trim(),
-            locationAr: document.getElementById("cmsProjLocAr").value.trim() || document.getElementById("cmsProjLoc").value.trim(),
-            roleEn: document.getElementById("cmsProjRoleEn").value.trim() || "Lead Brand & 3D Designer",
-            roleAr: document.getElementById("cmsProjRoleAr").value.trim() || "مصمم هويات ومنتجات 3D أول",
-            tools: toolsArr.length ? toolsArr : ["Blender 3D", "Adobe Photoshop"],
-            deliverablesEn: document.getElementById("cmsProjDelivEn").value.trim(),
-            deliverablesAr: document.getElementById("cmsProjDelivAr").value.trim() || document.getElementById("cmsProjDelivEn").value.trim(),
+            location: projectCountry.value,
+            locationAr: projectCountry.arabic,
+            tools: toolsArr,
+            deliverablesEn: deliverables,
+            deliverablesAr: deliverables,
             descriptionEn: descEn,
             descriptionAr: descAr,
-            challengeEn: document.getElementById("cmsProjChallengeEn").value.trim() || descEn,
-            challengeAr: document.getElementById("cmsProjChallengeAr").value.trim() || descAr,
-            solutionEn: document.getElementById("cmsProjSolutionEn").value.trim() || "Executed with high-precision visual craft, balanced typography, and studio lighting.",
-            solutionAr: document.getElementById("cmsProjSolutionAr").value.trim() || "تم التنفيذ بدقة بصرية عالية وتوازن في الخطوط وإضاءة استوديو احترافية.",
-            outcomeEn: document.getElementById("cmsProjOutcomeEn").value.trim(),
-            outcomeAr: document.getElementById("cmsProjOutcomeAr").value.trim(),
+            challengeEn: descEn,
+            challengeAr: descAr,
             pdfUrl: document.getElementById("cmsProjPdfUrl").value.trim(),
             imageUrl: imgUrl,
             coverAspect: document.getElementById("cmsProjCoverAspect").value || "aspect-[4/3]",
