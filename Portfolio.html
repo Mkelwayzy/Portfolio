@@ -596,9 +596,11 @@
                 </div>
               </div>
 
-              <button type="submit" id="cmsProjectSubmitBtn" class="w-full py-4 rounded-2xl bg-obsidian text-white text-xs sm:text-sm font-bold shadow-lg hover:opacity-95 transition-all">
-                Publish Complete Project to Platform
-              </button>
+              <div class="sticky bottom-2 z-30 rounded-2xl border border-white/80 bg-white/85 p-2 shadow-lg backdrop-blur-md">
+                <button type="submit" id="cmsProjectSubmitBtn" class="w-full py-4 rounded-2xl bg-obsidian text-white text-xs sm:text-sm font-bold shadow-lg hover:opacity-95 transition-all">
+                  Publish Complete Project to Platform
+                </button>
+              </div>
             </form>
           </div>
 
@@ -610,6 +612,9 @@
                 <p class="text-[11px] text-slateText">Drag projects or use the arrows to change their display order.</p>
               </div>
             </div>
+            <label for="cmsProjectSearch" class="mb-1.5 block text-[11px] font-semibold text-obsidian">Find a project</label>
+            <input id="cmsProjectSearch" type="search" autocomplete="off" placeholder="Search name, country, year, software…" class="mb-2 w-full rounded-xl px-3.5 py-2.5 text-xs text-obsidian" />
+            <p id="cmsProjectSearchCount" role="status" aria-live="polite" class="mb-3 text-[10px] text-slateText"></p>
             <div id="cmsProjectsList" class="space-y-3 max-h-[960px] overflow-y-auto pe-1"></div>
           </div>
         </div>

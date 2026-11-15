@@ -807,6 +807,38 @@
       }
     }
 
+    function filterCmsProjectList() {
+      const searchInput = document.getElementById("cmsProjectSearch");
+      const rows = document.querySelectorAll("#cmsProjectsList [data-project-order-row]");
+      if (!searchInput) return;
+      const query = searchInput.value.trim().toLocaleLowerCase();
+      let visibleCount = 0;
+
+      rows.forEach((row) => {
+        const project = portfolioProjects.find((item) => item.id === Number(row.dataset.projectOrderRow));
+        if (!project) return;
+        const searchableText = [
+          project.titleEn,
+          project.titleAr,
+          project.client,
+          project.year,
+          project.location,
+          project.locationAr,
+          project.categoryEn,
+          project.categoryAr,
+          project.deliverablesEn,
+          project.deliverablesAr,
+          ...(Array.isArray(project.tools) ? project.tools : [])
+        ].filter(Boolean).join(" ").toLocaleLowerCase();
+        const matches = !query || searchableText.includes(query);
+        row.classList.toggle("hidden", !matches);
+        if (matches) visibleCount += 1;
+      });
+
+      const count = document.getElementById("cmsProjectSearchCount");
+      if (count) count.textContent = `Showing ${visibleCount} of ${portfolioProjects.length} projects`;
+    }
+
     function renderAdminDashboard() {
       renderCmsMediaBlocksEditor();
 
@@ -910,6 +942,7 @@
           });
           row.addEventListener("dragend", () => row.classList.remove("opacity-50"));
         });
+        filterCmsProjectList();
       }
     }
 
@@ -3096,6 +3129,9 @@
           }
         });
       }
+
+      const cmsProjectSearch = document.getElementById("cmsProjectSearch");
+      if (cmsProjectSearch) cmsProjectSearch.addEventListener("input", filterCmsProjectList);
 
       // CMS Tabs Switching
       document.querySelectorAll(".cms-tab-btn").forEach((btn) => {
