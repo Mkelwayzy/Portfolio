@@ -794,7 +794,7 @@
       document.getElementById("cmsProjCountry").value = getCmsProjectCountry(proj);
       populateCmsProjectYearOptions(Number(proj.year) || new Date().getFullYear());
       setCmsProjectCoverImage(proj.imageUrl || "");
-      document.getElementById("cmsProjCoverAspect").value = proj.coverAspect || "aspect-[4/3]";
+      document.getElementById("cmsProjCoverAspect").value = "aspect-[3/4]";
       setCmsProjectTools(proj.tools || []);
       document.getElementById("cmsProjDeliverables").value = proj.deliverablesEn || proj.deliverablesAr || "";
       document.getElementById("cmsProjDescEn").value = proj.descriptionEn || proj.descriptionAr || "";
@@ -974,7 +974,7 @@
         listEl.innerHTML = portfolioProjects.map((proj, index) => `
           <div class="ios-subcard rounded-2xl p-3.5 flex items-center justify-between gap-3 cursor-grab active:cursor-grabbing" data-project-order-row="${proj.id}" draggable="true">
             <div class="flex items-center gap-3 min-w-0">
-              <img src="${proj.imageUrl}" alt="${proj.titleEn}" loading="lazy" decoding="async" class="w-14 h-14 rounded-xl object-cover shrink-0 border border-white" />
+              <img src="${proj.imageUrl}" alt="${proj.titleEn}" loading="lazy" decoding="async" class="w-14 h-auto aspect-[3/4] rounded-xl object-cover shrink-0 border border-white" />
               <div class="min-w-0">
                 <div class="flex items-center gap-2">
                   <span class="px-2 py-0.5 rounded-full bg-obsidian text-white text-[10px] font-bold">Order ${index + 1}</span>
@@ -2039,6 +2039,7 @@
     let dragMoved = false;
     let isStageHovered = false;
     let pointerDownCardId = null;
+    let activeHomeProjectFilter = "";
 
     // ==================== CAROUSEL & PROJECT BROWSING ====================
     function getNextProjectId() {
@@ -2054,6 +2055,7 @@
     }
 
     function buildCarouselCards() {
+      renderHomeProjectGallery();
       const stage = document.getElementById("carouselStage");
       if (!stage) return;
       stage.innerHTML = "";
@@ -2109,6 +2111,97 @@
 
         stage.appendChild(card);
         cardElements.push(card);
+      });
+    }
+
+    function renderHomeProjectGallery() {
+      const filters = document.getElementById("homeProjectFilters");
+      const grid = document.getElementById("homeProjectGrid");
+      if (!filters || !grid) return;
+      const isAr = currentLang === "ar";
+      const categories = [...new Map(portfolioProjects
+        .map((project) => [String(project.categoryEn || "").trim(), project])
+        .filter(([category]) => category)
+        .map(([category, project]) => [category, {
+          key: category,
+          label: isAr ? (project.categoryAr || category) : category
+        }])).values()];
+
+      if (activeHomeProjectFilter && !categories.some((category) => category.key === activeHomeProjectFilter)) {
+        activeHomeProjectFilter = "";
+      }
+
+      filters.replaceChildren();
+      const filterOptions = [
+        { key: "", label: isAr ? "كل الأعمال" : "All work" },
+        ...categories
+      ];
+      filterOptions.forEach(({ key, label }) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `home-project-filter${activeHomeProjectFilter === key ? " active" : ""}`;
+        button.textContent = label;
+        button.setAttribute("aria-pressed", String(activeHomeProjectFilter === key));
+        button.addEventListener("click", () => {
+          activeHomeProjectFilter = key;
+          renderHomeProjectGallery();
+        });
+        filters.appendChild(button);
+      });
+
+      const visibleProjects = portfolioProjects.filter((project) =>
+        !activeHomeProjectFilter || String(project.categoryEn || "").trim() === activeHomeProjectFilter
+      );
+      grid.replaceChildren();
+      if (visibleProjects.length === 0) {
+        const emptyState = document.createElement("p");
+        emptyState.className = "col-span-full py-12 text-center text-sm text-slateText";
+        emptyState.textContent = isAr ? "لا توجد مشاريع في هذا التصنيف بعد." : "No projects in this category yet.";
+        grid.appendChild(emptyState);
+        return;
+      }
+
+      visibleProjects.forEach((project, index) => {
+        const title = isAr ? (project.titleAr || project.titleEn) : project.titleEn;
+        const category = isAr ? (project.categoryAr || project.categoryEn) : project.categoryEn;
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "home-project-card";
+        card.setAttribute("aria-label", `${isAr ? "عرض المشروع:" : "View project:"} ${title}`);
+        card.addEventListener("click", () => openProjectPage(project.id));
+
+        const imageFrame = document.createElement("span");
+        imageFrame.className = "home-project-image-frame";
+        const image = document.createElement("img");
+        image.src = project.imageUrl;
+        image.alt = title;
+        image.loading = index < 3 ? "eager" : "lazy";
+        image.decoding = "async";
+        if (index === 0) image.fetchPriority = "high";
+        imageFrame.appendChild(image);
+
+        if (getProjectMatchScore(project) > 0) {
+          const recommendation = document.createElement("span");
+          recommendation.className = "home-project-recommendation";
+          recommendation.textContent = isAr ? "★ مقترح لك" : "★ For You";
+          imageFrame.appendChild(recommendation);
+        }
+
+        const caption = document.createElement("span");
+        caption.className = "home-project-caption";
+        const categoryLabel = document.createElement("span");
+        categoryLabel.className = "home-project-category";
+        categoryLabel.textContent = category || "";
+        const projectTitle = document.createElement("span");
+        projectTitle.className = "home-project-title";
+        projectTitle.textContent = title || "";
+        const projectInfo = document.createElement("span");
+        projectInfo.className = "home-project-info";
+        projectInfo.textContent = [project.client, project.year].filter(Boolean).join(" · ");
+        caption.append(categoryLabel, projectTitle, projectInfo);
+        imageFrame.appendChild(caption);
+        card.appendChild(imageFrame);
+        grid.appendChild(card);
       });
     }
 
@@ -2533,7 +2626,7 @@
       // Hero Showcase & Metadata
       const coverBox = document.getElementById("modalProjectImage").parentElement;
       if (coverBox) {
-        coverBox.className = `rounded-[24px] overflow-hidden bg-[#E5E6E8] ${proj.coverAspect || "aspect-[4/3]"} shadow-md border border-white/85 relative group`;
+        coverBox.className = "rounded-[24px] overflow-hidden bg-[#E5E6E8] aspect-[3/4] shadow-md border border-white/85 relative group";
       }
       document.getElementById("modalProjectImage").src = proj.imageUrl;
       document.getElementById("modalProjectImage").alt = isAr ? proj.titleAr : proj.titleEn;
@@ -2721,6 +2814,25 @@
       const heroSub = document.getElementById("heroEditorialSubtitle");
       const contactLabel = document.getElementById("contactBtnLabel");
       const pdfLabel = document.getElementById("pdfBtnLabel");
+      const homeCopy = {
+        homeServiceTitle1: isAr ? "الهوية البصرية" : "Brand Identity",
+        homeServiceText1: isAr ? "أنظمة بصرية مميزة تمنح العلامات التجارية حضوراً لا يُنسى." : "Distinctive visual systems built to make brands memorable.",
+        homeServiceTitle2: isAr ? "التصميم ثلاثي الأبعاد و CGI" : "3D & CGI",
+        homeServiceText2: isAr ? "تصورات واقعية للمنتجات بتفاصيل وعمق." : "Photorealistic product visuals with detail and depth.",
+        homeServiceTitle3: isAr ? "الحملات البصرية" : "Visual Campaigns",
+        homeServiceText3: isAr ? "مواد إبداعية متناسقة للاستخدام الرقمي والمطبوع." : "Cohesive creative assets for digital and print.",
+        homeResultsLabel: isAr ? "أعمال مختارة" : "Selected work",
+        homeResultsTitle: isAr ? "أفكار تتحول إلى واقع" : "Ideas brought to life",
+        homeResultsSubtitle: isAr ? "استكشف مجموعة مختارة من مشاريع الهوية البصرية والتصميم ثلاثي الأبعاد." : "Explore selected brand, 3D, and visual design projects.",
+        homeProjectsCtaLabel: isAr ? "ابدأ مشروعك" : "Start a project"
+      };
+      Object.entries(homeCopy).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
+      });
+      document.getElementById("homeServicesSection")?.setAttribute("aria-label", isAr ? "الخدمات الإبداعية" : "Creative services");
+      document.getElementById("homeCategoriesSection")?.setAttribute("aria-label", isAr ? "تصنيفات المشاريع" : "Project categories");
+      document.getElementById("homeProjectFilters")?.setAttribute("aria-label", isAr ? "تصفية المشاريع" : "Filter projects");
 
       if (heroTitle) {
         const rawHeroTitle = isAr ? cmsConfig.heroTitleAr : cmsConfig.heroTitleEn;
@@ -3538,7 +3650,7 @@
             challengeAr: descAr,
             pdfUrl: document.getElementById("cmsProjPdfUrl").value.trim(),
             imageUrl: imgUrl,
-            coverAspect: document.getElementById("cmsProjCoverAspect").value || "aspect-[4/3]",
+            coverAspect: "aspect-[3/4]",
             mediaBlocks: validMediaBlocks,
             gallery: galleryUrls
           };
