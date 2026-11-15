@@ -2819,6 +2819,13 @@
         });
       }
 
+      const cmsHomeBtn = document.getElementById("cmsHomeBtn");
+      if (cmsHomeBtn) {
+        cmsHomeBtn.addEventListener("click", () => {
+          switchPage("home");
+        });
+      }
+
       const cmsLogoutBtn = document.getElementById("cmsLogoutBtn");
       if (cmsLogoutBtn) {
         cmsLogoutBtn.addEventListener("click", () => {
