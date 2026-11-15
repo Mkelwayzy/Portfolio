@@ -533,7 +533,7 @@
             </div>
           </div>
           ${blk.url
-            ? `<img src="${blk.url}" alt="Project image ${idx + 1}" class="w-full max-h-[36rem] rounded-xl border border-black/10 bg-black/5 object-contain" />`
+            ? `<img src="${blk.url}" alt="Project image ${idx + 1}" loading="lazy" decoding="async" class="w-full max-h-[36rem] rounded-xl border border-black/10 bg-black/5 object-contain" />`
             : `<div class="flex min-h-56 flex-col items-center justify-center gap-3 rounded-xl border border-black/10 bg-black/5 p-6">
                 <span data-image-read-progress-text class="text-xs font-semibold text-slateText">Reading image… ${Math.round(blk.readProgress || 0)}%</span>
                 <div class="h-2 w-full max-w-md overflow-hidden rounded-full bg-black/10" role="progressbar" aria-valuenow="${Math.round(blk.readProgress || 0)}" aria-valuemin="0" aria-valuemax="100">
@@ -620,6 +620,55 @@
       document.getElementById("cmsProjectPdfStatus").textContent = statusMessage
         || (url ? "A PDF is attached and will open from the project details." : "No PDF attached.");
       document.getElementById("cmsRemoveProjectPdfBtn").classList.toggle("hidden", !url);
+    }
+
+    function setPageMetadata(title, description) {
+      document.title = title;
+      const metadata = {
+        description: description,
+        "og:title": title,
+        "og:description": description,
+        "twitter:title": title,
+        "twitter:description": description
+      };
+      Object.entries(metadata).forEach(([key, content]) => {
+        const selector = key.startsWith("og:")
+          ? `meta[property="${key}"]`
+          : `meta[name="${key}"]`;
+        const element = document.querySelector(selector);
+        if (element) element.content = content;
+      });
+    }
+
+    function updatePageMetadata(pageName, project = null) {
+      const isAr = currentLang === "ar";
+      if (project) {
+        const title = isAr ? (project.titleAr || project.titleEn) : (project.titleEn || project.titleAr);
+        const description = isAr
+          ? (project.descriptionAr || project.descriptionEn || "")
+          : (project.descriptionEn || project.descriptionAr || "");
+        setPageMetadata(`${title} | Mostafa Khaled`, description);
+        return;
+      }
+
+      const pageLabels = isAr
+        ? { home: "الأعمال", resume: "السيرة الذاتية", partners: "الشركاء", about: "من أنا" }
+        : { home: "Portfolio", resume: "Resume", partners: "Partners", about: "About" };
+      const pageDescriptions = isAr
+        ? {
+            home: "مصطفى خالد، مصمم جرافيك متخصص في الهويات البصرية وتصميم المنتجات ثلاثية الأبعاد وCGI.",
+            resume: "السيرة الذاتية لمصطفى خالد وخبراته في التصميم والهوية البصرية و3D.",
+            partners: "علامات تجارية وشركات تعاون معها مصطفى خالد في التصميم.",
+            about: "تعرف على مصطفى خالد وتخصصه في الهوية البصرية وتصميم 3D."
+          }
+        : {
+            home: "Mostafa Khaled is a graphic designer specializing in brand identity, 3D product visualization, and CGI.",
+            resume: "Experience and skills of Mostafa Khaled in graphic design, brand identity, and 3D.",
+            partners: "Brands and businesses that have worked with Mostafa Khaled.",
+            about: "Learn about Mostafa Khaled and his work in brand identity and 3D design."
+          };
+      const pageTitle = pageLabels[pageName] || pageLabels.home;
+      setPageMetadata(`${pageTitle} | Mostafa Khaled`, pageDescriptions[pageName] || pageDescriptions.home);
     }
 
     function updateCmsCoverReadProgress(percent, label = "Reading cover image…") {
@@ -887,7 +936,7 @@
         listEl.innerHTML = portfolioProjects.map((proj, index) => `
           <div class="ios-subcard rounded-2xl p-3.5 flex items-center justify-between gap-3 cursor-grab active:cursor-grabbing" data-project-order-row="${proj.id}" draggable="true">
             <div class="flex items-center gap-3 min-w-0">
-              <img src="${proj.imageUrl}" alt="${proj.titleEn}" class="w-14 h-14 rounded-xl object-cover shrink-0 border border-white" />
+              <img src="${proj.imageUrl}" alt="${proj.titleEn}" loading="lazy" decoding="async" class="w-14 h-14 rounded-xl object-cover shrink-0 border border-white" />
               <div class="min-w-0">
                 <div class="flex items-center gap-2">
                   <span class="px-2 py-0.5 rounded-full bg-obsidian text-white text-[10px] font-bold">Order ${index + 1}</span>
@@ -1985,7 +2034,7 @@
 
         card.innerHTML = `
           <div class="card-inner">
-            <img src="${proj.imageUrl}" alt="${title}" loading="eager" />
+            <img src="${proj.imageUrl}" alt="${title}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" fetchpriority="${index === 0 ? "high" : "auto"}" />
             ${isRecommended ? `
               <div class="absolute top-3.5 start-3.5 px-2.5 py-1 rounded-full bg-[#111214]/85 backdrop-blur-md border border-white/30 text-[10px] font-bold text-white shadow-sm pointer-events-none">
                 ${recLabel}
@@ -2380,6 +2429,7 @@
       });
 
       const activeNavKey = pageName === "project" ? "home" : pageName;
+      if (pageName !== "project") updatePageMetadata(pageName);
       document.querySelectorAll(".nav-pill-btn").forEach((btn) => {
         const isActive = btn.getAttribute("data-page") === activeNavKey;
         if (isActive) {
@@ -2422,6 +2472,7 @@
       activeProjectId = proj.id;
       trackVisitorProjectInterest(proj);
       const isAr = currentLang === "ar";
+      updatePageMetadata("project", proj);
 
       // Labels & Navigation Counter
       document.getElementById("backToWorkArrow").textContent = isAr ? "→" : "←";
@@ -2522,7 +2573,7 @@
         return `
           <figure class="${layoutCls} col-span-1 flex flex-col justify-between rounded-2xl overflow-hidden bg-white/55 border border-white/85 shadow-sm group cursor-pointer" onclick="document.getElementById('modalProjectImage').src='${blk.url}'">
             <div class="overflow-hidden bg-[#E5E6E8] ${aspectCls} w-full">
-              <img src="${blk.url}" alt="${(isAr ? proj.titleAr : proj.titleEn)} - ${idx + 1}" class="${imgFitCls} transition-transform duration-500 group-hover:scale-[1.03]" />
+              <img src="${blk.url}" alt="${(isAr ? proj.titleAr : proj.titleEn)} - ${idx + 1}" loading="${idx === 0 ? "eager" : "lazy"}" decoding="async" class="${imgFitCls} transition-transform duration-500 group-hover:scale-[1.03]" />
             </div>
             ${cap ? `
               <figcaption class="px-4 py-3 text-xs font-medium text-[#2A2C30] bg-white/75 backdrop-blur-md border-t border-white/80 leading-relaxed">
@@ -2566,7 +2617,7 @@
             <article onclick="openProjectPage(${rel.id})" role="button" tabindex="0" class="ios-subcard rounded-2xl p-3.5 cursor-pointer group flex flex-col justify-between">
               <div>
                 <div class="rounded-xl overflow-hidden bg-[#E5E6E8] aspect-[16/10] mb-3.5 relative border border-white/75">
-                  <img src="${rel.imageUrl}" alt="${relTitle}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <img src="${rel.imageUrl}" alt="${relTitle}" loading="lazy" decoding="async" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                   <span class="glass-pill absolute top-2.5 start-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-[#111214]">0${rel.id}</span>
                 </div>
                 <span class="inline-block text-[10px] font-semibold uppercase tracking-wider text-[#5A5C60] mb-1">${relCat}</span>
@@ -2611,6 +2662,19 @@
       const isAr = currentLang === "ar";
       document.documentElement.lang = isAr ? "ar" : "en";
       document.documentElement.dir = isAr ? "rtl" : "ltr";
+      const projectView = document.getElementById("projectPageView");
+      if (projectView && !projectView.classList.contains("hidden")) {
+        const project = portfolioProjects.find((item) => item.id === activeProjectId);
+        updatePageMetadata("project", project);
+      } else {
+        const currentPage = Object.entries({
+          home: "homePortfolioView",
+          resume: "resumeView",
+          partners: "partnersView",
+          about: "aboutView"
+        }).find(([, elementId]) => !document.getElementById(elementId)?.classList.contains("hidden"))?.[0] || "home";
+        updatePageMetadata(currentPage);
+      }
 
       const langBtn = document.getElementById("langToggleBtn");
       if (langBtn) langBtn.textContent = isAr ? "EN" : "AR";
@@ -2646,8 +2710,8 @@
       renderResumeContent();
       renderPartnersContent();
       renderAboutContent();
-      const projectView = document.getElementById("projectPageView");
-      if (projectView && !projectView.classList.contains("hidden")) {
+      const activeProjectView = document.getElementById("projectPageView");
+      if (activeProjectView && !activeProjectView.classList.contains("hidden")) {
         renderProjectPage(activeProjectId);
       }
     }

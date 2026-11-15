@@ -21,6 +21,8 @@ Then open `http://localhost:8000/`.
 
 The page loads Tailwind CSS, IBM Plex fonts, jsPDF, and Supabase JS from external CDNs, so those features require an internet connection.
 
+The carousel prioritizes its first cover image and lazily loads the remaining project, gallery, and related-project images. The portfolio also supplies bilingual page titles/descriptions and baseline Open Graph, Twitter, canonical, and Person structured metadata. Project details still use the existing hash routes, so they do not have independently crawlable URLs or server-rendered social previews.
+
 ## Content and publishing
 
 The admin dashboard reads public portfolio content from Supabase and requires an authorized Supabase Auth account to publish changes. Project images, attached PDFs, and uploaded logos are stored in the public `portfolio-assets` bucket; only an allowlisted admin can upload or change content.
