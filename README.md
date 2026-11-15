@@ -28,6 +28,25 @@ The carousel prioritizes its first cover image and lazily loads the remaining pr
 
 The admin dashboard reads public portfolio content from Supabase and requires an authorized Supabase Auth account to publish changes. Project images, attached PDFs, and uploaded logos are stored in the public `portfolio-assets` bucket; only an allowlisted admin can upload or change content.
 
+### AI project-writing assistant
+
+The project editor can send a narrative to [Gemini 3.8 Flash](https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash) and receive a draft for the existing project fields. It does not publish projects or handle images. The Supabase Edge Function checks the caller's admin membership, keeps the Gemini API key server-side, limits narrative length, and only returns the supported country, year, and software values.
+
+To enable it:
+
+1. Create a Gemini API key in [Google AI Studio](https://aistudio.google.com/apikey) for a project that has no billing account linked.
+2. In the Supabase Dashboard, open **Edge Function Secrets** and add `GEMINI_API_KEY`. Never add the key to `assets/js/supabase-config.js` or commit it.
+3. Install and sign in to the [Supabase CLI](https://supabase.com/docs/guides/cli), then deploy the function:
+
+   ```bash
+   supabase login
+   supabase functions deploy draft-project --project-ref anvadgrhanqewgxygisg
+   ```
+
+4. Keep JWT verification enabled for the function. Its database admin check also requires the existing `portfolio_admins` table and policies from [`supabase/setup.sql`](./supabase/setup.sql).
+
+Before each request, the admin must consent to sending the narrative to Google. Under Google's [current free-tier terms](https://ai.google.dev/gemini-api/docs/pricing), submitted content may be used to improve Google products; avoid confidential client information. The portfolio does not save the narrative or API key. Access and quotas can change; the function does not choose a paid model, but Google controls whether an API project is on a free or paid tier, so do not link a billing account if zero charges are required.
+
 In the project editor, enter the project name and problem summary in English and Arabic, choose a country (Egypt, Saudi Arabia, or Kuwait) and a year (2018 onward), type the deliverables, and select software from the available list. Select a cover image and optionally add gallery images or a PDF. Project images and PDFs can each be up to 15 MB.
 
 Project case studies also support optional outcome and impact text in English and Arabic. Include measurable claims only when you can verify them.

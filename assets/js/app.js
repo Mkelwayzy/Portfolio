@@ -477,7 +477,7 @@
       if (!yearSelect) return;
       const currentYear = new Date().getFullYear();
       const latestYear = Math.max(currentYear + 5, Number(selectedYear) || currentYear);
-      yearSelect.innerHTML = Array.from({ length: latestYear - 2018 + 1 }, (_, index) => {
+      yearSelect.innerHTML = '<option value="">اختر السنة / Select year</option>' + Array.from({ length: latestYear - 2018 + 1 }, (_, index) => {
         const year = 2018 + index;
         return `<option value="${year}">${year}</option>`;
       }).join("");
@@ -784,6 +784,9 @@
 
     function resetCmsProjectForm() {
       document.getElementById("cmsProjectForm").reset();
+      document.getElementById("cmsProjectNarrative").value = "";
+      document.getElementById("cmsProjectAiConsent").checked = false;
+      document.getElementById("cmsProjectAiStatus").textContent = "راجع كل الحقول وتأكد من المعلومات قبل النشر.";
       document.getElementById("cmsEditProjectId").value = "";
       document.getElementById("cmsProjectFormHeading").textContent = "Publish New Precision Project";
       document.getElementById("cmsProjectSubmitBtn").textContent = "Publish Complete Project to Platform";
@@ -3332,6 +3335,113 @@
       // Publish or Update Precision Project
       const cmsProjectForm = document.getElementById("cmsProjectForm");
       if (cmsProjectForm) {
+        const aiDraftButton = document.getElementById("cmsProjectAiDraftBtn");
+        const aiNarrativeInput = document.getElementById("cmsProjectNarrative");
+        const aiConsentInput = document.getElementById("cmsProjectAiConsent");
+        const aiStatus = document.getElementById("cmsProjectAiStatus");
+
+        if (aiDraftButton && aiNarrativeInput && aiConsentInput && aiStatus) {
+          aiDraftButton.addEventListener("click", async () => {
+            const narrative = aiNarrativeInput.value.trim();
+            if (!narrative) {
+              aiStatus.textContent = "اكتب وصف المشروع أولًا.";
+              return;
+            }
+            if (narrative.length > 5000) {
+              aiStatus.textContent = "اختصر الوصف إلى 5000 حرف أو أقل.";
+              return;
+            }
+            if (!aiConsentInput.checked) {
+              aiStatus.textContent = "وافق على إرسال النص إلى Google قبل إنشاء المسودة.";
+              return;
+            }
+            if (!supabaseClient || !isAdminAuthenticated) {
+              aiStatus.textContent = "سجّل الدخول بحساب المشرف لاستخدام المساعد.";
+              return;
+            }
+
+            const existingDraft = [
+              "cmsProjTitleEn",
+              "cmsProjTitleAr",
+              "cmsProjCountry",
+              "cmsProjDescEn",
+              "cmsProjDescAr",
+              "cmsProjDeliverables"
+            ].some((id) => document.getElementById(id).value.trim())
+              || (document.getElementById("cmsProjYear").value && document.getElementById("cmsProjYear").value !== String(new Date().getFullYear()))
+              || getSelectedCmsProjectTools().length > 0;
+            if (existingDraft && !window.confirm("سيستبدل المساعد بيانات المشروع النصية والاختيارات الحالية. لن يغيّر الصور أو ملفات PDF. هل تريد المتابعة؟")) {
+              return;
+            }
+
+            aiDraftButton.disabled = true;
+            aiDraftButton.textContent = "جارٍ ترتيب بيانات المشروع…";
+            aiStatus.textContent = "جارٍ إرسال الوصف إلى Gemini لإنشاء مسودة…";
+            try {
+              const { data, error } = await supabaseClient.functions.invoke("draft-project", {
+                body: { narrative }
+              });
+              if (error) {
+                let errorCode = "";
+                if (typeof error.context?.json === "function") {
+                  try {
+                    errorCode = (await error.context.json())?.error || "";
+                  } catch (bodyError) {
+                    console.warn("Unable to read the project assistant error response.", bodyError);
+                  }
+                }
+                const errorMessages = {
+                  AI_NOT_CONFIGURED: "لم يتم إعداد مفتاح Gemini في إعدادات Supabase بعد.",
+                    FREE_QUOTA_EXCEEDED: "انتهت الحصة المجانية مؤقتًا. انتظر تجددها ثم حاول مرة أخرى؛ لن يغيّر التطبيق الموديل أو يعيد المحاولة تلقائيًا.",
+                  NOT_ADMIN: "هذا الحساب غير مصرح له باستخدام مساعد المشاريع.",
+                  UNAUTHORIZED: "انتهت جلسة المشرف. سجّل الدخول مرة أخرى.",
+                  ADMIN_CHECK_FAILED: "تعذر التحقق من صلاحيات المشرف. راجع إعداد قاعدة البيانات ثم حاول مجددًا.",
+                  INVALID_REQUEST: "الوصف غير صالح أو أطول من الحد المسموح.",
+                  MODEL_NOT_AVAILABLE: "موديل Gemini المجاني غير متاح حاليًا لهذا الحساب.",
+                  MODEL_REQUEST_FAILED: "تعذر على Gemini إنشاء المسودة. حاول مرة أخرى لاحقًا.",
+                  INVALID_MODEL_OUTPUT: "لم يُرجع Gemini بيانات منظمة صالحة. حاول مرة أخرى."
+                };
+                throw new Error(errorMessages[errorCode] || error.message || "تعذر الاتصال بمساعد المشاريع.");
+              }
+
+              const draft = data?.project;
+              const textFields = ["titleEn", "titleAr", "deliverables", "descriptionEn", "descriptionAr"];
+              if (!draft || textFields.some((field) => typeof draft[field] !== "string")) {
+                throw new Error("استجابة المساعد غير مكتملة. حاول مرة أخرى.");
+              }
+              const validCountries = new Set(CMS_PROJECT_COUNTRIES.map((country) => country.value));
+              if (draft.country !== "" && !validCountries.has(draft.country)) {
+                throw new Error("أعاد المساعد دولة خارج الاختيارات المتاحة؛ لم يتم تغيير النموذج.");
+              }
+              const validYears = new Set(Array.from(document.getElementById("cmsProjYear").options, (option) => option.value));
+              if (typeof draft.year !== "string" || (draft.year !== "" && !validYears.has(draft.year))) {
+                throw new Error("أعاد المساعد سنة غير متاحة؛ لم يتم تغيير النموذج.");
+              }
+              const validTools = new Set(Array.from(document.querySelectorAll('input[name="cmsProjTools"]'), (checkbox) => checkbox.value));
+              if (!Array.isArray(draft.tools) || draft.tools.some((tool) => !validTools.has(tool))) {
+                throw new Error("أعاد المساعد برنامجًا خارج الاختيارات المتاحة؛ لم يتم تغيير النموذج.");
+              }
+
+              document.getElementById("cmsProjTitleEn").value = draft.titleEn;
+              document.getElementById("cmsProjTitleAr").value = draft.titleAr;
+              document.getElementById("cmsProjCountry").value = draft.country;
+              document.getElementById("cmsProjYear").value = draft.year;
+              document.getElementById("cmsProjDescEn").value = draft.descriptionEn;
+              document.getElementById("cmsProjDescAr").value = draft.descriptionAr;
+              document.getElementById("cmsProjDeliverables").value = draft.deliverables;
+              setCmsProjectTools(draft.tools);
+              aiStatus.textContent = "تم ملء المسودة. راجع العنوان والوصف والدولة والسنة والبرامج قبل النشر.";
+            } catch (error) {
+              console.error("Unable to draft project fields with Gemini.", error);
+              aiStatus.textContent = error.message || "حدث خطأ أثناء إنشاء المسودة.";
+            } finally {
+              aiConsentInput.checked = false;
+              aiDraftButton.disabled = false;
+              aiDraftButton.textContent = "رتّب بيانات المشروع بالذكاء الاصطناعي";
+            }
+          });
+        }
+
         cmsProjectForm.addEventListener("submit", async (e) => {
           e.preventDefault();
           if (cmsCoverReadPending || cmsPdfReadPending || cmsDraftBlocks.some((block) => !block.url)) {

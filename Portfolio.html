@@ -463,6 +463,25 @@
               </div>
             </div>
 
+            <section id="cmsProjectAiWriter" class="mb-6 rounded-2xl border border-black/10 bg-white/65 p-4 sm:p-5" aria-labelledby="cmsProjectAiWriterTitle">
+              <div class="mb-3">
+                <h4 id="cmsProjectAiWriterTitle" class="text-sm font-bold text-obsidian">مساعد كتابة المشروع / Project Writing Assistant</h4>
+                <p class="mt-1 text-[11px] leading-relaxed text-slateText">اكتب حكاية المشروع بطريقتك، وسيملأ Gemini خانات النموذج كمُسودة للمراجعة. لن ينشر المشروع أو يضيف الصور.</p>
+              </div>
+              <label for="cmsProjectNarrative" class="mb-1 block text-[11px] font-semibold text-obsidian">وصفك للمشروع / Your project story</label>
+              <textarea id="cmsProjectNarrative" rows="4" maxlength="5000" placeholder="مثال: صممت هوية لمطعم في مصر سنة 2025. كان العميل محتاج يميز المطعم عن المنافسين، وعملت الشعار والتغليف باستخدام Illustrator وPhotoshop." class="w-full rounded-xl border border-black/10 bg-white/90 px-3.5 py-3 text-xs leading-relaxed text-obsidian"></textarea>
+              <div class="mt-3 flex flex-col gap-3">
+                <label class="flex items-start gap-2 text-[10px] leading-relaxed text-slateText">
+                  <input id="cmsProjectAiConsent" type="checkbox" class="mt-0.5 accent-[#111214]" />
+                  <span>أوافق على إرسال هذا النص إلى Google Gemini لإنشاء المسودة. قد تستخدم Google محتوى الخطة المجانية لتحسين خدماتها؛ لا تكتب معلومات سرية.</span>
+                </label>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p id="cmsProjectAiStatus" role="status" aria-live="polite" class="text-[10px] text-slateText">راجع كل الحقول وتأكد من المعلومات قبل النشر.</p>
+                  <button type="button" id="cmsProjectAiDraftBtn" class="shrink-0 rounded-xl bg-obsidian px-4 py-2.5 text-[11px] font-bold text-white transition hover:opacity-90 disabled:cursor-wait disabled:opacity-50">رتّب بيانات المشروع بالذكاء الاصطناعي</button>
+                </div>
+              </div>
+            </section>
+
             <form id="cmsProjectForm" class="space-y-6">
               <input type="hidden" id="cmsEditProjectId" value="" />
               <!-- Step 1: Basic project details -->
