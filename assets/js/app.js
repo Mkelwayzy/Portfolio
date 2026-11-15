@@ -667,8 +667,10 @@
             partners: "Brands and businesses that have worked with Mostafa Khaled.",
             about: "Learn about Mostafa Khaled and his work in brand identity and 3D design."
           };
-      const pageTitle = pageLabels[pageName] || pageLabels.home;
-      setPageMetadata(`${pageTitle} | Mostafa Khaled`, pageDescriptions[pageName] || pageDescriptions.home);
+      const pageTitle = pageName === "home"
+        ? (isAr ? "مصطفى خالد — تصميم وهوية" : "Mostafa Khaled — Brand & 3D")
+        : `${pageLabels[pageName] || pageLabels.home} | Mostafa Khaled`;
+      setPageMetadata(pageTitle, pageDescriptions[pageName] || pageDescriptions.home);
     }
 
     function updateCmsCoverReadProgress(percent, label = "Reading cover image…") {

@@ -6,6 +6,7 @@ A bilingual portfolio for brand identity, 3D design, and visual work.
 
 - `index.html` — redirects the site root to the portfolio page.
 - `Portfolio.html` — page markup.
+- `assets/favicon.svg` — custom portfolio tab icon.
 - `assets/css/styles.css` — custom styles and animations.
 - `assets/js/app.js` — portfolio data, page interactions, CMS, routing, and PDF export.
 
@@ -21,7 +22,7 @@ Then open `http://localhost:8000/`.
 
 The page loads Tailwind CSS, IBM Plex fonts, jsPDF, and Supabase JS from external CDNs, so those features require an internet connection.
 
-The carousel prioritizes its first cover image and lazily loads the remaining project, gallery, and related-project images. The portfolio also supplies bilingual page titles/descriptions and baseline Open Graph, Twitter, canonical, and Person structured metadata. Project details still use the existing hash routes, so they do not have independently crawlable URLs or server-rendered social previews.
+The carousel prioritizes its first cover image and lazily loads the remaining project, gallery, and related-project images. The portfolio also supplies bilingual page titles/descriptions, a custom favicon, and baseline Open Graph, Twitter, canonical, and Person structured metadata. Project details still use the existing hash routes, so they do not have independently crawlable URLs or server-rendered social previews.
 
 ## Content and publishing
 
