@@ -27,7 +27,7 @@ The admin dashboard reads public portfolio content from Supabase and requires an
 
 ### Supabase setup
 
-1. In the Supabase SQL Editor, run [`supabase/setup.sql`](./supabase/setup.sql).
+1. In the SQL Editor for the same Supabase project configured in the website, run [`supabase/setup.sql`](./supabase/setup.sql).
 2. In **Authentication → Users**, create and confirm the admin account with an email and password. Disable public sign-ups in the Auth settings; the database allowlist still blocks non-admin writes.
 3. In the SQL file's final example, replace `YOUR_ADMIN_EMAIL` with that account's email, uncomment the statement, then run it to allowlist the account.
 4. Confirm the website's Supabase project URL and **publishable** key in [`assets/js/supabase-config.js`](./assets/js/supabase-config.js). The publishable key is intended for browser use; never put a `service_role` or secret key in this repository.

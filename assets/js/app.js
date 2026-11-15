@@ -2782,7 +2782,9 @@
               console.error("Unable to clear an unverified Supabase session.", signOutError);
             }
             if (errEl) {
-              errEl.textContent = "Admin access could not be verified. Complete the Supabase database setup and try again.";
+              errEl.textContent = verificationError?.code === "PGRST205"
+                ? "Supabase tables are missing. Run supabase/setup.sql in this project's SQL Editor, then add your account to portfolio_admins."
+                : `Admin access could not be verified: ${verificationError?.message || "Check the Supabase database setup."}`;
               errEl.classList.remove("hidden");
             }
           }
