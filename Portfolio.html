@@ -491,6 +491,10 @@
                     <input id="cmsProjTitleEn" type="text" required placeholder="Enter project name" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
                   </div>
                   <div>
+                    <label class="block text-[11px] font-semibold text-obsidian mb-1">اسم المشروع (عربي)</label>
+                    <input id="cmsProjTitleAr" type="text" placeholder="اسم المشروع بالعربية" class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
+                  </div>
+                  <div>
                     <label for="cmsProjCountry" class="block text-[11px] font-semibold text-obsidian mb-1">الدولة / Country *</label>
                     <select id="cmsProjCountry" required class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian">
                       <option value="">Select country</option>
@@ -504,32 +508,74 @@
                     <label for="cmsProjYear" class="block text-[11px] font-semibold text-obsidian mb-1">السنة / Year *</label>
                     <select id="cmsProjYear" required class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></select>
                   </div>
-                  <input id="cmsProjTitleAr" type="hidden" value="" />
                 </div>
 
-                <div class="border-t border-black/5 pt-4 space-y-3.5">
-                  <div>
-                    <label class="block text-[11px] font-semibold text-obsidian mb-1">نبذة عن المشكلة / Problem Brief *</label>
-                    <textarea id="cmsProjDescEn" rows="3" required placeholder="What problem or need did this project address?" class="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white text-xs text-obsidian"></textarea>
-                    <input id="cmsProjDescAr" type="hidden" value="" />
+                <div class="border-t border-black/5 pt-4 space-y-4">
+                  <h5 class="text-xs font-bold text-obsidian">Project page cards / بيانات بطاقات صفحة المشروع</h5>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <label class="block text-[11px] font-semibold text-obsidian">Client (EN)
+                      <input id="cmsProjClientEn" type="text" placeholder="Client or brand name" class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal" />
+                    </label>
+                    <label class="block text-[11px] font-semibold text-obsidian">العميل (عربي)
+                      <input id="cmsProjClientAr" type="text" placeholder="اسم العميل أو العلامة" class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal" />
+                    </label>
+                    <label class="block text-[11px] font-semibold text-obsidian">Category badge (EN)
+                      <input id="cmsProjCategoryEn" type="text" placeholder="Branding, 3D, UI/UX…" class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal" />
+                    </label>
+                    <label class="block text-[11px] font-semibold text-obsidian">تصنيف المشروع (عربي)
+                      <input id="cmsProjCategoryAr" type="text" placeholder="الهوية البصرية، ثلاثي الأبعاد…" class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal" />
+                    </label>
+                    <label class="block text-[11px] font-semibold text-obsidian">Role (EN)
+                      <input id="cmsProjRoleEn" type="text" placeholder="Lead Brand Designer" class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal" />
+                    </label>
+                    <label class="block text-[11px] font-semibold text-obsidian">الدور في المشروع (عربي)
+                      <input id="cmsProjRoleAr" type="text" placeholder="مصمم هوية بصرية رئيسي" class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal" />
+                    </label>
                   </div>
 
-                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div class="sm:col-span-1">
-                      <label class="block text-[11px] font-semibold text-obsidian mb-1">المخرجات / Outputs *</label>
-                      <input id="cmsProjDeliverables" type="text" required placeholder="Brand identity, packaging, social media, etc." class="w-full px-3.5 py-2.5 rounded-xl bg-white/90 border border-white text-xs text-obsidian" />
-                    </div>
-                    <fieldset class="sm:col-span-2">
-                      <legend class="block text-[11px] font-semibold text-obsidian mb-2">البرامج المستخدمة / Software used *</legend>
-                      <div class="flex flex-wrap gap-2">
-                        <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="Photoshop" class="accent-[#111214]" /> Photoshop</label>
-                        <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="Illustrator" class="accent-[#111214]" /> Illustrator</label>
-                        <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="After Effects" class="accent-[#111214]" /> After Effects</label>
-                        <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="Comfy" class="accent-[#111214]" /> Comfy</label>
-                        <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="Blender" class="accent-[#111214]" /> Blender</label>
-                      </div>
-                    </fieldset>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 border-t border-black/5 pt-4">
+                    <label class="block text-[11px] font-semibold text-obsidian">Project summary (EN) *
+                      <textarea id="cmsProjSummaryEn" rows="3" required placeholder="Short description shown below the project title." class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal"></textarea>
+                    </label>
+                    <label class="block text-[11px] font-semibold text-obsidian">ملخص المشروع (عربي)
+                      <textarea id="cmsProjSummaryAr" rows="3" placeholder="ملخص قصير يظهر أسفل عنوان المشروع." class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal"></textarea>
+                    </label>
+                    <label class="block text-[11px] font-semibold text-obsidian">Project brief / challenge (EN) *
+                      <textarea id="cmsProjDescEn" rows="3" required placeholder="What problem or need did this project address?" class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal"></textarea>
+                    </label>
+                    <label class="block text-[11px] font-semibold text-obsidian">تحدي المشروع (عربي)
+                      <textarea id="cmsProjDescAr" rows="3" placeholder="ما التحدي أو الاحتياج الذي عالجه المشروع؟" class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal"></textarea>
+                    </label>
+                    <label class="block text-[11px] font-semibold text-obsidian">Key deliverables (EN) *
+                      <input id="cmsProjDeliverables" type="text" required placeholder="Brand identity, packaging, social media, etc." class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal" />
+                    </label>
+                    <label class="block text-[11px] font-semibold text-obsidian">أبرز المخرجات (عربي)
+                      <input id="cmsProjDeliverablesAr" type="text" placeholder="هوية بصرية، تغليف، محتوى اجتماعي…" class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal" />
+                    </label>
+                    <label class="block text-[11px] font-semibold text-obsidian">Visual direction &amp; execution (EN)
+                      <textarea id="cmsProjSolutionEn" rows="3" placeholder="How was the project visually developed and executed?" class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal"></textarea>
+                    </label>
+                    <label class="block text-[11px] font-semibold text-obsidian">التوجه البصري والتنفيذ (عربي)
+                      <textarea id="cmsProjSolutionAr" rows="3" placeholder="كيف تم تطوير الفكرة بصريًا وتنفيذها؟" class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal"></textarea>
+                    </label>
+                    <label class="block text-[11px] font-semibold text-obsidian">Outcome &amp; impact (EN, optional)
+                      <textarea id="cmsProjOutcomeEn" rows="2" placeholder="Optional measurable project result." class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal"></textarea>
+                    </label>
+                    <label class="block text-[11px] font-semibold text-obsidian">النتيجة والأثر (عربي، اختياري)
+                      <textarea id="cmsProjOutcomeAr" rows="2" placeholder="نتيجة المشروع أو أثره، إن وجد." class="mt-1 w-full rounded-xl px-3.5 py-2.5 text-xs font-normal"></textarea>
+                    </label>
                   </div>
+
+                  <fieldset>
+                    <legend class="block text-[11px] font-semibold text-obsidian mb-2">البرامج المستخدمة / Software used *</legend>
+                    <div class="flex flex-wrap gap-2">
+                      <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="Photoshop" class="accent-[#111214]" /> Photoshop</label>
+                      <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="Illustrator" class="accent-[#111214]" /> Illustrator</label>
+                      <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="After Effects" class="accent-[#111214]" /> After Effects</label>
+                      <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="Comfy" class="accent-[#111214]" /> Comfy</label>
+                      <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white bg-white/80 px-3 py-2 text-xs text-obsidian"><input type="checkbox" name="cmsProjTools" value="Blender" class="accent-[#111214]" /> Blender</label>
+                    </div>
+                  </fieldset>
                 </div>
               </div>
 
