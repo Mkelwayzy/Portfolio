@@ -6,10 +6,17 @@
 
     // ==================== ADMIN CMS STATE & PERSISTENCE ====================
     const CMS_STORAGE_KEY = "mk_studio_cms_state_v1";
+    const CMS_CONTENT_TABLE = "portfolio_content";
+    const CMS_MEDIA_BUCKET = "portfolio-assets";
+    const supabaseConfig = window.PORTFOLIO_SUPABASE_CONFIG;
+    const supabaseClient = window.supabase?.createClient && supabaseConfig?.url && supabaseConfig?.publishableKey
+      ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.publishableKey)
+      : null;
     let isAdminAuthenticated = false;
+    let cmsRemoteStateLoaded = false;
+    let cmsRemoteStateExists = false;
 
     const defaultCmsConfig = {
-      passcode: "admin2026",
       studioTagEn: "Mostafa Khaled Studio",
       studioTagAr: "استوديو مصطفى خالد",
       heroTitleEn: "Express Your Brand with\nOur Visual Craft",
@@ -42,78 +49,235 @@
 
     let cmsConfig = { ...defaultCmsConfig };
 
-    function saveCmsState() {
+    function getCmsStateSnapshot() {
+      return {
+        config: { ...cmsConfig },
+        projects: portfolioProjects,
+        experience: experienceData,
+        software: softwareList,
+        education: educationData,
+        expertise: expertiseTags,
+        partners: partnersData,
+        partnerSectors,
+        partnerStats,
+        resumeStats,
+        aboutStats,
+        aboutPillars,
+        aboutTags
+      };
+    }
+
+    function applyCmsState(parsed) {
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
+      let repairedProjectIds = false;
+      if (parsed.config && typeof parsed.config === "object" && !Array.isArray(parsed.config)) {
+        const publicConfig = { ...parsed.config };
+        delete publicConfig.passcode;
+        cmsConfig = { ...defaultCmsConfig, ...publicConfig };
+      }
+      if (Array.isArray(parsed.projects) && parsed.projects.length > 0) {
+        const validProjects = parsed.projects.filter((project) => project && typeof project === "object" && !Array.isArray(project));
+        if (validProjects.length > 0) {
+          const nextAvailableId = validProjects.reduce((max, project) => {
+            const id = Number(project.id);
+            return Number.isSafeInteger(id) && id > 0 ? Math.max(max, id) : max;
+          }, 0) + 1;
+          const usedIds = new Set();
+          let nextId = nextAvailableId;
+          portfolioProjects = validProjects.map((project) => {
+            const id = Number(project.id);
+            if (Number.isSafeInteger(id) && id > 0 && !usedIds.has(id)) {
+              usedIds.add(id);
+              return { ...project, id };
+            }
+            while (usedIds.has(nextId)) nextId += 1;
+            repairedProjectIds = true;
+            usedIds.add(nextId);
+            return { ...project, id: nextId++ };
+          });
+        }
+      }
+      if (Array.isArray(parsed.experience)) experienceData = parsed.experience;
+      if (Array.isArray(parsed.software)) softwareList = parsed.software;
+      if (parsed.education && typeof parsed.education === "object" && !Array.isArray(parsed.education)) {
+        educationData = { ...educationData, ...parsed.education };
+      }
+      if (Array.isArray(parsed.expertise)) expertiseTags = parsed.expertise;
+      if (Array.isArray(parsed.partners)) partnersData = parsed.partners;
+      if (Array.isArray(parsed.partnerSectors)) partnerSectors = parsed.partnerSectors;
+      if (Array.isArray(parsed.partnerStats)) partnerStats = parsed.partnerStats;
+      if (Array.isArray(parsed.resumeStats)) resumeStats = parsed.resumeStats;
+      if (Array.isArray(parsed.aboutStats)) aboutStats = parsed.aboutStats;
+      if (Array.isArray(parsed.aboutPillars)) aboutPillars = parsed.aboutPillars;
+      if (Array.isArray(parsed.aboutTags)) aboutTags = parsed.aboutTags;
+      return repairedProjectIds;
+    }
+
+    async function uploadCmsDataUrl(dataUrl) {
+      if (!supabaseClient || !isAdminAuthenticated) {
+        throw new Error("Sign in as an authorized administrator before uploading images.");
+      }
+      const response = await fetch(dataUrl);
+      if (!response.ok) throw new Error("Unable to read an uploaded image.");
+      const blob = await response.blob();
+      if (!blob.type.startsWith("image/")) throw new Error("Only image files can be uploaded.");
+      const extensions = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/svg+xml": "svg",
+        "image/webp": "webp",
+        "image/gif": "gif",
+        "image/avif": "avif"
+      };
+      if (blob.size > 15 * 1024 * 1024) {
+        throw new Error("Images must be 15 MB or smaller.");
+      }
+      const extension = extensions[blob.type] || "img";
+      const randomId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const path = `${randomId}.${extension}`;
+      const { error } = await supabaseClient.storage.from(CMS_MEDIA_BUCKET).upload(path, blob, {
+        cacheControl: "31536000",
+        contentType: blob.type,
+        upsert: false
+      });
+      if (error) throw error;
+      const { data } = supabaseClient.storage.from(CMS_MEDIA_BUCKET).getPublicUrl(path);
+      return data.publicUrl;
+    }
+
+    async function prepareCmsStateForRemote() {
+      const snapshot = JSON.parse(JSON.stringify(getCmsStateSnapshot()));
+      const uploadedImages = new Map();
+      const prepareImage = async (value) => {
+        if (typeof value !== "string" || !value.startsWith("data:image/")) return value;
+        if (!uploadedImages.has(value)) uploadedImages.set(value, await uploadCmsDataUrl(value));
+        return uploadedImages.get(value);
+      };
+
+      snapshot.config.customLogoDataUrl = await prepareImage(snapshot.config.customLogoDataUrl);
+      for (const project of snapshot.projects) {
+        project.imageUrl = await prepareImage(project.imageUrl);
+        if (Array.isArray(project.gallery)) {
+          project.gallery = await Promise.all(project.gallery.map(prepareImage));
+        }
+        if (Array.isArray(project.mediaBlocks)) {
+          project.mediaBlocks = await Promise.all(project.mediaBlocks.map(async (block) => ({
+            ...block,
+            url: await prepareImage(block.url)
+          })));
+        }
+      }
+      return snapshot;
+    }
+
+    async function saveCmsState() {
+      if (!supabaseClient) {
+        showCmsToast("Supabase is not configured. Portfolio changes were not published.");
+        return false;
+      }
+      if (!isAdminAuthenticated) {
+        showCmsToast("Sign in as an authorized administrator before publishing changes.");
+        return false;
+      }
+      if (!cmsRemoteStateLoaded) {
+        showCmsToast("Portfolio content could not be verified online. Reload before publishing to avoid overwriting existing content.");
+        return false;
+      }
       try {
-        localStorage.setItem(CMS_STORAGE_KEY, JSON.stringify({
-          config: cmsConfig,
-          projects: portfolioProjects,
-          experience: experienceData,
-          software: softwareList,
-          education: educationData,
-          expertise: expertiseTags,
-          partners: partnersData,
-          partnerSectors,
-          partnerStats,
-          resumeStats,
-          aboutStats,
-          aboutPillars,
-          aboutTags
-        }));
+        const content = await prepareCmsStateForRemote();
+        const { error } = await supabaseClient
+          .from(CMS_CONTENT_TABLE)
+          .upsert({ id: 1, content, updated_at: new Date().toISOString() }, { onConflict: "id" });
+        if (error) throw error;
+        applyCmsState(content);
+        cmsRemoteStateExists = true;
+        try {
+          localStorage.removeItem(CMS_STORAGE_KEY);
+        } catch (cacheError) {
+          console.error("Unable to clear the old local portfolio cache after publishing.", cacheError);
+        }
         return true;
       } catch (error) {
-        console.error("Unable to save portfolio changes to local storage.", error);
-        showCmsToast("Changes could not be saved in this browser. Check available storage space.");
+        console.error("Unable to publish portfolio changes to Supabase.", error);
+        showCmsToast(`Changes could not be published: ${error.message || "Supabase request failed."}`);
         return false;
       }
     }
 
-    function loadCmsState() {
+    async function loadCmsState() {
+      cmsRemoteStateLoaded = false;
       try {
         const raw = localStorage.getItem(CMS_STORAGE_KEY);
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
-        let repairedProjectIds = false;
-        if (parsed.config) cmsConfig = { ...defaultCmsConfig, ...parsed.config };
-        if (Array.isArray(parsed.projects) && parsed.projects.length > 0) {
-          const validProjects = parsed.projects.filter((project) => project && typeof project === "object" && !Array.isArray(project));
-          if (validProjects.length > 0) {
-            const nextAvailableId = validProjects.reduce((max, project) => {
-              const id = Number(project.id);
-              return Number.isSafeInteger(id) && id > 0 ? Math.max(max, id) : max;
-            }, 0) + 1;
-            const usedIds = new Set();
-            let nextId = nextAvailableId;
-            portfolioProjects = validProjects.map((project) => {
-              const id = Number(project.id);
-              if (Number.isSafeInteger(id) && id > 0 && !usedIds.has(id)) {
-                usedIds.add(id);
-                return { ...project, id };
-              }
-              while (usedIds.has(nextId)) nextId += 1;
-              repairedProjectIds = true;
-              usedIds.add(nextId);
-              return { ...project, id: nextId++ };
-            });
+        if (raw) applyCmsState(JSON.parse(raw));
+      } catch (error) {
+        console.error("Unable to load the previous local portfolio cache.", error);
+      }
+
+      if (!supabaseClient) {
+        console.error("Supabase is unavailable; portfolio content is limited to this browser's saved cache.");
+        showCmsToast("Supabase is unavailable. Showing default or previously cached content.");
+        return false;
+      }
+
+      try {
+        const { data, error } = await supabaseClient
+          .from(CMS_CONTENT_TABLE)
+          .select("content")
+          .eq("id", 1)
+          .maybeSingle();
+        if (error) throw error;
+        cmsRemoteStateLoaded = true;
+        cmsRemoteStateExists = Boolean(data);
+        if (data?.content) {
+          const repairedProjectIds = applyCmsState(data.content);
+          if (repairedProjectIds) {
+            console.warn("Duplicate or invalid project IDs were reassigned to keep project records distinct.");
+            if (isAdminAuthenticated && await saveCmsState()) {
+              showCmsToast("Duplicate project IDs were corrected and published.");
+            } else if (!isAdminAuthenticated) {
+              showCmsToast("Duplicate project IDs were corrected for display; sign in to publish the correction.");
+            }
           }
         }
-        if (Array.isArray(parsed.experience)) experienceData = parsed.experience;
-        if (Array.isArray(parsed.software)) softwareList = parsed.software;
-        if (parsed.education && typeof parsed.education === "object") educationData = { ...educationData, ...parsed.education };
-        if (Array.isArray(parsed.expertise)) expertiseTags = parsed.expertise;
-        if (Array.isArray(parsed.partners)) partnersData = parsed.partners;
-        if (Array.isArray(parsed.partnerSectors)) partnerSectors = parsed.partnerSectors;
-        if (Array.isArray(parsed.partnerStats)) partnerStats = parsed.partnerStats;
-        if (Array.isArray(parsed.resumeStats)) resumeStats = parsed.resumeStats;
-        if (Array.isArray(parsed.aboutStats)) aboutStats = parsed.aboutStats;
-        if (Array.isArray(parsed.aboutPillars)) aboutPillars = parsed.aboutPillars;
-        if (Array.isArray(parsed.aboutTags)) aboutTags = parsed.aboutTags;
-        if (repairedProjectIds) {
-          console.warn("Duplicate or invalid project IDs were reassigned to keep project records distinct.");
-          if (saveCmsState()) showCmsToast("Duplicate project IDs were corrected and saved.");
-        }
+        return true;
       } catch (error) {
-        console.error("Unable to load saved portfolio changes.", error);
-        showCmsToast("Saved changes could not be loaded. The default content is shown.");
+        console.error("Unable to load portfolio content from Supabase.", error);
+        showCmsToast("Online content could not be loaded. Showing default or previously cached content.");
+        return false;
+      }
+    }
+
+    async function isSupabaseAdmin(userId) {
+      const { data, error } = await supabaseClient
+        .from("portfolio_admins")
+        .select("user_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) throw error;
+      return Boolean(data);
+    }
+
+    async function restoreAdminSession() {
+      if (!supabaseClient) return;
+      try {
+        const { data, error } = await supabaseClient.auth.getSession();
+        if (error) throw error;
+        if (!data.session) return;
+        if (!await isSupabaseAdmin(data.session.user.id)) {
+          const { error: signOutError } = await supabaseClient.auth.signOut();
+          if (signOutError) throw signOutError;
+          return;
+        }
+        isAdminAuthenticated = true;
+      } catch (error) {
+        console.error("Unable to restore the Supabase administrator session.", error);
+        showCmsToast("Admin session could not be verified. Sign in again after completing the Supabase setup.");
+        try {
+          const { error: signOutError } = await supabaseClient.auth.signOut();
+          if (signOutError) console.error("Unable to clear the unverified Supabase session.", signOutError);
+        } catch (signOutError) {
+          console.error("Unable to clear the unverified Supabase session.", signOutError);
+        }
       }
     }
 
@@ -193,7 +357,7 @@
       setTimeout(() => modal.classList.add("hidden"), 250);
     }
 
-    function applyCmsPresetTheme(primary, bg, muted) {
+    async function applyCmsPresetTheme(primary, bg, muted) {
       cmsConfig.primaryColor = primary;
       cmsConfig.bgColor = bg;
       cmsConfig.mutedColor = muted;
@@ -207,7 +371,7 @@
       document.getElementById("cmsColorBgHex").textContent = bg;
       document.getElementById("cmsColorMutedHex").textContent = muted;
       applyCmsThemeAndContact();
-      if (saveCmsState()) showCmsToast("Theme colors updated!");
+      if (await saveCmsState()) showCmsToast("Theme colors updated!");
     }
 
     // ==================== DYNAMIC MULTI-SIZE MEDIA & DETAIL BLOCKS BUILDER ====================
@@ -393,16 +557,21 @@
       renderCmsMediaBlocksEditor();
     }
 
-    function deleteCmsProject(id) {
+    async function deleteCmsProject(id) {
       if (portfolioProjects.length <= 1) {
         showCmsToast("At least 1 project must remain published.");
         return;
       }
+      const previousProjects = portfolioProjects;
       portfolioProjects = portfolioProjects.filter((p) => p.id !== id);
-      const saved = saveCmsState();
+      const saved = await saveCmsState();
+      if (!saved) {
+        portfolioProjects = previousProjects;
+        return;
+      }
       buildCarouselCards();
       renderAdminDashboard();
-      if (saved) showCmsToast("Project deleted from platform.");
+      showCmsToast("Project deleted from platform.");
     }
 
     function renderAdminDashboard() {
@@ -441,8 +610,6 @@
       document.getElementById("cmsEmailAddr").value = cmsConfig.email;
       document.getElementById("cmsBehanceUrl").value = cmsConfig.behanceUrl;
       document.getElementById("cmsSocialHandle").value = cmsConfig.socialHandle;
-      document.getElementById("cmsNewPasscode").value = cmsConfig.passcode;
-
       // Populate Identity Form
       document.getElementById("cmsColorPrimary").value = cmsConfig.primaryColor;
       document.getElementById("cmsColorPrimaryHex").textContent = cmsConfig.primaryColor;
@@ -1156,7 +1323,7 @@
       });
     }
 
-    function saveCmsPageCollections(sectionName) {
+    async function saveCmsPageCollections(sectionName) {
       if (sectionName === "resume" && softwareList.some((item) => !Number.isFinite(item.level) || item.level < 0 || item.level > 100)) {
         showCmsToast("Software skill levels must be numbers from 0 to 100.");
         return;
@@ -1184,16 +1351,16 @@
       if (sectionName === "resume") renderResumeContent();
       if (sectionName === "partners") renderPartnersContent();
       if (sectionName === "about") renderAboutContent();
-      if (saveCmsState()) showCmsToast(`${sectionName} page changes saved.`);
+      if (await saveCmsState()) showCmsToast(`${sectionName} page changes published.`);
     }
 
-    function saveCmsEducation() {
+    async function saveCmsEducation() {
       ["degreeEn", "degreeAr", "universityEn", "universityAr", "period"].forEach((field) => {
         const input = document.getElementById(`cmsEducation${field[0].toUpperCase()}${field.slice(1)}`);
         if (input) educationData[field] = input.value.trim();
       });
       renderResumeContent();
-      if (saveCmsState()) showCmsToast("Education details saved.");
+      if (await saveCmsState()) showCmsToast("Education details published.");
     }
 
     let portfolioProjects = [
@@ -2395,8 +2562,9 @@
     }
 
     // ==================== EVENT BINDINGS & ROUTING ====================
-    document.addEventListener("DOMContentLoaded", () => {
-      loadCmsState();
+    document.addEventListener("DOMContentLoaded", async () => {
+      await restoreAdminSession();
+      await loadCmsState();
       applyCmsThemeAndContact();
 
       // Load saved visitor cookie preferences if present
@@ -2553,18 +2721,69 @@
 
       const adminLoginForm = document.getElementById("adminLoginForm");
       if (adminLoginForm) {
-        adminLoginForm.addEventListener("submit", (e) => {
+        adminLoginForm.addEventListener("submit", async (e) => {
           e.preventDefault();
-          const pass = document.getElementById("adminLoginPass").value.trim();
+          const email = document.getElementById("adminLoginEmail").value.trim();
+          const password = document.getElementById("adminLoginPassword").value;
           const errEl = document.getElementById("adminLoginError");
-          if (pass === cmsConfig.passcode || pass === "admin2026") {
+          if (!supabaseClient) {
+            if (errEl) {
+              errEl.textContent = "Supabase is unavailable. Check the project configuration and reload.";
+              errEl.classList.remove("hidden");
+            }
+            return;
+          }
+          let data;
+          let error;
+          try {
+            ({ data, error } = await supabaseClient.auth.signInWithPassword({ email, password }));
+          } catch (signInError) {
+            console.error("Unable to reach Supabase Auth.", signInError);
+            if (errEl) {
+              errEl.textContent = "Unable to reach the sign-in service. Check your connection and try again.";
+              errEl.classList.remove("hidden");
+            }
+            return;
+          }
+          if (error) {
+            if (errEl) {
+              errEl.textContent = "Unable to sign in. Check your credentials and administrator access.";
+              errEl.classList.remove("hidden");
+            }
+            return;
+          }
+          try {
+            if (!await isSupabaseAdmin(data.user.id)) {
+              const { error: signOutError } = await supabaseClient.auth.signOut();
+              if (signOutError) console.error("Unable to clear a non-admin Supabase session.", signOutError);
+              if (errEl) {
+                errEl.textContent = "This account is not authorized to manage the portfolio.";
+                errEl.classList.remove("hidden");
+              }
+              return;
+            }
             isAdminAuthenticated = true;
             if (errEl) errEl.classList.add("hidden");
+            const remoteContentLoaded = await loadCmsState();
+            if (remoteContentLoaded && !cmsRemoteStateExists && await saveCmsState()) {
+              showCmsToast("Your current portfolio content was published to Supabase.");
+            }
             applyCmsThemeAndContact();
             closeAdminLoginModal();
+            adminLoginForm.reset();
             switchPage("admin");
-          } else {
-            if (errEl) errEl.classList.remove("hidden");
+          } catch (verificationError) {
+            console.error("Unable to verify Supabase administrator access.", verificationError);
+            try {
+              const { error: signOutError } = await supabaseClient.auth.signOut();
+              if (signOutError) console.error("Unable to clear an unverified Supabase session.", signOutError);
+            } catch (signOutError) {
+              console.error("Unable to clear an unverified Supabase session.", signOutError);
+            }
+            if (errEl) {
+              errEl.textContent = "Admin access could not be verified. Complete the Supabase database setup and try again.";
+              errEl.classList.remove("hidden");
+            }
           }
         });
       }
@@ -2651,7 +2870,7 @@
       // Publish or Update Precision Project
       const cmsProjectForm = document.getElementById("cmsProjectForm");
       if (cmsProjectForm) {
-        cmsProjectForm.addEventListener("submit", (e) => {
+        cmsProjectForm.addEventListener("submit", async (e) => {
           e.preventDefault();
           const editId = document.getElementById("cmsEditProjectId").value;
           const toolsArr = document.getElementById("cmsProjTools").value.split(",").map((s) => s.trim()).filter(Boolean);
@@ -2695,6 +2914,7 @@
           const successMessage = editId
             ? "Project updated with all custom media frames!"
             : "Precision project published to platform!";
+          const previousProjects = [...portfolioProjects];
 
           if (editId) {
             const idx = portfolioProjects.findIndex((p) => p.id === Number(editId));
@@ -2712,11 +2932,15 @@
             portfolioProjects.unshift({ id: nextId, ...projectPayload });
           }
 
+          const saved = await saveCmsState();
+          if (!saved) {
+            portfolioProjects = previousProjects;
+            return;
+          }
           resetCmsProjectForm();
-          const saved = saveCmsState();
           buildCarouselCards();
           renderAdminDashboard();
-          if (saved) showCmsToast(successMessage);
+          showCmsToast(successMessage);
         });
       }
 
@@ -2726,7 +2950,7 @@
       // Save Platform Content Form
       const cmsContentForm = document.getElementById("cmsContentForm");
       if (cmsContentForm) {
-        cmsContentForm.addEventListener("submit", (e) => {
+        cmsContentForm.addEventListener("submit", async (e) => {
           e.preventDefault();
           cmsConfig.studioTagEn = document.getElementById("cmsStudioTagEn").value;
           cmsConfig.studioTagAr = document.getElementById("cmsStudioTagAr").value;
@@ -2746,7 +2970,7 @@
           cmsConfig.resumeIntroAr = document.getElementById("cmsResumeIntroAr").value;
           cmsConfig.partnersTitleEn = document.getElementById("cmsPartnersTitleEn").value;
           cmsConfig.partnersTitleAr = document.getElementById("cmsPartnersTitleAr").value;
-          const saved = saveCmsState();
+          const saved = await saveCmsState();
           applyLanguageUI();
           if (saved) showCmsToast("Platform content & texts updated!");
         });
@@ -2755,21 +2979,50 @@
       // Save Contact & Security Form
       const cmsContactForm = document.getElementById("cmsContactForm");
       if (cmsContactForm) {
-        cmsContactForm.addEventListener("submit", (e) => {
+        cmsContactForm.addEventListener("submit", async (e) => {
           e.preventDefault();
           cmsConfig.waNumber = document.getElementById("cmsWaNumber").value.replace(/[^0-9]/g, "");
           cmsConfig.waDisplay = document.getElementById("cmsWaDisplay").value;
           cmsConfig.email = document.getElementById("cmsEmailAddr").value;
           cmsConfig.behanceUrl = document.getElementById("cmsBehanceUrl").value;
           cmsConfig.socialHandle = document.getElementById("cmsSocialHandle").value;
-          const newPass = document.getElementById("cmsNewPasscode").value.trim();
-          if (newPass) cmsConfig.passcode = newPass;
-          const saved = saveCmsState();
+          const saved = await saveCmsState();
           applyCmsThemeAndContact();
           if (saved) showCmsToast("Contact & social details saved!");
         });
       }
 
+      const cmsPasswordForm = document.getElementById("cmsPasswordForm");
+      if (cmsPasswordForm) {
+        cmsPasswordForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const newPassword = document.getElementById("cmsNewPassword").value;
+          const confirmation = document.getElementById("cmsConfirmPassword").value;
+          if (newPassword !== confirmation) {
+            showCmsToast("The new password and confirmation do not match.");
+            return;
+          }
+          if (!supabaseClient || !isAdminAuthenticated) {
+            showCmsToast("Sign in as an authorized administrator before changing the password.");
+            return;
+          }
+          let error;
+          try {
+            ({ error } = await supabaseClient.auth.updateUser({ password: newPassword }));
+          } catch (passwordError) {
+            console.error("Unable to reach Supabase Auth to update the password.", passwordError);
+            showCmsToast("Password could not be updated. Check your connection and try again.");
+            return;
+          }
+          if (error) {
+            console.error("Unable to update the Supabase administrator password.", error);
+            showCmsToast(`Password could not be updated: ${error.message}`);
+            return;
+          }
+          cmsPasswordForm.reset();
+          showCmsToast("Administrator password updated.");
+        });
+      }
       // Live Color Picker Hex Labels
       ["Primary", "Bg", "Muted"].forEach((key) => {
         const input = document.getElementById(`cmsColor${key}`);
@@ -2788,10 +3041,10 @@
           const file = e.target.files && e.target.files[0];
           if (!file) return;
           const reader = new FileReader();
-          reader.onload = () => {
+          reader.onload = async () => {
             cmsConfig.customLogoDataUrl = reader.result;
             applyCmsThemeAndContact();
-            if (saveCmsState()) showCmsToast("Custom logo uploaded!");
+            if (await saveCmsState()) showCmsToast("Custom logo uploaded!");
           };
           reader.readAsDataURL(file);
         });
@@ -2799,23 +3052,23 @@
 
       const useSigLogoBtn = document.getElementById("cmsUseSignatureLogoBtn");
       if (useSigLogoBtn) {
-        useSigLogoBtn.addEventListener("click", () => {
+        useSigLogoBtn.addEventListener("click", async () => {
           cmsConfig.customLogoDataUrl = "";
           applyCmsThemeAndContact();
-          if (saveCmsState()) showCmsToast("Restored signature calligraphy logo.");
+          if (await saveCmsState()) showCmsToast("Restored signature calligraphy logo.");
         });
       }
 
       const cmsIdentityForm = document.getElementById("cmsIdentityForm");
       if (cmsIdentityForm) {
-        cmsIdentityForm.addEventListener("submit", (e) => {
+        cmsIdentityForm.addEventListener("submit", async (e) => {
           e.preventDefault();
           cmsConfig.primaryColor = document.getElementById("cmsColorPrimary").value;
           cmsConfig.bgColor = document.getElementById("cmsColorBg").value;
           cmsConfig.mutedColor = document.getElementById("cmsColorMuted").value;
           cmsConfig.customLogoText = document.getElementById("cmsCustomLogoBrandText").value;
           applyCmsThemeAndContact();
-          if (saveCmsState()) showCmsToast("Brand identity & colors applied!");
+          if (await saveCmsState()) showCmsToast("Brand identity & colors applied!");
         });
       }
 
@@ -2828,7 +3081,17 @@
 
       const cmsLogoutBtn = document.getElementById("cmsLogoutBtn");
       if (cmsLogoutBtn) {
-        cmsLogoutBtn.addEventListener("click", () => {
+        cmsLogoutBtn.addEventListener("click", async () => {
+          if (supabaseClient) {
+            try {
+              const { error } = await supabaseClient.auth.signOut();
+              if (error) throw error;
+            } catch (error) {
+              console.error("Unable to sign out of Supabase.", error);
+              showCmsToast(`Could not sign out: ${error.message || "Supabase request failed."}`);
+              return;
+            }
+          }
           isAdminAuthenticated = false;
           applyCmsThemeAndContact();
           switchPage("home");
@@ -2837,15 +3100,15 @@
 
       const cmsResetDefaultsBtn = document.getElementById("cmsResetDefaultsBtn");
       if (cmsResetDefaultsBtn) {
-        cmsResetDefaultsBtn.addEventListener("click", () => {
+        cmsResetDefaultsBtn.addEventListener("click", async () => {
           if (!window.confirm("Reset all portfolio content and settings to their defaults?")) return;
-          localStorage.removeItem(CMS_STORAGE_KEY);
           cmsConfig = { ...defaultCmsConfig };
           restoreCmsContentDefaults();
+          const saved = await saveCmsState();
           applyCmsThemeAndContact();
           applyLanguageUI();
           renderAdminDashboard();
-          showCmsToast("Platform reset to original defaults.");
+          if (saved) showCmsToast("Platform defaults restored and published.");
         });
       }
 

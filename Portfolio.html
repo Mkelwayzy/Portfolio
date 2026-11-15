@@ -302,14 +302,18 @@
       <div class="mb-6 text-center">
         <span class="text-xs font-semibold uppercase tracking-[0.2em] text-slateText">Studio Access</span>
         <h2 id="adminLoginTitle" class="mt-1 text-2xl font-semibold text-obsidian">Admin Dashboard</h2>
-        <p class="mt-1.5 text-sm text-slateText">Enter your passcode to manage the portfolio.</p>
+        <p class="mt-1.5 text-sm text-slateText">Sign in with your authorized administrator account.</p>
       </div>
       <form id="adminLoginForm" class="space-y-4">
         <div>
-          <label for="adminLoginPass" class="mb-1.5 block text-xs font-semibold text-obsidian">Passcode</label>
-          <input id="adminLoginPass" type="password" autocomplete="current-password" required class="w-full rounded-2xl border border-white bg-white/85 px-4 py-3 text-sm text-obsidian outline-none transition focus:ring-2 focus:ring-black/20" />
+          <label for="adminLoginEmail" class="mb-1.5 block text-xs font-semibold text-obsidian">Administrator email</label>
+          <input id="adminLoginEmail" type="email" autocomplete="username" required class="w-full rounded-2xl border border-white bg-white/85 px-4 py-3 text-sm text-obsidian outline-none transition focus:ring-2 focus:ring-black/20" />
         </div>
-        <p id="adminLoginError" role="alert" class="hidden text-sm font-medium text-red-700">Incorrect passcode. Please try again.</p>
+        <div>
+          <label for="adminLoginPassword" class="mb-1.5 block text-xs font-semibold text-obsidian">Password</label>
+          <input id="adminLoginPassword" type="password" autocomplete="current-password" required class="w-full rounded-2xl border border-white bg-white/85 px-4 py-3 text-sm text-obsidian outline-none transition focus:ring-2 focus:ring-black/20" />
+        </div>
+        <p id="adminLoginError" role="alert" class="hidden text-sm font-medium text-red-700">Unable to sign in. Check your credentials and administrator access.</p>
         <button type="submit" class="w-full rounded-2xl bg-obsidian px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90">Sign In</button>
       </form>
     </div>
@@ -744,16 +748,26 @@
               <label class="block text-xs font-semibold text-obsidian mb-1.5">Social Handle Label</label>
               <input id="cmsSocialHandle" type="text" placeholder="Behance & Socials (@MKELWAYZY)" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-obsidian mb-1.5">Update Admin Login Passcode</label>
-              <input id="cmsNewPasscode" type="text" placeholder="admin2026" class="w-full px-4 py-3 rounded-2xl bg-white/85 border border-white text-xs text-obsidian" />
-            </div>
           </div>
 
           <button type="submit" class="px-6 py-3 rounded-2xl bg-obsidian text-white text-xs font-bold shadow hover:opacity-95 transition-all">
-            Save Contact &amp; Security Settings
+            Save Contact Settings
           </button>
         </form>
+
+        <div class="mt-8 border-t border-black/10 pt-6">
+          <h4 class="text-sm font-bold text-obsidian">Administrator security</h4>
+          <p class="mt-1 text-xs text-slateText">Change the password for your currently signed-in Supabase administrator account.</p>
+          <form id="cmsPasswordForm" class="mt-4 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
+            <label class="block text-xs font-semibold text-obsidian">New password
+              <input id="cmsNewPassword" type="password" autocomplete="new-password" minlength="8" required class="mt-1 w-full rounded-2xl border border-white bg-white/85 px-4 py-3 text-xs text-obsidian" />
+            </label>
+            <label class="block text-xs font-semibold text-obsidian">Confirm new password
+              <input id="cmsConfirmPassword" type="password" autocomplete="new-password" minlength="8" required class="mt-1 w-full rounded-2xl border border-white bg-white/85 px-4 py-3 text-xs text-obsidian" />
+            </label>
+            <button type="submit" class="w-fit rounded-2xl bg-obsidian px-6 py-3 text-xs font-bold text-white shadow transition hover:opacity-90 sm:col-span-2">Update Admin Password</button>
+          </form>
+        </div>
       </div>
 
       <!-- TAB 4: BRAND IDENTITY, LOGO & COLORS -->
@@ -908,6 +922,8 @@
     </div>
   </section>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./assets/js/supabase-config.js"></script>
   <script src="./assets/js/app.js"></script>
 </body>
 </html>
