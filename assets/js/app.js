@@ -149,13 +149,10 @@
       return Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
     }
 
-    async function uploadCmsDataUrl(dataUrl, onProgress, bucket = CMS_MEDIA_BUCKET) {
+    async function uploadCmsBlob(blob, onProgress, bucket = CMS_MEDIA_BUCKET) {
       if (!supabaseClient || !isAdminAuthenticated) {
         throw new Error("Sign in as an authorized administrator before uploading project files.");
       }
-      const response = await fetch(dataUrl);
-      if (!response.ok) throw new Error("Unable to read an uploaded project file.");
-      const blob = await response.blob();
       if (!CMS_ALLOWED_IMAGE_TYPES.has(blob.type) && blob.type !== CMS_PROJECT_PDF_TYPE) {
         throw new Error("Use a JPEG, PNG, WebP, AVIF, GIF, SVG image, or PDF document.");
       }
@@ -216,6 +213,12 @@
       if (bucket === CMS_PROJECT_DRAFTS_BUCKET) return `${CMS_DRAFT_ASSET_PREFIX}${path}`;
       const { data } = supabaseClient.storage.from(bucket).getPublicUrl(path);
       return data.publicUrl;
+    }
+
+    async function uploadCmsDataUrl(dataUrl, onProgress, bucket = CMS_MEDIA_BUCKET) {
+      const response = await fetch(dataUrl);
+      if (!response.ok) throw new Error("Unable to read an uploaded project file.");
+      return uploadCmsBlob(await response.blob(), onProgress, bucket);
     }
 
     async function uploadCmsPdfFile(file, path, onProgress, bucket = CMS_MEDIA_BUCKET) {
@@ -703,9 +706,9 @@
               <button type="button" data-media-action="remove" data-media-index="${idx}" class="px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-700 text-[10px] font-bold">${isAr ? "حذف" : "Remove"}</button>
             </div>
           </div>
-          ${blk.url
+          ${(blk.previewUrl || blk.url)
             ? `<div data-media-preview-frame class="cms-media-preview-frame ${aspect} mt-3 overflow-hidden rounded-xl border border-black/10 bg-black/5">
-                 <img src="${escapeCmsHtml(blk.url)}" alt="${isAr ? "صورة المشروع" : "Project image"} ${idx + 1}" loading="lazy" decoding="async" class="${imageClass}" />
+                 <img src="${escapeCmsHtml(blk.previewUrl || blk.url)}" alt="${isAr ? "صورة المشروع" : "Project image"} ${idx + 1}" loading="lazy" decoding="async" class="${imageClass}" />
                </div>`
             : `<div class="mt-3 flex min-h-40 flex-col items-center justify-center gap-3 rounded-xl border border-black/10 bg-black/5 p-6">
                 <span data-image-read-progress-text class="text-xs font-semibold text-slateText">${isAr ? "جارٍ قراءة الصورة" : "Reading image"}… ${Math.round(blk.readProgress || 0)}%</span>
@@ -852,10 +855,13 @@
 
     async function compressCmsImageFile(file) {
       if (!file || !file.type || !file.type.startsWith("image/") || file.type === "image/svg+xml") return file;
-      if (file.size <= 2 * 1024 * 1024) return file;
+      let imageBitmap;
       try {
-        const imageBitmap = await createImageBitmap(file);
-        const maxSide = 1800;
+        imageBitmap = await createImageBitmap(file);
+        const maxSide = 1400;
+        if (file.size <= 2 * 1024 * 1024 && Math.max(imageBitmap.width, imageBitmap.height) <= maxSide) {
+          return file;
+        }
         const scale = Math.min(1, maxSide / Math.max(imageBitmap.width, imageBitmap.height));
         const canvas = document.createElement("canvas");
         canvas.width = Math.max(1, Math.round(imageBitmap.width * scale));
@@ -863,14 +869,18 @@
         const context = canvas.getContext("2d");
         if (!context) return file;
         context.drawImage(imageBitmap, 0, 0, canvas.width, canvas.height);
-        const compressedBlob = await new Promise((resolve) => {
-          canvas.toBlob((blob) => resolve(blob || file), "image/jpeg", file.size > 6 * 1024 * 1024 ? 0.72 : 0.82);
+        const compressedBlob = await new Promise((resolve, reject) => {
+          canvas.toBlob((blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error("Unable to compress this image."));
+          }, "image/jpeg", file.size > 6 * 1024 * 1024 ? 0.72 : 0.82);
         });
-        imageBitmap.close?.();
         return compressedBlob instanceof Blob ? compressedBlob : file;
       } catch (error) {
         console.warn("Could not compress the project image before publishing.", error);
         return file;
+      } finally {
+        imageBitmap?.close();
       }
     }
 
@@ -937,13 +947,27 @@
       return reference;
     }
 
-    async function materializeCmsProjectDraftAsset(value) {
+    async function publishCmsProjectAsset(value, uploadedAssets = new Map()) {
       const path = getCmsProjectDraftAssetPath(value);
       if (!path) return value;
+      if (uploadedAssets.has(path)) return uploadedAssets.get(path);
       const signedUrl = await getCmsProjectDraftAssetUrl(`${CMS_DRAFT_ASSET_PREFIX}${path}`);
       const response = await fetch(signedUrl);
       if (!response.ok) throw new Error(`Unable to retrieve a private draft file (HTTP ${response.status}).`);
-      return readCmsFileAsDataUrl(await response.blob(), () => {});
+      const blob = await response.blob();
+      const publicUrl = blob.type === CMS_PROJECT_PDF_TYPE
+        ? await uploadCmsPdfFile(blob, `${createCmsProjectDraftId()}.pdf`)
+        : await uploadCmsBlob(blob);
+      uploadedAssets.set(path, publicUrl);
+      return publicUrl;
+    }
+
+    async function publishCmsProjectAssets(values, uploadedAssets = new Map()) {
+      const publishedValues = [];
+      for (const value of values) {
+        publishedValues.push(await publishCmsProjectAsset(value, uploadedAssets));
+      }
+      return publishedValues;
     }
 
     async function loadCmsProjectDrafts() {
@@ -1021,10 +1045,16 @@
           fields[field.id] = field.type === "checkbox" ? field.checked : field.value;
         });
         fields.cmsProjImgUrl = await saveCmsProjectDraftAsset(fields.cmsProjImgUrl);
-        const mediaBlocks = await Promise.all(cmsDraftBlocks.map(async (block) => ({
-          ...block,
-          url: await saveCmsProjectDraftAsset(block.url)
-        })));
+        const mediaBlocks = [];
+        for (const block of cmsDraftBlocks) {
+          mediaBlocks.push({
+            uid: block.uid,
+            url: await saveCmsProjectDraftAsset(block.url),
+            aspect: normalizeCmsMediaAspect(block.aspect),
+            captionEn: block.captionEn || "",
+            captionAr: block.captionAr || ""
+          });
+        }
         const pdfs = [];
         for (const pdf of cmsDraftPdfs) {
           if (pdf.file instanceof File) {
@@ -1378,14 +1408,14 @@
       wrapper.querySelector('[role="progressbar"]')?.setAttribute("aria-valuenow", String(percent));
     }
 
-    function updateCmsMediaBlockReadProgress(uid, percent) {
+    function updateCmsMediaBlockReadProgress(uid, percent, label = "Reading image…") {
       const container = document.getElementById("cmsMediaBlocksContainer");
       const card = Array.from(container?.children || []).find((item) => item.dataset.blockUid === uid);
       if (!card) return;
       const text = card.querySelector("[data-image-read-progress-text]");
       const bar = card.querySelector("[data-image-read-progress-bar]");
       const progress = card.querySelector('[role="progressbar"]');
-      if (text) text.textContent = `Reading image… ${percent}%`;
+      if (text) text.textContent = `${label} ${percent}%`;
       if (bar) bar.style.width = `${percent}%`;
       if (progress) progress.setAttribute("aria-valuenow", String(percent));
     }
@@ -4042,7 +4072,8 @@
           cmsCoverReadPending = true;
           updateCmsCoverReadProgress(0);
           try {
-            const imageUrl = await readCmsFileAsDataUrl(file, (percent) => updateCmsCoverReadProgress(percent));
+            const optimizedFile = await compressCmsImageFile(file);
+            const imageUrl = await readCmsFileAsDataUrl(optimizedFile, (percent) => updateCmsCoverReadProgress(percent));
             if (readVersion !== cmsCoverReadVersion) return;
             setCmsProjectCoverImage(imageUrl);
             updateCmsCoverReadProgress(100, "Cover image ready.");
@@ -4090,30 +4121,46 @@
       // Read multiple selected images and show a large preview for each one.
       const batchImagesInput = document.getElementById("cmsBatchImagesInput");
       if (batchImagesInput) {
-        batchImagesInput.addEventListener("change", (e) => {
+        batchImagesInput.addEventListener("change", async (e) => {
           const files = Array.from(e.target.files || []);
           if (!files.length) return;
-          files.forEach((file) => {
-            if (!validateCmsImageFile(file)) return;
-            const block = createDefaultMediaBlock();
-            block.readProgress = 0;
-            cmsDraftBlocks.push(block);
-            renderCmsMediaBlocksEditor();
-            readCmsFileAsDataUrl(file, (percent) => {
-              block.readProgress = percent;
-              updateCmsMediaBlockReadProgress(block.uid, percent);
-            }).then((dataUrl) => {
-              block.url = dataUrl;
-              delete block.readProgress;
-              renderCmsMediaBlocksEditor();
-            }).catch((error) => {
-              cmsDraftBlocks = cmsDraftBlocks.filter((item) => item.uid !== block.uid);
-              renderCmsMediaBlocksEditor();
-              console.error(`Unable to read project image "${file.name}".`, error);
-              showCmsToast(`Unable to read "${file.name}": ${error.message || "image file error."}`);
-            });
-          });
           e.target.value = "";
+          if (cmsProjectPdfUploadActive) return;
+          cmsProjectPdfUploadActive = true;
+          batchImagesInput.disabled = true;
+          renderCmsProjectPdfs();
+          try {
+            for (const [fileIndex, file] of files.entries()) {
+              if (!validateCmsImageFile(file)) continue;
+              const block = createDefaultMediaBlock();
+              block.readProgress = 0;
+              cmsDraftBlocks.push(block);
+              renderCmsMediaBlocksEditor();
+              try {
+                const optimizedFile = await compressCmsImageFile(file);
+                updateCmsMediaBlockReadProgress(block.uid, 0, `Uploading image ${fileIndex + 1} of ${files.length}…`);
+                block.url = await uploadCmsBlob(optimizedFile, (loaded, total) => {
+                  updateCmsMediaBlockReadProgress(
+                    block.uid,
+                    Math.min(100, Math.round((loaded / total) * 100)),
+                    `Uploading image ${fileIndex + 1} of ${files.length}…`
+                  );
+                }, CMS_PROJECT_DRAFTS_BUCKET);
+                block.previewUrl = await getCmsProjectDraftAssetUrl(block.url);
+                delete block.readProgress;
+                renderCmsMediaBlocksEditor();
+              } catch (error) {
+                cmsDraftBlocks = cmsDraftBlocks.filter((item) => item.uid !== block.uid);
+                renderCmsMediaBlocksEditor();
+                console.error(`Unable to stage project image "${file.name}".`, error);
+                showCmsToast(`Unable to upload "${file.name}": ${getCmsErrorMessage(error, "Check the private Storage bucket setup.")}`);
+              }
+            }
+          } finally {
+            cmsProjectPdfUploadActive = false;
+            batchImagesInput.disabled = false;
+            renderCmsProjectPdfs();
+          }
         });
       }
 
@@ -4276,7 +4323,7 @@
           const validMediaBlocks = cmsDraftBlocks
             .filter((b) => b.url && b.url.trim() !== "")
             .map((b) => ({
-              ...b,
+              uid: b.uid,
               url: b.url.trim(),
               aspect: normalizeCmsMediaAspect(b.aspect),
               captionEn: b.captionEn || "",
@@ -4383,30 +4430,28 @@
             gallery: galleryUrls
           };
           const draftId = document.getElementById("cmsEditDraftId").value;
-          if (draftId) {
-            try {
-              projectPayload.imageUrl = await materializeCmsProjectDraftAsset(projectPayload.imageUrl);
-              projectPayload.gallery = await Promise.all(projectPayload.gallery.map(materializeCmsProjectDraftAsset));
-              projectPayload.mediaBlocks = await Promise.all(projectPayload.mediaBlocks.map(async (block) => ({
-                ...block,
-                url: await materializeCmsProjectDraftAsset(block.url)
-              })));
-              projectPayload.pdfFiles = await Promise.all(projectPayload.pdfFiles.map(async (pdf) => ({
-                ...pdf,
-                url: await materializeCmsProjectDraftAsset(pdf.url)
-              })));
-              projectPayload.pdfUrl = projectPayload.pdfFiles[0]?.url || "";
-            } catch (error) {
-              const errorMessage = getCmsErrorMessage(error, "Unable to retrieve a private draft file.");
-              setCmsProjectPublishStatus("error", `Project was not published: ${errorMessage}`);
-              showCmsToast(errorMessage);
-              submitButton.disabled = false;
-              submitButton.textContent = submitButtonLabel;
-              cmsProjectPdfUploadActive = false;
-              renderCmsProjectPdfs();
-              resetCmsProjectUploadProgress();
-              return;
+          const privateDraftAssetPaths = new Set(collectCmsProjectDraftAssetPaths(projectPayload));
+          try {
+            const uploadedAssets = new Map();
+            projectPayload.imageUrl = await publishCmsProjectAsset(projectPayload.imageUrl, uploadedAssets);
+            projectPayload.gallery = await publishCmsProjectAssets(projectPayload.gallery, uploadedAssets);
+            for (const block of projectPayload.mediaBlocks) {
+              block.url = await publishCmsProjectAsset(block.url, uploadedAssets);
             }
+            for (const pdf of projectPayload.pdfFiles) {
+              pdf.url = await publishCmsProjectAsset(pdf.url, uploadedAssets);
+            }
+            projectPayload.pdfUrl = projectPayload.pdfFiles[0]?.url || "";
+          } catch (error) {
+            const errorMessage = getCmsErrorMessage(error, "Unable to move project files from private storage.");
+            setCmsProjectPublishStatus("error", `Project was not published: ${errorMessage}`);
+            showCmsToast(errorMessage);
+            submitButton.disabled = false;
+            submitButton.textContent = submitButtonLabel;
+            cmsProjectPdfUploadActive = false;
+            renderCmsProjectPdfs();
+            resetCmsProjectUploadProgress();
+            return;
           }
           const successMessage = editId
             ? "Project and files updated."
@@ -4440,8 +4485,10 @@
             return;
           }
           let draftCleanupMessage = "";
+          const privatePathsToRemove = new Set(privateDraftAssetPaths);
           if (draftId) {
             const publishedDraft = cmsProjectDrafts.find((draft) => draft.id === draftId);
+            collectCmsProjectDraftAssetPaths(publishedDraft?.content).forEach((path) => privatePathsToRemove.add(path));
             try {
               const { error } = await supabaseClient
                 .from(CMS_PROJECT_DRAFTS_TABLE)
@@ -4449,16 +4496,20 @@
                 .eq("id", draftId);
               if (error) throw error;
               cmsProjectDrafts = cmsProjectDrafts.filter((draft) => draft.id !== draftId);
-              const paths = collectCmsProjectDraftAssetPaths(publishedDraft?.content);
-              if (paths.length) {
-                const { error: storageError } = await supabaseClient.storage
-                  .from(CMS_PROJECT_DRAFTS_BUCKET)
-                  .remove(paths);
-                if (storageError) throw storageError;
-              }
             } catch (error) {
               console.error("Project was published, but its private draft could not be fully removed.", error);
               draftCleanupMessage = ` Project published, but draft cleanup needs attention: ${getCmsErrorMessage(error, "storage cleanup failed.")}`;
+            }
+          }
+          if (privatePathsToRemove.size) {
+            try {
+              const { error } = await supabaseClient.storage
+                .from(CMS_PROJECT_DRAFTS_BUCKET)
+                .remove([...privatePathsToRemove]);
+              if (error) throw error;
+            } catch (error) {
+              console.error("Project was published, but staged private images could not be removed.", error);
+              draftCleanupMessage = ` Project published, but private file cleanup needs attention: ${getCmsErrorMessage(error, "storage cleanup failed.")}`;
             }
           }
           resetCmsProjectForm();

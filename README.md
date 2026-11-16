@@ -60,7 +60,7 @@ Reorder published projects by dragging their cards or using the up/down controls
 3. In the SQL file's final example, replace `YOUR_ADMIN_EMAIL` with that account's email, uncomment the statement, then run it to allowlist the account.
 4. Confirm the website's Supabase project URL and **publishable** key in [`assets/js/supabase-config.js`](./assets/js/supabase-config.js). The publishable key is intended for browser use; never put a `service_role` or secret key in this repository.
 5. Open the portfolio and sign in with the authorized email and password. If the content table is empty, the dashboard publishes the existing portfolio content on first sign-in.
-6. To enable private project drafts, run [`supabase/setup.sql`](./supabase/setup.sql) again. It creates the admin-only `portfolio_project_drafts` table and private `portfolio-project-drafts` Storage bucket. Draft records and their media are available only to allowlisted administrators; publishing a draft copies its media into the public portfolio bucket.
+6. To enable private project drafts and safely stage gallery images, run [`supabase/setup.sql`](./supabase/setup.sql) again. It creates the admin-only `portfolio_project_drafts` table and private `portfolio-project-drafts` Storage bucket. Draft records and staged gallery media are available only to allowlisted administrators; publishing a project copies its staged media into the public portfolio bucket.
 
 If sign-in fails, the login form displays Supabase's error message. “Invalid login credentials” means the email/password was rejected or the user was not created in **Authentication → Users**; “not authorized” means the account still needs to be added to `portfolio_admins` using step 3.
 
