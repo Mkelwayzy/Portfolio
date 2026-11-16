@@ -720,8 +720,10 @@
       updateCmsMediaEditorDescription();
       const floatingImport = document.getElementById("cmsMediaImportButton");
       const legacyImport = document.getElementById("cmsLegacyImagesImport");
+      const alignToolbar = document.getElementById("cmsMediaAlignToolbar");
       if (floatingImport) floatingImport.classList.toggle("hidden", !cmsDraftFreeformGallery);
       if (legacyImport) legacyImport.classList.toggle("hidden", cmsDraftFreeformGallery);
+      if (alignToolbar) alignToolbar.classList.toggle("hidden", !cmsDraftFreeformGallery || cmsDraftBlocks.length < 2);
       container.classList.toggle("is-freeform", cmsDraftFreeformGallery);
       container.classList.toggle("is-legacy", !cmsDraftFreeformGallery);
 
@@ -985,6 +987,16 @@
       tile.addEventListener("pointercancel", finish, { once: true });
     }
 
+    function bindCmsMediaAlignToolbar() {
+      const toolbar = document.getElementById("cmsMediaAlignToolbar");
+      if (!toolbar || toolbar.dataset.handlersAttached) return;
+      toolbar.addEventListener("click", (event) => {
+        const button = event.target instanceof Element ? event.target.closest("[data-media-align]") : null;
+        if (button) alignCmsMediaBlocks(button.dataset.mediaAlign);
+      });
+      toolbar.dataset.handlersAttached = "true";
+    }
+
     function removeCmsMediaBlock(idx) {
       const [block] = cmsDraftBlocks.splice(idx, 1);
       if (block?.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(block.previewUrl);
@@ -1010,6 +1022,45 @@
       renderCmsMediaBlocksEditor();
       document.getElementById("cmsMediaBlocksContainer")
         ?.querySelector(`[data-block-uid="${CSS.escape(block.uid)}"] [data-media-layer]`)?.focus();
+    }
+
+    function alignCmsMediaBlocks(alignment) {
+      if (!cmsDraftFreeformGallery || cmsDraftBlocks.length < 2) return;
+      const layouts = cmsDraftBlocks.map((block, index) => normalizeCmsMediaLayout(block, index));
+      const minX = Math.min(...layouts.map((layout) => layout.x));
+      const maxRight = Math.max(...layouts.map((layout) => layout.x + layout.width));
+      const minY = Math.min(...layouts.map((layout) => layout.y));
+      const maxBottom = Math.max(...layouts.map((layout) => layout.y + layout.height));
+      const centerX = layouts.reduce((sum, layout) => sum + layout.x + layout.width / 2, 0) / layouts.length;
+      const centerY = layouts.reduce((sum, layout) => sum + layout.y + layout.height / 2, 0) / layouts.length;
+
+      cmsDraftBlocks.forEach((block, index) => {
+        const layout = layouts[index];
+        if (alignment === "left") block.x = Math.min(minX, 12 - layout.width);
+        if (alignment === "center-x") block.x = Math.max(0, Math.min(12 - layout.width, centerX - layout.width / 2));
+        if (alignment === "right") block.x = Math.max(0, maxRight - layout.width);
+        if (alignment === "top") block.y = minY;
+        if (alignment === "center-y") block.y = Math.max(0, Math.min(120 - layout.height, centerY - layout.height / 2));
+        if (alignment === "bottom") block.y = Math.max(0, maxBottom - layout.height);
+      });
+
+      cmsDraftGalleryChanged = true;
+      renderCmsMediaBlocksEditor();
+      const status = document.getElementById("cmsMediaBlocksStatus");
+      if (status) {
+        const isAr = currentLang === "ar";
+        const labels = {
+          top: isAr ? "الحافة العلوية" : "top edges",
+          "center-y": isAr ? "خط أفقي" : "horizontal center line",
+          bottom: isAr ? "الحافة السفلية" : "bottom edges",
+          left: isAr ? "الحافة اليسرى" : "left edges",
+          "center-x": isAr ? "خط رأسي" : "vertical center line",
+          right: isAr ? "الحافة اليمنى" : "right edges"
+        };
+        status.textContent = isAr
+          ? `تمت محاذاة كل الوسائط عند ${labels[alignment] || ""}.`
+          : `All media aligned by ${labels[alignment] || "selected edge"}.`;
+      }
     }
 
     function validateCmsImageFile(file) {
@@ -1521,8 +1572,26 @@
       const isAr = currentLang === "ar";
       const importLabel = document.getElementById("cmsMediaImportButtonLabel");
       const importButton = document.getElementById("cmsMediaImportButton");
+      const alignLabel = document.getElementById("cmsMediaAlignLabel");
+      const alignToolbar = document.getElementById("cmsMediaAlignToolbar");
       if (importLabel) importLabel.textContent = isAr ? "استيراد ملفات" : "Import media";
       if (importButton) importButton.setAttribute("aria-label", isAr ? "استيراد وسائط المشروع" : "Import project media");
+      if (alignLabel) alignLabel.textContent = isAr ? "محاذاة" : "Align";
+      if (alignToolbar) {
+        alignToolbar.setAttribute("aria-label", isAr ? "محاذاة وسائط المشروع" : "Align project media");
+        const labels = isAr
+          ? { top: "أعلى", "center-y": "خط أفقي", bottom: "أسفل", left: "يسار", "center-x": "خط رأسي", right: "يمين" }
+          : { top: "Top", "center-y": "Center Y", bottom: "Bottom", left: "Left", "center-x": "Center X", right: "Right" };
+        const titles = isAr
+          ? { top: "محاذاة الحواف العلوية", "center-y": "محاذاة على خط أفقي", bottom: "محاذاة الحواف السفلية", left: "محاذاة الحواف اليسرى", "center-x": "محاذاة على خط رأسي", right: "محاذاة الحواف اليمنى" }
+          : { top: "Align top edges", "center-y": "Align on one horizontal line", bottom: "Align bottom edges", left: "Align left edges", "center-x": "Align on one vertical line", right: "Align right edges" };
+        alignToolbar.querySelectorAll("[data-media-align]").forEach((button) => {
+          const value = button.dataset.mediaAlign;
+          button.textContent = labels[value] || value;
+          button.title = titles[value] || value;
+          button.setAttribute("aria-label", titles[value] || value);
+        });
+      }
       description.textContent = cmsDraftFreeformGallery
         ? (isAr
           ? "رتّب الصور والفيديو وملفات PDF بحرية. اسحب للتحريك أو القص، غيّر الحجم والطبقات، واستورد من الزر العائم."
@@ -4090,6 +4159,7 @@
       document.getElementById("cmsMediaImportButton")?.addEventListener("click", () => {
         document.getElementById("cmsBatchImagesInput")?.click();
       });
+      bindCmsMediaAlignToolbar();
 
       // Read multiple selected images and show a large preview for each one.
       const batchImagesInput = document.getElementById("cmsBatchImagesInput");

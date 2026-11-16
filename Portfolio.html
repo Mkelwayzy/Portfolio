@@ -653,6 +653,16 @@
                 </div>
 
                 <input id="cmsBatchImagesInput" type="file" accept="image/*,video/mp4,video/webm,application/pdf,.pdf" multiple class="hidden" />
+                <div id="cmsMediaAlignToolbar" class="cms-layout-align-toolbar hidden" role="group" aria-label="Align project media">
+                  <span id="cmsMediaAlignLabel" class="cms-layout-align-label">Align</span>
+                  <button type="button" data-media-align="top" title="Align top edges">Top</button>
+                  <button type="button" data-media-align="center-y" title="Align horizontal centers">Center Y</button>
+                  <button type="button" data-media-align="bottom" title="Align bottom edges">Bottom</button>
+                  <span class="cms-layout-align-divider" aria-hidden="true"></span>
+                  <button type="button" data-media-align="left" title="Align left edges">Left</button>
+                  <button type="button" data-media-align="center-x" title="Align vertical centers">Center X</button>
+                  <button type="button" data-media-align="right" title="Align right edges">Right</button>
+                </div>
                 <div class="cms-layout-workspace">
                   <div id="cmsMediaBlocksContainer" class="cms-layout-canvas" aria-label="Project image layout canvas"></div>
                   <button id="cmsMediaImportButton" type="button" class="cms-layout-import" aria-label="Import project images">
