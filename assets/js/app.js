@@ -33,6 +33,7 @@
     let cmsProjectDrafts = [];
     const cmsDraftAssetReferences = new Map();
     const cmsDraftMediaUploads = new Map();
+    const cmsDraftAssetLocalBlobs = new Map();
 
     const defaultCmsConfig = {
       studioTagEn: "Mostafa Khaled Studio",
@@ -816,7 +817,10 @@
     }
 
     function removeCmsMediaBlock(idx) {
-      cmsDraftBlocks.splice(idx, 1);
+      const [block] = cmsDraftBlocks.splice(idx, 1);
+      const path = getCmsProjectDraftAssetPath(block?.url);
+      if (path) cmsDraftAssetLocalBlobs.delete(path);
+      if (block?.localPreviewUrl) URL.revokeObjectURL(block.localPreviewUrl);
       renderCmsMediaBlocksEditor();
     }
 
@@ -951,10 +955,13 @@
       const path = getCmsProjectDraftAssetPath(value);
       if (!path) return value;
       if (uploadedAssets.has(path)) return uploadedAssets.get(path);
-      const signedUrl = await getCmsProjectDraftAssetUrl(`${CMS_DRAFT_ASSET_PREFIX}${path}`);
-      const response = await fetch(signedUrl);
-      if (!response.ok) throw new Error(`Unable to retrieve a private draft file (HTTP ${response.status}).`);
-      const blob = await response.blob();
+      let blob = cmsDraftAssetLocalBlobs.get(path);
+      if (!blob) {
+        const signedUrl = await getCmsProjectDraftAssetUrl(`${CMS_DRAFT_ASSET_PREFIX}${path}`);
+        const response = await fetch(signedUrl);
+        if (!response.ok) throw new Error(`Unable to retrieve a private draft file (HTTP ${response.status}).`);
+        blob = await response.blob();
+      }
       const publicUrl = blob.type === CMS_PROJECT_PDF_TYPE
         ? await uploadCmsPdfFile(blob, `${createCmsProjectDraftId()}.pdf`)
         : await uploadCmsBlob(blob);
@@ -968,6 +975,22 @@
         publishedValues.push(await publishCmsProjectAsset(value, uploadedAssets));
       }
       return publishedValues;
+    }
+
+    function releaseCmsProjectDraftLocalAsset(path) {
+      cmsDraftAssetLocalBlobs.delete(path);
+      cmsDraftBlocks.forEach((block) => {
+        if (getCmsProjectDraftAssetPath(block.url) !== path) return;
+        if (block.localPreviewUrl) URL.revokeObjectURL(block.localPreviewUrl);
+        delete block.localPreviewUrl;
+      });
+    }
+
+    function clearCmsProjectDraftLocalAssets() {
+      cmsDraftBlocks.forEach((block) => {
+        if (block.localPreviewUrl) URL.revokeObjectURL(block.localPreviewUrl);
+      });
+      cmsDraftAssetLocalBlobs.clear();
     }
 
     async function loadCmsProjectDrafts() {
@@ -1501,6 +1524,7 @@
       const proj = portfolioProjects.find((p) => p.id === id);
       if (!proj) return;
       setCmsProjectPublishStatus("");
+      clearCmsProjectDraftLocalAssets();
       document.getElementById("cmsEditDraftId").value = "";
       cmsCoverReadVersion += 1;
       cmsCoverReadPending = false;
@@ -1556,6 +1580,7 @@
 
     function resetCmsProjectForm() {
       setCmsProjectPublishStatus("");
+      clearCmsProjectDraftLocalAssets();
       document.getElementById("cmsProjectForm").reset();
       document.getElementById("cmsProjectNarrative").value = "";
       document.getElementById("cmsProjectAiConsent").checked = false;
@@ -4136,6 +4161,7 @@
               block.readProgress = 0;
               cmsDraftBlocks.push(block);
               renderCmsMediaBlocksEditor();
+              let uploaded = false;
               try {
                 const optimizedFile = await compressCmsImageFile(file);
                 updateCmsMediaBlockReadProgress(block.uid, 0, `Uploading image ${fileIndex + 1} of ${files.length}…`);
@@ -4146,12 +4172,29 @@
                     `Uploading image ${fileIndex + 1} of ${files.length}…`
                   );
                 }, CMS_PROJECT_DRAFTS_BUCKET);
-                block.previewUrl = await getCmsProjectDraftAssetUrl(block.url);
+                uploaded = true;
+                const assetPath = getCmsProjectDraftAssetPath(block.url);
+                try {
+                  block.previewUrl = await getCmsProjectDraftAssetUrl(block.url);
+                } catch (previewError) {
+                  block.localPreviewUrl = URL.createObjectURL(optimizedFile);
+                  block.previewUrl = block.localPreviewUrl;
+                  if (assetPath) cmsDraftAssetLocalBlobs.set(assetPath, optimizedFile);
+                  console.warn(`Unable to create a private preview URL for "${file.name}". Using the local image preview.`, previewError);
+                  showCmsToast(
+                    `"${file.name}" uploaded; using a local preview because the private preview link failed: ${getCmsErrorMessage(previewError, "unknown Storage error.")}`
+                  );
+                }
                 delete block.readProgress;
                 renderCmsMediaBlocksEditor();
               } catch (error) {
-                cmsDraftBlocks = cmsDraftBlocks.filter((item) => item.uid !== block.uid);
-                renderCmsMediaBlocksEditor();
+                if (!uploaded) {
+                  cmsDraftBlocks = cmsDraftBlocks.filter((item) => item.uid !== block.uid);
+                  renderCmsMediaBlocksEditor();
+                } else {
+                  delete block.readProgress;
+                  renderCmsMediaBlocksEditor();
+                }
                 console.error(`Unable to stage project image "${file.name}".`, error);
                 showCmsToast(`Unable to upload "${file.name}": ${getCmsErrorMessage(error, "Check the private Storage bucket setup.")}`);
               }
@@ -4507,6 +4550,7 @@
                 .from(CMS_PROJECT_DRAFTS_BUCKET)
                 .remove([...privatePathsToRemove]);
               if (error) throw error;
+              privatePathsToRemove.forEach(releaseCmsProjectDraftLocalAsset);
             } catch (error) {
               console.error("Project was published, but staged private images could not be removed.", error);
               draftCleanupMessage = ` Project published, but private file cleanup needs attention: ${getCmsErrorMessage(error, "storage cleanup failed.")}`;
