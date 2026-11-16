@@ -26,6 +26,7 @@
     let isAdminAuthenticated = false;
     let cmsRemoteStateLoaded = false;
     let cmsRemoteStateExists = false;
+    let lastCmsSaveError = "";
 
     const defaultCmsConfig = {
       studioTagEn: "Mostafa Khaled Studio",
@@ -329,16 +330,20 @@
     }
 
     async function saveCmsState(onUploadProgress) {
+      lastCmsSaveError = "";
       if (!supabaseClient) {
-        showCmsToast("Supabase is not configured. Portfolio changes were not published.");
+        lastCmsSaveError = "Supabase is not configured.";
+        showCmsToast(`${lastCmsSaveError} Portfolio changes were not published.`);
         return false;
       }
       if (!isAdminAuthenticated) {
-        showCmsToast("Sign in as an authorized administrator before publishing changes.");
+        lastCmsSaveError = "Sign in as an authorized administrator before publishing changes.";
+        showCmsToast(lastCmsSaveError);
         return false;
       }
       if (!cmsRemoteStateLoaded) {
-        showCmsToast("Portfolio content could not be verified online. Reload before publishing to avoid overwriting existing content.");
+        lastCmsSaveError = "Portfolio content could not be verified online. Reload before publishing to avoid overwriting existing content.";
+        showCmsToast(lastCmsSaveError);
         return false;
       }
       try {
@@ -362,7 +367,8 @@
         return true;
       } catch (error) {
         console.error("Unable to publish portfolio changes to Supabase.", error);
-        showCmsToast(`Changes could not be published: ${error.message || "Supabase request failed."}`);
+        lastCmsSaveError = getCmsErrorMessage(error, "Supabase request failed.");
+        showCmsToast(`Changes could not be published: ${lastCmsSaveError}`);
         return false;
       }
     }
@@ -488,6 +494,12 @@
       status.style.color = textColor;
       icon.textContent = symbol;
       text.textContent = message;
+    }
+
+    function getCmsErrorMessage(error, fallback) {
+      if (typeof error === "string" && error.trim()) return error;
+      if (typeof error?.message === "string" && error.message.trim()) return error.message;
+      return fallback;
     }
 
     function applyCmsThemeAndContact() {
@@ -4016,7 +4028,9 @@
             }
           } catch (error) {
             console.error("Unable to upload project PDF files.", error);
-            showCmsToast(error.message || "Unable to upload project PDF files.");
+            const errorMessage = getCmsErrorMessage(error, "Unable to upload project PDF files.");
+            setCmsProjectPublishStatus("error", `Project was not published: ${errorMessage}`);
+            showCmsToast(errorMessage);
             cmsProjectPdfUploadActive = false;
             renderCmsProjectPdfs();
             submitButton.disabled = false;
@@ -4092,7 +4106,10 @@
           }
           if (!saved) {
             portfolioProjects = previousProjects;
-            setCmsProjectPublishStatus("error", "Project was not published. Check the error message and try again.");
+            setCmsProjectPublishStatus(
+              "error",
+              `Project was not published: ${lastCmsSaveError || "Unknown error. Check your connection and try again."}`
+            );
             return;
           }
           resetCmsProjectForm();
