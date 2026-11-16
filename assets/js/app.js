@@ -823,8 +823,14 @@
       if (fileInput) fileInput.disabled = cmsProjectPdfUploadActive;
       const cancelButton = document.getElementById("cmsCancelEditProjectBtn");
       if (cancelButton) cancelButton.disabled = cmsProjectPdfUploadActive;
+      const publishButton = document.getElementById("cmsPublishProjectPdfsBtn");
+      if (publishButton) {
+        publishButton.classList.toggle("hidden", !document.getElementById("cmsEditProjectId").value);
+        publishButton.disabled = cmsProjectPdfUploadActive;
+      }
+      const isEditingProject = Boolean(document.getElementById("cmsEditProjectId").value);
       status.textContent = cmsDraftPdfs.length
-        ? `${cmsDraftPdfs.length} PDF${cmsDraftPdfs.length === 1 ? "" : "s"} attached. New files upload when you publish.`
+        ? `${cmsDraftPdfs.length} PDF${cmsDraftPdfs.length === 1 ? "" : "s"} selected. ${isEditingProject ? "Save PDF changes to this project, or update the full project below." : "PDFs upload when you publish the project below."}`
         : "No PDFs attached.";
       container.innerHTML = cmsDraftPdfs.map((pdf, index) => {
         const isPending = pdf.file instanceof File;
@@ -849,6 +855,83 @@
           renderCmsProjectPdfs();
         });
       });
+    }
+
+    async function publishCmsProjectPdfs() {
+      if (cmsProjectPdfUploadActive) return;
+      const editId = Number(document.getElementById("cmsEditProjectId").value);
+      const projectIndex = portfolioProjects.findIndex((project) => project.id === editId);
+      if (!editId || projectIndex === -1) {
+        showCmsToast("Publish the project first, then attach PDFs to it.");
+        return;
+      }
+      if (!cmsDraftPdfs.length && !getCmsProjectPdfFiles(portfolioProjects[projectIndex]).length) {
+        showCmsToast("Select at least one PDF or keep one attached to this project.");
+        return;
+      }
+
+      const project = portfolioProjects[projectIndex];
+      const previousProject = project;
+      const submitButton = document.getElementById("cmsProjectSubmitBtn");
+      const submitButtonLabel = submitButton.textContent;
+      const publishButton = document.getElementById("cmsPublishProjectPdfsBtn");
+      const publishButtonLabel = publishButton.textContent;
+      const pendingPdfs = cmsDraftPdfs.filter((pdf) => pdf.file instanceof File);
+      const totalPdfBytes = pendingPdfs.reduce((total, pdf) => total + pdf.file.size, 0);
+      let completedPdfBytes = 0;
+      const savedPdfs = [];
+
+      cmsProjectPdfUploadActive = true;
+      submitButton.disabled = true;
+      submitButton.textContent = "Saving PDF changes…";
+      publishButton.disabled = true;
+      publishButton.textContent = "Uploading and saving PDFs…";
+      renderCmsProjectPdfs();
+      try {
+        for (const pdf of cmsDraftPdfs) {
+          if (pdf.file instanceof File) {
+            const url = await uploadCmsPdfFile(pdf.file, pdf.path, (loaded) => {
+              updateCmsProjectUploadProgress({
+                loaded: completedPdfBytes + loaded,
+                total: totalPdfBytes,
+                fileIndex: pendingPdfs.indexOf(pdf) + 1,
+                fileCount: pendingPdfs.length
+              });
+            });
+            completedPdfBytes += pdf.file.size;
+            savedPdfs.push({ name: pdf.name, url, size: pdf.file.size });
+            cmsDraftPdfs[cmsDraftPdfs.indexOf(pdf)] = { ...savedPdfs[savedPdfs.length - 1], pending: true };
+            renderCmsProjectPdfs();
+          } else if (pdf.url) {
+            savedPdfs.push({ name: pdf.name, url: pdf.url, size: Number(pdf.size) || 0 });
+          }
+        }
+
+        portfolioProjects[projectIndex] = {
+          ...project,
+          pdfFiles: savedPdfs,
+          pdfUrl: savedPdfs[0]?.url || ""
+        };
+        const saved = await saveCmsState(updateCmsProjectUploadProgress);
+        if (!saved) {
+          portfolioProjects[projectIndex] = previousProject;
+          return;
+        }
+        cmsDraftPdfs = savedPdfs;
+        renderCmsProjectPdfs();
+        showCmsToast("PDF files were attached to the published project.");
+      } catch (error) {
+        console.error("Unable to publish project PDF changes.", error);
+        showCmsToast(error.message || "Unable to publish project PDF changes.");
+      } finally {
+        cmsProjectPdfUploadActive = false;
+        submitButton.disabled = false;
+        submitButton.textContent = submitButtonLabel;
+        publishButton.disabled = false;
+        publishButton.textContent = publishButtonLabel;
+        renderCmsProjectPdfs();
+        resetCmsProjectUploadProgress();
+      }
     }
 
     function getCmsProjectPdfFiles(project) {
@@ -3639,6 +3722,7 @@
           event.target.value = "";
         });
       }
+      document.getElementById("cmsPublishProjectPdfsBtn")?.addEventListener("click", publishCmsProjectPdfs);
 
       // Read multiple selected images and show a large preview for each one.
       const batchImagesInput = document.getElementById("cmsBatchImagesInput");
