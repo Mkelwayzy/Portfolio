@@ -709,7 +709,7 @@
           </div>
           ${(blk.previewUrl || blk.url)
             ? `<div data-media-preview-frame class="cms-media-preview-frame ${aspect} mt-3 overflow-hidden rounded-xl border border-black/10 bg-black/5">
-                 <img data-media-preview-image data-media-uid="${escapeCmsHtml(blk.uid)}" src="${escapeCmsHtml(blk.previewUrl || blk.url)}" alt="${isAr ? "صورة المشروع" : "Project image"} ${idx + 1}" loading="lazy" decoding="async" class="${imageClass}" />
+                 <img src="${escapeCmsHtml(blk.previewUrl || blk.url)}" alt="${isAr ? "صورة المشروع" : "Project image"} ${idx + 1}" loading="lazy" decoding="async" class="${imageClass}" />
                </div>`
             : `<div class="mt-3 flex min-h-40 flex-col items-center justify-center gap-3 rounded-xl border border-black/10 bg-black/5 p-6">
                 <span data-image-read-progress-text class="text-xs font-semibold text-slateText">${isAr ? "جارٍ قراءة الصورة" : "Reading image"}… ${Math.round(blk.readProgress || 0)}%</span>
@@ -723,24 +723,6 @@
         </article>
       `;
       }).join("");
-
-      container.querySelectorAll("[data-media-preview-image]").forEach((image) => {
-        const block = cmsDraftBlocks.find((item) => item.uid === image.dataset.mediaUid);
-        const path = getCmsProjectDraftAssetPath(block?.url);
-        if (!block || !path) return;
-        image.addEventListener("load", () => {
-          if (!block.localPreviewUrl) cmsDraftAssetLocalBlobs.delete(path);
-        }, { once: true });
-        image.addEventListener("error", () => {
-          const blob = cmsDraftAssetLocalBlobs.get(path);
-          if (!blob || block.localPreviewUrl) return;
-          block.localPreviewUrl = URL.createObjectURL(blob);
-          block.previewUrl = block.localPreviewUrl;
-          image.src = block.localPreviewUrl;
-          console.warn("The private project image preview could not be loaded. Using its local copy.");
-          showCmsToast("The private image preview link failed; displaying the uploaded image from this browser.");
-        }, { once: true });
-      });
 
       container.querySelectorAll("[data-media-aspect]").forEach((select) => {
         select.addEventListener("change", () => {
@@ -889,7 +871,7 @@
         canvas.width = Math.max(1, Math.round(imageBitmap.width * scale));
         canvas.height = Math.max(1, Math.round(imageBitmap.height * scale));
         const context = canvas.getContext("2d");
-        if (!context) throw new Error("The browser could not prepare the image for upload.");
+        if (!context) return file;
         context.drawImage(imageBitmap, 0, 0, canvas.width, canvas.height);
         const compressedBlob = await new Promise((resolve, reject) => {
           canvas.toBlob((blob) => {
@@ -897,11 +879,10 @@
             else reject(new Error("Unable to compress this image."));
           }, "image/jpeg", file.size > 6 * 1024 * 1024 ? 0.72 : 0.82);
         });
-        return compressedBlob;
+        return compressedBlob instanceof Blob ? compressedBlob : file;
       } catch (error) {
-        console.error("Could not safely optimize the project image before uploading.", error);
-        const detail = error instanceof Error ? error.message : "try exporting it as JPEG or PNG.";
-        throw new Error(`Could not safely optimize this image: ${detail}`);
+        console.warn("Could not compress the project image before publishing.", error);
+        return file;
       } finally {
         imageBitmap?.close();
       }
@@ -4193,7 +4174,6 @@
                 }, CMS_PROJECT_DRAFTS_BUCKET);
                 uploaded = true;
                 const assetPath = getCmsProjectDraftAssetPath(block.url);
-                if (assetPath) cmsDraftAssetLocalBlobs.set(assetPath, optimizedFile);
                 try {
                   block.previewUrl = await getCmsProjectDraftAssetUrl(block.url);
                 } catch (previewError) {
