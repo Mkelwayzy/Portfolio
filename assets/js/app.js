@@ -851,6 +851,30 @@
       });
     }
 
+    function getCmsProjectPdfFiles(project) {
+      const pdfFiles = Array.isArray(project.pdfFiles)
+        ? project.pdfFiles
+          .map((pdf) => {
+            if (typeof pdf === "string") return { name: "Project PDF", url: pdf, size: 0 };
+            if (!pdf || typeof pdf !== "object" || Array.isArray(pdf)) return null;
+            return {
+              name: typeof pdf.name === "string" && pdf.name ? pdf.name : "Project PDF",
+              url: typeof pdf.url === "string" ? pdf.url : (typeof pdf.publicUrl === "string" ? pdf.publicUrl : ""),
+              size: Number(pdf.size) || 0
+            };
+          })
+          .filter(Boolean)
+        : [];
+      if (typeof project.pdfUrl === "string" && project.pdfUrl && !pdfFiles.some((pdf) => pdf.url === project.pdfUrl)) {
+        pdfFiles.unshift({ name: "Project PDF", url: project.pdfUrl, size: 0 });
+      }
+      return pdfFiles.filter((pdf) => {
+        if (/^https?:\/\//i.test(pdf.url)) return true;
+        if (pdf.url) console.error("Ignoring a project PDF URL that does not use HTTP or HTTPS.");
+        return false;
+      });
+    }
+
     function setPageMetadata(title, description) {
       document.title = title;
       const metadata = {
@@ -1040,16 +1064,7 @@
       document.getElementById("cmsProjSolutionAr").value = proj.solutionAr || "";
       document.getElementById("cmsProjOutcomeEn").value = proj.outcomeEn || "";
       document.getElementById("cmsProjOutcomeAr").value = proj.outcomeAr || "";
-      const savedPdfs = Array.isArray(proj.pdfFiles) && proj.pdfFiles.length
-        ? proj.pdfFiles
-        : (proj.pdfUrl ? [{ url: proj.pdfUrl, name: "Project PDF" }] : []);
-      cmsDraftPdfs = savedPdfs
-        .filter((pdf) => pdf && typeof pdf === "object" && !Array.isArray(pdf))
-        .map((pdf) => ({
-          name: typeof pdf.name === "string" && pdf.name ? pdf.name : "Project PDF",
-          url: typeof pdf.url === "string" ? pdf.url : "",
-          size: Number(pdf.size) || 0
-        }));
+      cmsDraftPdfs = getCmsProjectPdfFiles(proj);
       renderCmsProjectPdfs();
       updateCmsCoverPreviewCard();
 
@@ -2800,13 +2815,9 @@
         ? (proj.descriptionAr || proj.descriptionEn)
         : (proj.descriptionEn || proj.descriptionAr);
       document.getElementById("modalProjectDescription").textContent = projectSummary;
+      const projectPdfs = getCmsProjectPdfFiles(proj);
       const projectPdfLink = document.getElementById("modalProjectPdfLink");
-      const projectPdfUrl = typeof proj.pdfUrl === "string" && /^https?:\/\//i.test(proj.pdfUrl)
-        ? proj.pdfUrl
-        : "";
-      if (proj.pdfUrl && !projectPdfUrl) {
-        console.error("Ignoring a project PDF URL that does not use HTTP or HTTPS.");
-      }
+      const projectPdfUrl = projectPdfs[0]?.url || "";
       projectPdfLink.textContent = isAr ? "فتح ملف المشروع PDF ↗" : "Open project PDF ↗";
       projectPdfLink.classList.toggle("hidden", !projectPdfUrl);
       if (projectPdfUrl) projectPdfLink.href = projectPdfUrl;
@@ -2846,14 +2857,6 @@
       outcomeCard.classList.toggle("hidden", !outcome);
       const projectPdfSection = document.getElementById("projectPdfSection");
       const projectPdfList = document.getElementById("projectPdfList");
-      const projectPdfs = (Array.isArray(proj.pdfFiles) && proj.pdfFiles.length
-        ? proj.pdfFiles
-        : (proj.pdfUrl ? [{ url: proj.pdfUrl, name: "Project PDF" }] : []))
-        .filter((pdf) => {
-          if (pdf && typeof pdf.url === "string" && /^https?:\/\//i.test(pdf.url)) return true;
-          console.error("Ignoring a project PDF URL that does not use HTTP or HTTPS.");
-          return false;
-        });
       document.getElementById("projectPdfSubheading").textContent = isAr ? "ملفات المشروع" : "Project documents";
       document.getElementById("projectPdfHeading").textContent = isAr ? "ملفات PDF" : "PDF Documents";
       projectPdfSection.classList.toggle("hidden", projectPdfs.length === 0);
