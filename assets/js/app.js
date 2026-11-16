@@ -7,7 +7,10 @@
     // ==================== ADMIN CMS STATE & PERSISTENCE ====================
     const CMS_STORAGE_KEY = "mk_studio_cms_state_v1";
     const CMS_CONTENT_TABLE = "portfolio_content";
+    const CMS_PROJECT_DRAFTS_TABLE = "portfolio_project_drafts";
     const CMS_MEDIA_BUCKET = "portfolio-assets";
+    const CMS_PROJECT_DRAFTS_BUCKET = "portfolio-project-drafts";
+    const CMS_DRAFT_ASSET_PREFIX = "draft-asset:";
     const CMS_PROJECT_COVER_ASPECT_VERSION = 1;
     const CMS_ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif", "image/svg+xml"]);
     const CMS_PROJECT_PDF_TYPE = "application/pdf";
@@ -27,6 +30,9 @@
     let cmsRemoteStateLoaded = false;
     let cmsRemoteStateExists = false;
     let lastCmsSaveError = "";
+    let cmsProjectDrafts = [];
+    const cmsDraftAssetReferences = new Map();
+    const cmsDraftMediaUploads = new Map();
 
     const defaultCmsConfig = {
       studioTagEn: "Mostafa Khaled Studio",
@@ -143,7 +149,7 @@
       return Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
     }
 
-    async function uploadCmsDataUrl(dataUrl, onProgress) {
+    async function uploadCmsDataUrl(dataUrl, onProgress, bucket = CMS_MEDIA_BUCKET) {
       if (!supabaseClient || !isAdminAuthenticated) {
         throw new Error("Sign in as an authorized administrator before uploading project files.");
       }
@@ -176,7 +182,7 @@
       if (!sessionData.session?.access_token) {
         throw new Error("Your administrator session expired. Sign in again before uploading project files.");
       }
-      const uploadUrl = `${supabaseConfig.url.replace(/\/+$/, "")}/storage/v1/object/${encodeURIComponent(CMS_MEDIA_BUCKET)}/${encodeURIComponent(path)}`;
+      const uploadUrl = `${supabaseConfig.url.replace(/\/+$/, "")}/storage/v1/object/${encodeURIComponent(bucket)}/${encodeURIComponent(path)}`;
       await new Promise((resolve, reject) => {
         const request = new XMLHttpRequest();
         request.timeout = 60000;
@@ -207,11 +213,12 @@
         request.addEventListener("timeout", () => reject(new Error("Project file upload timed out. Try a smaller image or a stronger connection.")));
         request.send(blob);
       });
-      const { data } = supabaseClient.storage.from(CMS_MEDIA_BUCKET).getPublicUrl(path);
+      if (bucket === CMS_PROJECT_DRAFTS_BUCKET) return `${CMS_DRAFT_ASSET_PREFIX}${path}`;
+      const { data } = supabaseClient.storage.from(bucket).getPublicUrl(path);
       return data.publicUrl;
     }
 
-    async function uploadCmsPdfFile(file, path, onProgress) {
+    async function uploadCmsPdfFile(file, path, onProgress, bucket = CMS_MEDIA_BUCKET) {
       if (!supabaseClient || !isAdminAuthenticated) {
         throw new Error("Sign in as an authorized administrator before uploading project files.");
       }
@@ -238,7 +245,7 @@
             "x-upsert": "false"
           },
           metadata: {
-            bucketName: CMS_MEDIA_BUCKET,
+            bucketName: bucket,
             objectName: path,
             contentType: CMS_PROJECT_PDF_TYPE,
             cacheControl: "31536000"
@@ -255,7 +262,8 @@
         }).catch(reject);
       });
 
-      const { data } = supabaseClient.storage.from(CMS_MEDIA_BUCKET).getPublicUrl(path);
+      if (bucket === CMS_PROJECT_DRAFTS_BUCKET) return `${CMS_DRAFT_ASSET_PREFIX}${path}`;
+      const { data } = supabaseClient.storage.from(bucket).getPublicUrl(path);
       return data.publicUrl;
     }
 
@@ -498,7 +506,12 @@
 
     function getCmsErrorMessage(error, fallback) {
       if (typeof error === "string" && error.trim()) return error;
-      if (typeof error?.message === "string" && error.message.trim()) return error.message;
+      if (error && typeof error === "object") {
+        const parts = [error.message, error.details, error.hint]
+          .filter((part) => typeof part === "string" && part.trim());
+        if (error.code && !parts.includes(String(error.code))) parts.push(`Code: ${error.code}`);
+        if (parts.length) return [...new Set(parts)].join(" — ");
+      }
       return fallback;
     }
 
@@ -877,6 +890,286 @@
       });
     }
 
+    function createCmsProjectDraftId() {
+      if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+      return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+        const random = Math.random() * 16 | 0;
+        return (char === "x" ? random : (random & 0x3 | 0x8)).toString(16);
+      });
+    }
+
+    function getCmsProjectDraftAssetPath(value) {
+      if (typeof value !== "string") return "";
+      if (value.startsWith(CMS_DRAFT_ASSET_PREFIX)) return value.slice(CMS_DRAFT_ASSET_PREFIX.length);
+      const cachedPath = cmsDraftAssetReferences.get(value);
+      if (cachedPath) return cachedPath;
+      try {
+        const url = new URL(value);
+        const prefix = `/storage/v1/object/sign/${CMS_PROJECT_DRAFTS_BUCKET}/`;
+        if (!url.pathname.includes(prefix)) return "";
+        const encodedPath = url.pathname.slice(url.pathname.indexOf(prefix) + prefix.length);
+        return encodedPath.split("/").map((part) => decodeURIComponent(part)).join("/");
+      } catch {
+        return "";
+      }
+    }
+
+    async function getCmsProjectDraftAssetUrl(value) {
+      const path = getCmsProjectDraftAssetPath(value);
+      if (!path) return value;
+      const { data, error } = await supabaseClient.storage
+        .from(CMS_PROJECT_DRAFTS_BUCKET)
+        .createSignedUrl(path, 60 * 60);
+      if (error) throw error;
+      cmsDraftAssetReferences.set(data.signedUrl, path);
+      return data.signedUrl;
+    }
+
+    async function saveCmsProjectDraftAsset(value) {
+      if (typeof value !== "string" || !value) return value || "";
+      const path = getCmsProjectDraftAssetPath(value);
+      if (path) return `${CMS_DRAFT_ASSET_PREFIX}${path}`;
+      if (!value.startsWith("data:")) return value;
+      const cachedReference = cmsDraftMediaUploads.get(value);
+      if (cachedReference) return cachedReference;
+      const reference = await uploadCmsDataUrl(value, null, CMS_PROJECT_DRAFTS_BUCKET);
+      cmsDraftMediaUploads.set(value, reference);
+      return reference;
+    }
+
+    async function materializeCmsProjectDraftAsset(value) {
+      const path = getCmsProjectDraftAssetPath(value);
+      if (!path) return value;
+      const signedUrl = await getCmsProjectDraftAssetUrl(`${CMS_DRAFT_ASSET_PREFIX}${path}`);
+      const response = await fetch(signedUrl);
+      if (!response.ok) throw new Error(`Unable to retrieve a private draft file (HTTP ${response.status}).`);
+      return readCmsFileAsDataUrl(await response.blob(), () => {});
+    }
+
+    async function loadCmsProjectDrafts() {
+      if (!isAdminAuthenticated || !supabaseClient) return;
+      try {
+        const { data, error } = await supabaseClient
+          .from(CMS_PROJECT_DRAFTS_TABLE)
+          .select("id, content, updated_at")
+          .order("updated_at", { ascending: false });
+        if (error) throw error;
+        cmsProjectDrafts = await Promise.all((data || []).map(async (draft) => ({
+          ...draft,
+          previewUrl: await getCmsProjectDraftAssetUrl(draft.content?.fields?.cmsProjImgUrl || "")
+        })));
+        renderCmsProjectDrafts();
+      } catch (error) {
+        console.error("Unable to load private project drafts.", error);
+        showCmsToast(`Drafts could not be loaded: ${getCmsErrorMessage(error, "Run supabase/setup.sql and try again.")}`);
+      }
+    }
+
+    function renderCmsProjectDrafts() {
+      const count = document.getElementById("cmsProjectDraftsCount");
+      const list = document.getElementById("cmsProjectDraftsList");
+      if (!count || !list) return;
+      count.textContent = String(cmsProjectDrafts.length);
+      list.innerHTML = cmsProjectDrafts.map((draft) => {
+        const title = draft.content?.fields?.cmsProjTitleEn?.trim() || "Untitled draft";
+        const updatedAt = draft.updated_at ? new Date(draft.updated_at).toLocaleString() : "";
+        return `
+          <article class="ios-subcard flex min-w-0 items-center gap-3 rounded-xl p-3">
+            ${draft.previewUrl ? `<img src="${escapeCmsHtml(draft.previewUrl)}" alt="" loading="lazy" class="h-12 w-12 shrink-0 rounded-lg object-cover" />` : ""}
+            <div class="min-w-0 flex-1">
+              <h5 class="truncate text-xs font-bold text-obsidian">${escapeCmsHtml(title)}</h5>
+              <p class="mt-1 text-[10px] text-slateText">${escapeCmsHtml(updatedAt)}</p>
+            </div>
+            <div class="flex shrink-0 gap-1">
+              <button type="button" data-edit-project-draft="${escapeCmsHtml(draft.id)}" class="rounded-lg bg-obsidian px-2.5 py-1.5 text-[10px] font-semibold text-white">Open</button>
+              <button type="button" data-delete-project-draft="${escapeCmsHtml(draft.id)}" aria-label="Delete draft ${escapeCmsHtml(title)}" class="rounded-lg bg-red-500/10 px-2 py-1.5 text-[10px] font-bold text-red-700">✕</button>
+            </div>
+          </article>
+        `;
+      }).join("") || '<p class="rounded-xl bg-white/60 p-3 text-[11px] text-slateText">No saved drafts.</p>';
+
+      list.querySelectorAll("[data-edit-project-draft]").forEach((button) => {
+        button.addEventListener("click", () => editCmsProjectDraft(button.dataset.editProjectDraft));
+      });
+      list.querySelectorAll("[data-delete-project-draft]").forEach((button) => {
+        button.addEventListener("click", () => deleteCmsProjectDraft(button.dataset.deleteProjectDraft));
+      });
+    }
+
+    async function saveCmsProjectDraft() {
+      if (cmsProjectPdfUploadActive) return;
+      if (cmsCoverReadPending || cmsDraftBlocks.some((block) => !block.url)) {
+        showCmsToast("Wait for all selected images to finish loading before saving the draft.");
+        return;
+      }
+      if (!supabaseClient || !isAdminAuthenticated || !cmsRemoteStateLoaded) {
+        showCmsToast("Sign in as an authorized administrator and verify the online portfolio before saving drafts.");
+        return;
+      }
+
+      const saveButton = document.getElementById("cmsSaveProjectDraftBtn");
+      const previousLabel = saveButton.textContent;
+      saveButton.disabled = true;
+      saveButton.textContent = "Saving private draft…";
+      cmsProjectPdfUploadActive = true;
+      renderCmsProjectPdfs();
+      try {
+        const form = document.getElementById("cmsProjectForm");
+        const fields = {};
+        form.querySelectorAll("input[id], select[id], textarea[id]").forEach((field) => {
+          if (field.type === "file" || field.id === "cmsEditProjectId" || field.id === "cmsEditDraftId" || field.name === "cmsProjTools") return;
+          fields[field.id] = field.type === "checkbox" ? field.checked : field.value;
+        });
+        fields.cmsProjImgUrl = await saveCmsProjectDraftAsset(fields.cmsProjImgUrl);
+        const mediaBlocks = await Promise.all(cmsDraftBlocks.map(async (block) => ({
+          ...block,
+          url: await saveCmsProjectDraftAsset(block.url)
+        })));
+        const pdfs = [];
+        for (const pdf of cmsDraftPdfs) {
+          if (pdf.file instanceof File) {
+            const url = await uploadCmsPdfFile(pdf.file, pdf.path, null, CMS_PROJECT_DRAFTS_BUCKET);
+            pdfs.push({ name: pdf.name, url, size: pdf.size });
+          } else if (pdf.url) {
+            pdfs.push({
+              name: pdf.name,
+              url: await saveCmsProjectDraftAsset(pdf.url),
+              size: Number(pdf.size) || 0
+            });
+          }
+        }
+
+        const id = document.getElementById("cmsEditDraftId").value || createCmsProjectDraftId();
+        const content = {
+          fields,
+          tools: getSelectedCmsProjectTools(),
+          mediaBlocks,
+          pdfs
+        };
+        const previousDraft = cmsProjectDrafts.find((item) => item.id === id);
+        const { data, error } = await supabaseClient
+          .from(CMS_PROJECT_DRAFTS_TABLE)
+          .upsert({ id, content, updated_at: new Date().toISOString() }, { onConflict: "id" })
+          .select("id, content, updated_at")
+          .single();
+        if (error) throw error;
+        const draft = {
+          ...data,
+          previewUrl: await getCmsProjectDraftAssetUrl(fields.cmsProjImgUrl)
+        };
+        cmsProjectDrafts = [draft, ...cmsProjectDrafts.filter((item) => item.id !== id)];
+        document.getElementById("cmsEditDraftId").value = id;
+        document.getElementById("cmsProjectFormHeading").textContent = `Private Draft — ${fields.cmsProjTitleEn || "Untitled"}`;
+        cmsDraftPdfs = pdfs;
+        renderCmsProjectPdfs();
+        renderCmsProjectDrafts();
+        const currentPaths = new Set(collectCmsProjectDraftAssetPaths(content));
+        const stalePaths = collectCmsProjectDraftAssetPaths(previousDraft?.content)
+          .filter((path) => !currentPaths.has(path));
+        if (stalePaths.length) {
+          const { error: cleanupError } = await supabaseClient.storage
+            .from(CMS_PROJECT_DRAFTS_BUCKET)
+            .remove(stalePaths);
+          if (cleanupError) {
+            console.error("The draft was saved, but old private assets could not be removed.", cleanupError);
+            showCmsToast(`Draft saved, but old private files need cleanup: ${getCmsErrorMessage(cleanupError, "Storage cleanup failed.")}`);
+            return;
+          }
+        }
+        showCmsToast("Private project draft saved.");
+      } catch (error) {
+        console.error("Unable to save private project draft.", error);
+        const message = getCmsErrorMessage(error, "Run supabase/setup.sql and try again.");
+        showCmsToast(`Draft could not be saved: ${message}`);
+      } finally {
+        cmsProjectPdfUploadActive = false;
+        renderCmsProjectPdfs();
+        saveButton.disabled = false;
+        saveButton.textContent = previousLabel;
+      }
+    }
+
+    async function editCmsProjectDraft(id) {
+      const draft = cmsProjectDrafts.find((item) => item.id === id);
+      if (!draft) return;
+      try {
+        resetCmsProjectForm();
+        const { fields, tools, mediaBlocks, pdfs } = draft.content || {};
+        if (!fields || typeof fields !== "object") throw new Error("The saved draft has an invalid format.");
+        populateCmsProjectYearOptions(Number(fields.cmsProjYear) || new Date().getFullYear());
+        Object.entries(fields).forEach(([fieldId, value]) => {
+          const field = document.getElementById(fieldId);
+          if (field && field.type !== "file") field.value = value ?? "";
+        });
+        fields.cmsProjImgUrl = await getCmsProjectDraftAssetUrl(fields.cmsProjImgUrl || "");
+        setCmsProjectCoverImage(fields.cmsProjImgUrl);
+        setCmsProjectTools(Array.isArray(tools) ? tools : []);
+        cmsDraftBlocks = await Promise.all((Array.isArray(mediaBlocks) ? mediaBlocks : []).map(async (block) => ({
+          ...block,
+          url: await getCmsProjectDraftAssetUrl(block.url || "")
+        })));
+        cmsDraftPdfs = await Promise.all((Array.isArray(pdfs) ? pdfs : []).map(async (pdf) => ({
+          ...pdf,
+          url: await getCmsProjectDraftAssetUrl(pdf.url || "")
+        })));
+        document.getElementById("cmsEditProjectId").value = "";
+        document.getElementById("cmsEditDraftId").value = id;
+        document.getElementById("cmsProjectFormHeading").textContent = `Private Draft — ${fields.cmsProjTitleEn || "Untitled"}`;
+        document.getElementById("cmsProjectSubmitBtn").textContent = "Publish Draft to Platform";
+        document.getElementById("cmsCancelEditProjectBtn").classList.remove("hidden");
+        updateCmsCoverPreviewCard();
+        renderCmsProjectPdfs();
+        renderCmsMediaBlocksEditor();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } catch (error) {
+        console.error("Unable to open the private project draft.", error);
+        showCmsToast(`Draft could not be opened: ${getCmsErrorMessage(error, "Check the draft and storage permissions.")}`);
+      }
+    }
+
+    async function deleteCmsProjectDraft(id) {
+      if (!window.confirm("Delete this private project draft?")) return;
+      let deleted = false;
+      try {
+        const draft = cmsProjectDrafts.find((item) => item.id === id);
+        const { error } = await supabaseClient
+          .from(CMS_PROJECT_DRAFTS_TABLE)
+          .delete()
+          .eq("id", id);
+        if (error) throw error;
+        deleted = true;
+        cmsProjectDrafts = cmsProjectDrafts.filter((draft) => draft.id !== id);
+        if (document.getElementById("cmsEditDraftId").value === id) resetCmsProjectForm();
+        renderCmsProjectDrafts();
+        const paths = collectCmsProjectDraftAssetPaths(draft?.content);
+        if (paths.length) {
+          const { error: storageError } = await supabaseClient.storage
+            .from(CMS_PROJECT_DRAFTS_BUCKET)
+            .remove(paths);
+          if (storageError) throw storageError;
+        }
+        showCmsToast("Private project draft deleted.");
+      } catch (error) {
+        console.error("Unable to delete private project draft.", error);
+        const message = getCmsErrorMessage(error, "Check your connection and storage policies.");
+        showCmsToast(deleted
+          ? `Draft was deleted, but private files may need cleanup: ${message}`
+          : `Draft could not be deleted: ${message}`);
+      }
+    }
+
+    function collectCmsProjectDraftAssetPaths(value, paths = new Set()) {
+      if (typeof value === "string") {
+        const path = getCmsProjectDraftAssetPath(value);
+        if (path) paths.add(path);
+      } else if (Array.isArray(value)) {
+        value.forEach((item) => collectCmsProjectDraftAssetPaths(item, paths));
+      } else if (value && typeof value === "object") {
+        Object.values(value).forEach((item) => collectCmsProjectDraftAssetPaths(item, paths));
+      }
+      return [...paths];
+    }
+
     function renderCmsProjectPdfs() {
       const container = document.getElementById("cmsProjectPdfList");
       const status = document.getElementById("cmsProjectPdfStatus");
@@ -891,8 +1184,9 @@
         publishButton.disabled = cmsProjectPdfUploadActive;
       }
       const isEditingProject = Boolean(document.getElementById("cmsEditProjectId").value);
+      const isEditingDraft = Boolean(document.getElementById("cmsEditDraftId").value);
       status.textContent = cmsDraftPdfs.length
-        ? `${cmsDraftPdfs.length} PDF${cmsDraftPdfs.length === 1 ? "" : "s"} selected. ${isEditingProject ? "Save PDF changes to this project, or update the full project below." : "PDFs upload when you publish the project below."}`
+        ? `${cmsDraftPdfs.length} PDF${cmsDraftPdfs.length === 1 ? "" : "s"} selected. ${isEditingProject ? "Save PDF changes to this project, or update the full project below." : isEditingDraft ? "PDFs stay private with the draft until you publish it." : "PDFs upload when you publish the project below."}`
         : "No PDFs attached.";
       container.innerHTML = cmsDraftPdfs.map((pdf, index) => {
         const isPending = pdf.file instanceof File;
@@ -902,7 +1196,7 @@
           <article class="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-black/5 bg-white/75 p-3">
             <div class="min-w-0">
               <p class="truncate text-[11px] font-semibold text-obsidian" title="${escapeCmsHtml(pdf.name || `Project document ${index + 1}`)}">${escapeCmsHtml(pdf.name || `Project document ${index + 1}`)}</p>
-              <p class="mt-1 text-[10px] text-slateText">${isPending ? "Ready to upload" : (pdf.pending ? "Uploaded — publish to attach" : "Published")} · ${sizeLabel}</p>
+              <p class="mt-1 text-[10px] text-slateText">${isPending ? "Ready to upload" : (isEditingDraft ? "Saved privately with draft" : (pdf.pending ? "Uploaded — publish to attach" : "Published"))} · ${sizeLabel}</p>
             </div>
             <div class="flex shrink-0 items-center gap-2">
               ${validUrl ? `<a href="${escapeCmsHtml(pdf.url)}" target="_blank" rel="noopener noreferrer" class="rounded-full bg-black/5 px-2.5 py-1.5 text-[10px] font-semibold text-obsidian hover:bg-black/10">Open</a>` : ""}
@@ -1177,6 +1471,7 @@
       const proj = portfolioProjects.find((p) => p.id === id);
       if (!proj) return;
       setCmsProjectPublishStatus("");
+      document.getElementById("cmsEditDraftId").value = "";
       cmsCoverReadVersion += 1;
       cmsCoverReadPending = false;
       document.getElementById("cmsProjImgFile").value = "";
@@ -1236,6 +1531,7 @@
       document.getElementById("cmsProjectAiConsent").checked = false;
       document.getElementById("cmsProjectAiStatus").textContent = "راجع كل الحقول وتأكد من المعلومات قبل النشر.";
       document.getElementById("cmsEditProjectId").value = "";
+      document.getElementById("cmsEditDraftId").value = "";
       document.getElementById("cmsProjectFormHeading").textContent = "Publish New Precision Project";
       document.getElementById("cmsProjectSubmitBtn").textContent = "Publish Complete Project to Platform";
       document.getElementById("cmsCancelEditProjectBtn").classList.add("hidden");
@@ -1445,6 +1741,7 @@
         });
         filterCmsProjectList();
       }
+      renderCmsProjectDrafts();
     }
 
     // ==================== SMART COOKIE & VISITOR INTEREST ENGINE ====================
@@ -3478,6 +3775,7 @@
     document.addEventListener("DOMContentLoaded", async () => {
       await restoreAdminSession();
       await loadCmsState();
+      if (isAdminAuthenticated) await loadCmsProjectDrafts();
       populateCmsProjectYearOptions();
       applyCmsThemeAndContact();
 
@@ -3683,6 +3981,7 @@
             if (remoteContentLoaded && !cmsRemoteStateExists && await saveCmsState()) {
               showCmsToast("Your current portfolio content was published to Supabase.");
             }
+            await loadCmsProjectDrafts();
             applyCmsThemeAndContact();
             closeAdminLoginModal();
             adminLoginForm.reset();
@@ -3821,6 +4120,7 @@
       // Publish or Update Precision Project
       const cmsProjectForm = document.getElementById("cmsProjectForm");
       if (cmsProjectForm) {
+        document.getElementById("cmsSaveProjectDraftBtn")?.addEventListener("click", saveCmsProjectDraft);
         const aiDraftButton = document.getElementById("cmsProjectAiDraftBtn");
         const aiNarrativeInput = document.getElementById("cmsProjectNarrative");
         const aiConsentInput = document.getElementById("cmsProjectAiConsent");
@@ -3946,6 +4246,7 @@
 
         cmsProjectForm.addEventListener("submit", async (e) => {
           e.preventDefault();
+          if (cmsProjectPdfUploadActive) return;
           setCmsProjectPublishStatus("");
           if (cmsCoverReadPending || cmsDraftBlocks.some((block) => !block.url)) {
             showCmsToast("Wait for all selected images to finish loading before publishing.");
@@ -4081,6 +4382,32 @@
             mediaBlocks: validMediaBlocks,
             gallery: galleryUrls
           };
+          const draftId = document.getElementById("cmsEditDraftId").value;
+          if (draftId) {
+            try {
+              projectPayload.imageUrl = await materializeCmsProjectDraftAsset(projectPayload.imageUrl);
+              projectPayload.gallery = await Promise.all(projectPayload.gallery.map(materializeCmsProjectDraftAsset));
+              projectPayload.mediaBlocks = await Promise.all(projectPayload.mediaBlocks.map(async (block) => ({
+                ...block,
+                url: await materializeCmsProjectDraftAsset(block.url)
+              })));
+              projectPayload.pdfFiles = await Promise.all(projectPayload.pdfFiles.map(async (pdf) => ({
+                ...pdf,
+                url: await materializeCmsProjectDraftAsset(pdf.url)
+              })));
+              projectPayload.pdfUrl = projectPayload.pdfFiles[0]?.url || "";
+            } catch (error) {
+              const errorMessage = getCmsErrorMessage(error, "Unable to retrieve a private draft file.");
+              setCmsProjectPublishStatus("error", `Project was not published: ${errorMessage}`);
+              showCmsToast(errorMessage);
+              submitButton.disabled = false;
+              submitButton.textContent = submitButtonLabel;
+              cmsProjectPdfUploadActive = false;
+              renderCmsProjectPdfs();
+              resetCmsProjectUploadProgress();
+              return;
+            }
+          }
           const successMessage = editId
             ? "Project and files updated."
             : "Project and files published.";
@@ -4112,11 +4439,33 @@
             );
             return;
           }
+          let draftCleanupMessage = "";
+          if (draftId) {
+            const publishedDraft = cmsProjectDrafts.find((draft) => draft.id === draftId);
+            try {
+              const { error } = await supabaseClient
+                .from(CMS_PROJECT_DRAFTS_TABLE)
+                .delete()
+                .eq("id", draftId);
+              if (error) throw error;
+              cmsProjectDrafts = cmsProjectDrafts.filter((draft) => draft.id !== draftId);
+              const paths = collectCmsProjectDraftAssetPaths(publishedDraft?.content);
+              if (paths.length) {
+                const { error: storageError } = await supabaseClient.storage
+                  .from(CMS_PROJECT_DRAFTS_BUCKET)
+                  .remove(paths);
+                if (storageError) throw storageError;
+              }
+            } catch (error) {
+              console.error("Project was published, but its private draft could not be fully removed.", error);
+              draftCleanupMessage = ` Project published, but draft cleanup needs attention: ${getCmsErrorMessage(error, "storage cleanup failed.")}`;
+            }
+          }
           resetCmsProjectForm();
           buildCarouselCards();
           renderAdminDashboard();
           setCmsProjectPublishStatus("success", editId ? "Project updated and published successfully." : "Project published successfully.");
-          showCmsToast(successMessage);
+          showCmsToast(`${draftCleanupMessage ? "Project published successfully." : successMessage}${draftCleanupMessage}`);
         });
       }
 
