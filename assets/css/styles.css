@@ -794,3 +794,32 @@
     #adminDashboardView input[readonly] {
       background-color: #eceef0;
     }
+
+
+/* ==================== 3-COLUMN 1080x1440 IMAGE GRID (USER REQUEST) ==================== */
+.project-images-grid,
+#modalProjectGallery,
+#cmsMediaBlocksContainer.is-legacy {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+  width: 100% !important;
+}
+
+.project-image-item,
+#modalProjectGallery figure,
+#cmsMediaBlocksContainer.is-legacy > div {
+  width: 100% !important;
+  aspect-ratio: 1080 / 1440 !important;
+  overflow: hidden !important;
+  border-radius: 12px !important;
+  background-color: #E5E6E8 !important;
+}
+
+.project-image-item img,
+#modalProjectGallery figure img,
+#cmsMediaBlocksContainer.is-legacy img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
