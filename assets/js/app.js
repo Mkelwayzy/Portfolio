@@ -8,6 +8,7 @@
     const CMS_STORAGE_KEY = "mk_studio_cms_state_v1";
     const CMS_CONTENT_TABLE = "portfolio_content";
     const CMS_MEDIA_BUCKET = "portfolio-assets";
+    const CMS_PROJECT_COVER_ASPECT_VERSION = 1;
     const CMS_ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif", "image/svg+xml"]);
     const CMS_PROJECT_PDF_TYPE = "application/pdf";
     const CMS_PROJECT_PDF_MAX_BYTES = 100 * 1024 * 1024;
@@ -61,6 +62,7 @@
 
     function getCmsStateSnapshot() {
       return {
+        projectCoverAspectVersion: CMS_PROJECT_COVER_ASPECT_VERSION,
         config: { ...cmsConfig },
         projects: portfolioProjects,
         experience: experienceData,
@@ -78,8 +80,11 @@
     }
 
     function applyCmsState(parsed) {
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return { repairedProjectIds: false, migratedProjectCoverAspects: false };
+      }
       let repairedProjectIds = false;
+      const migratedProjectCoverAspects = parsed.projectCoverAspectVersion !== CMS_PROJECT_COVER_ASPECT_VERSION;
       if (parsed.config && typeof parsed.config === "object" && !Array.isArray(parsed.config)) {
         const publicConfig = { ...parsed.config };
         delete publicConfig.passcode;
@@ -98,12 +103,20 @@
             const id = Number(project.id);
             if (Number.isSafeInteger(id) && id > 0 && !usedIds.has(id)) {
               usedIds.add(id);
-              return { ...project, id };
+              return {
+                ...project,
+                id,
+                ...(migratedProjectCoverAspects ? { coverAspect: "aspect-[3/4]" } : {})
+              };
             }
             while (usedIds.has(nextId)) nextId += 1;
             repairedProjectIds = true;
             usedIds.add(nextId);
-            return { ...project, id: nextId++ };
+            return {
+              ...project,
+              id: nextId++,
+              ...(migratedProjectCoverAspects ? { coverAspect: "aspect-[3/4]" } : {})
+            };
           });
         }
       }
@@ -120,7 +133,7 @@
       if (Array.isArray(parsed.aboutStats)) aboutStats = parsed.aboutStats;
       if (Array.isArray(parsed.aboutPillars)) aboutPillars = parsed.aboutPillars;
       if (Array.isArray(parsed.aboutTags)) aboutTags = parsed.aboutTags;
-      return repairedProjectIds;
+      return { repairedProjectIds, migratedProjectCoverAspects };
     }
 
     function getDataUrlByteLength(dataUrl) {
@@ -379,12 +392,22 @@
         cmsRemoteStateLoaded = true;
         cmsRemoteStateExists = Boolean(data);
         if (data?.content) {
-          const repairedProjectIds = applyCmsState(data.content);
-          if (repairedProjectIds) {
+          const stateChanges = applyCmsState(data.content);
+          if (stateChanges.repairedProjectIds) {
             console.warn("Duplicate or invalid project IDs were reassigned to keep project records distinct.");
-            if (isAdminAuthenticated && await saveCmsState()) {
+          }
+          if (stateChanges.migratedProjectCoverAspects) {
+            console.info("Legacy project cover proportions were updated to portrait 3:4.");
+          }
+          if (stateChanges.repairedProjectIds || stateChanges.migratedProjectCoverAspects) {
+            const saved = isAdminAuthenticated && await saveCmsState();
+            if (saved && stateChanges.migratedProjectCoverAspects) {
+              showCmsToast("Project cover proportions were synchronized and published.");
+            } else if (saved && stateChanges.repairedProjectIds) {
               showCmsToast("Duplicate project IDs were corrected and published.");
-            } else if (!isAdminAuthenticated) {
+            } else if (!isAdminAuthenticated && stateChanges.migratedProjectCoverAspects) {
+              showCmsToast("Project covers now display in portrait 3:4; sign in as an admin to sync the change online.");
+            } else if (!isAdminAuthenticated && stateChanges.repairedProjectIds) {
               showCmsToast("Duplicate project IDs were corrected for display; sign in to publish the correction.");
             }
           }
@@ -1075,7 +1098,7 @@
       image.classList.toggle("hidden", !imageUrl);
       placeholder.classList.toggle("hidden", Boolean(imageUrl));
       placeholder.textContent = isAr ? "اختر صورة الغلاف لمعاينة بطاقة المشروع." : "Select a cover image to preview the project card.";
-      preview.style.aspectRatio = aspectRatios[aspectSelect.value] || "4 / 3";
+      preview.style.aspectRatio = aspectRatios[aspectSelect.value] || "3 / 4";
       countryBadge.textContent = country ? (isAr ? country.arabic : country.value) : (isAr ? "الدولة" : "Country");
       title.textContent = projectTitle || (isAr ? "اسم المشروع" : "Project title");
       details.textContent = projectDetails || (isAr ? "تفاصيل المشروع" : "Project details will appear here");
@@ -1129,7 +1152,7 @@
       document.getElementById("cmsProjCountry").value = getCmsProjectCountry(proj);
       populateCmsProjectYearOptions(Number(proj.year) || new Date().getFullYear());
       setCmsProjectCoverImage(proj.imageUrl || "");
-      document.getElementById("cmsProjCoverAspect").value = proj.coverAspect || "aspect-[4/3]";
+      document.getElementById("cmsProjCoverAspect").value = proj.coverAspect || "aspect-[3/4]";
       setCmsProjectTools(proj.tools || []);
       document.getElementById("cmsProjClientEn").value = proj.client || "";
       document.getElementById("cmsProjClientAr").value = proj.clientAr || "";
@@ -2883,7 +2906,7 @@
       // Hero Showcase & Metadata
       const coverBox = document.getElementById("modalProjectImage").parentElement;
       if (coverBox) {
-        coverBox.className = `rounded-[24px] overflow-hidden bg-[#E5E6E8] ${proj.coverAspect || "aspect-[4/3]"} shadow-md border border-white/85 relative group`;
+        coverBox.className = `rounded-[24px] overflow-hidden bg-[#E5E6E8] ${proj.coverAspect || "aspect-[3/4]"} shadow-md border border-white/85 relative group`;
       }
       document.getElementById("modalProjectImage").src = proj.imageUrl;
       document.getElementById("modalProjectImage").alt = isAr ? proj.titleAr : proj.titleEn;
@@ -4009,7 +4032,7 @@
             pdfFiles: projectPdfFiles,
             pdfUrl: projectPdfFiles[0]?.url || "",
             imageUrl: imgUrl,
-            coverAspect: document.getElementById("cmsProjCoverAspect").value || "aspect-[4/3]",
+            coverAspect: document.getElementById("cmsProjCoverAspect").value || "aspect-[3/4]",
             mediaBlocks: validMediaBlocks,
             gallery: galleryUrls
           };

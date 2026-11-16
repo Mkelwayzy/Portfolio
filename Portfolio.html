@@ -223,7 +223,7 @@
       <div class="glass-card inner-anim-card rounded-[32px] p-5 sm:p-8 lg:p-10" style="animation-delay: 0.05s">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-7 lg:gap-10 items-center">
           <div class="lg:col-span-6">
-            <div class="rounded-[24px] overflow-hidden bg-[#E5E6E8] aspect-[4/3] shadow-md border border-white/85 relative group">
+            <div class="rounded-[24px] overflow-hidden bg-[#E5E6E8] aspect-[3/4] shadow-md border border-white/85 relative group">
               <img id="modalProjectImage" src="" alt="" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
               <span id="modalProjectLocationBadge" class="glass-pill absolute top-4 start-4 px-3.5 py-1.5 rounded-full text-[11px] font-semibold text-[#111214] shadow-sm"></span>
             </div>
@@ -611,7 +611,7 @@
                         <div id="cmsProjCoverReadProgressBar" class="h-full rounded-full bg-obsidian transition-[width] duration-150" style="width:0%"></div>
                       </div>
                     </div>
-                    <div id="cmsProjCoverPreview" class="cms-cover-preview relative mt-3 aspect-[4/3] overflow-hidden rounded-2xl border border-white bg-[#dfe3e8] shadow-sm">
+                    <div id="cmsProjCoverPreview" class="cms-cover-preview relative mt-3 aspect-[3/4] overflow-hidden rounded-2xl border border-white bg-[#dfe3e8] shadow-sm">
                       <img id="cmsProjCoverPreviewImage" alt="Project cover preview" class="hidden absolute inset-0 h-full w-full object-cover" />
                       <div id="cmsProjCoverPreviewPlaceholder" class="absolute inset-0 flex items-center justify-center px-6 text-center text-xs font-medium text-slateText">
                         Select a cover image to preview the project card.
@@ -627,10 +627,10 @@
                   <div class="sm:col-span-4">
                     <label class="block text-[11px] font-semibold text-obsidian mb-1">Cover Frame Aspect Size</label>
                     <select id="cmsProjCoverAspect" class="w-full px-3 py-2.5 rounded-xl bg-white/90 border border-white text-xs font-semibold text-obsidian">
-                      <option value="aspect-[4/3]">Standard 4:3 (Default)</option>
+                      <option value="aspect-[3/4]">Portrait 3:4 (Default — 1080×1440)</option>
+                      <option value="aspect-[4/3]">Standard 4:3</option>
                       <option value="aspect-video">Widescreen 16:9 (Landscape)</option>
                       <option value="aspect-square">Square 1:1 (Social / Post)</option>
-                      <option value="aspect-[3/4]">Portrait 3:4 (Poster / Vertical)</option>
                       <option value="aspect-[21/9]">Ultra-Wide 21:9 (Banner)</option>
                     </select>
                   </div>
