@@ -590,6 +590,7 @@
     let cmsDraftBlocks = [];
     let cmsDraftFreeformGallery = true;
     let cmsDraftGalleryChanged = false;
+    let cmsActiveCropUid = "";
     let cmsDraftPdfs = [];
     let cmsProjectPdfUploadActive = false;
     let cmsCoverReadPending = false;
@@ -640,6 +641,9 @@
         width: 6,
         height: 6,
         fit: "cover",
+        cropX: 50,
+        cropY: 50,
+        cropZoom: 1,
         captionEn,
         captionAr
       };
@@ -661,7 +665,10 @@
         y,
         width,
         height,
-        fit: block.fit === "contain" ? "contain" : (block.fit === "cover" ? "cover" : (block.aspect === "aspect-auto" ? "contain" : "cover"))
+        fit: block.fit === "contain" ? "contain" : (block.fit === "cover" ? "cover" : (block.aspect === "aspect-auto" ? "contain" : "cover")),
+        cropX: Math.max(0, Math.min(100, Number.isFinite(Number(block.cropX)) ? Number(block.cropX) : 50)),
+        cropY: Math.max(0, Math.min(100, Number.isFinite(Number(block.cropY)) ? Number(block.cropY) : 50)),
+        cropZoom: Math.max(1, Math.min(3, Number(block.cropZoom) || 1))
       };
     }
 
@@ -675,6 +682,7 @@
     function updateCmsMediaCanvasLayout(container) {
       const rows = getCmsMediaCanvasRows();
       container.style.setProperty("--cms-canvas-rows", String(rows));
+      container.style.setProperty("--cms-canvas-cell-height", `${100 / rows}%`);
       container.style.aspectRatio = `12 / ${rows}`;
       cmsDraftBlocks.forEach((block, index) => {
         const tile = container.querySelector(`[data-block-uid="${CSS.escape(block.uid)}"]`);
@@ -685,6 +693,13 @@
         tile.style.width = `${(layout.width / 12) * 100}%`;
         tile.style.height = `${(layout.height / rows) * 100}%`;
         tile.style.zIndex = String(index + 1);
+        tile.classList.toggle("is-cropping", cmsActiveCropUid === block.uid);
+        const image = tile.querySelector("img");
+        if (image) {
+          image.style.objectFit = layout.fit;
+          image.style.objectPosition = `${layout.cropX}% ${layout.cropY}%`;
+          image.style.transform = `scale(${layout.cropZoom})`;
+        }
       });
     }
 
@@ -693,6 +708,10 @@
       if (!container) return;
       const isAr = currentLang === "ar";
       updateCmsMediaEditorDescription();
+      const floatingImport = document.getElementById("cmsMediaImportButton");
+      const legacyImport = document.getElementById("cmsLegacyImagesImport");
+      if (floatingImport) floatingImport.classList.toggle("hidden", !cmsDraftFreeformGallery);
+      if (legacyImport) legacyImport.classList.toggle("hidden", cmsDraftFreeformGallery);
 
       if (!cmsDraftFreeformGallery) {
         container.className = "grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3";
@@ -774,13 +793,18 @@
       const canvasRows = getCmsMediaCanvasRows();
       container.innerHTML = cmsDraftBlocks.map((blk, idx) => {
         const layout = normalizeCmsMediaLayout(blk, idx);
+        const cropping = cmsActiveCropUid === blk.uid;
         return `
-        <article class="cms-layout-tile" data-media-block data-block-uid="${escapeCmsHtml(blk.uid)}" tabindex="0" aria-label="${isAr ? "صورة" : "Image"} ${idx + 1}. ${isAr ? "استخدم الأسهم للتحريك وShift مع الأسهم لتغيير الحجم." : "Use arrow keys to move; hold Shift to resize."}" style="left:${(layout.x / 12) * 100}%;top:${(layout.y / canvasRows) * 100}%;width:${(layout.width / 12) * 100}%;height:${(layout.height / canvasRows) * 100}%;z-index:${idx + 1}">
+        <article class="cms-layout-tile${cropping ? " is-cropping" : ""}" data-media-block data-block-uid="${escapeCmsHtml(blk.uid)}" tabindex="0" aria-label="${isAr ? "صورة" : "Image"} ${idx + 1}. ${isAr ? "اسحب للتحريك، Alt مع الأسهم لضبط القص، وShift مع الأسهم لتغيير الحجم." : "Drag to move; Alt with arrows to adjust crop, Shift with arrows to resize."}" style="left:${(layout.x / 12) * 100}%;top:${(layout.y / canvasRows) * 100}%;width:${(layout.width / 12) * 100}%;height:${(layout.height / canvasRows) * 100}%;z-index:${idx + 1}">
           ${blk.url
-            ? `<img src="${escapeCmsHtml(blk.url)}" alt="${isAr ? "صورة المشروع" : "Project image"} ${idx + 1}" loading="lazy" decoding="async" style="object-fit:${layout.fit}" />`
+            ? `<img src="${escapeCmsHtml(blk.url)}" alt="${isAr ? "صورة المشروع" : "Project image"} ${idx + 1}" loading="lazy" decoding="async" style="object-fit:${layout.fit};object-position:${layout.cropX}% ${layout.cropY}%;transform:scale(${layout.cropZoom})" />`
             : `<div class="cms-layout-reading"><span data-image-read-progress-text>${isAr ? "جارٍ قراءة الصورة" : "Reading image"}… ${Math.round(blk.readProgress || 0)}%</span><div class="cms-layout-progress" role="progressbar" aria-valuenow="${Math.round(blk.readProgress || 0)}" aria-valuemin="0" aria-valuemax="100"><span data-image-read-progress-bar style="width:${Math.round(blk.readProgress || 0)}%"></span></div></div>`}
           <span class="cms-layout-number">${idx + 1}</span>
           <button type="button" data-media-remove="${idx}" aria-label="${isAr ? "حذف الصورة" : "Remove image"} ${idx + 1}" class="cms-layout-remove" data-media-control>×</button>
+          <button type="button" data-media-layer="front" data-media-index="${idx}" aria-label="${isAr ? "إحضار الصورة للأمام" : "Bring image forward"}" class="cms-layout-layer cms-layout-layer-front" data-media-control>↑</button>
+          <button type="button" data-media-layer="back" data-media-index="${idx}" aria-label="${isAr ? "إرسال الصورة للخلف" : "Send image backward"}" class="cms-layout-layer cms-layout-layer-back" data-media-control>↓</button>
+          <button type="button" data-media-crop="${idx}" aria-pressed="${cropping}" class="cms-layout-crop-toggle" data-media-control>${cropping ? (isAr ? "تم" : "Done") : (isAr ? "قص" : "Crop")}</button>
+          ${cropping ? `<label class="cms-layout-crop-controls" data-media-control><span>${isAr ? "تكبير" : "Zoom"}</span><input type="range" min="1" max="3" step="0.05" value="${layout.cropZoom}" data-media-crop-zoom="${idx}" aria-label="${isAr ? "تكبير القص" : "Crop zoom"}" /><span>${layout.cropZoom.toFixed(1)}×</span></label>` : ""}
           <label class="cms-layout-fit">
             <span>${isAr ? "طريقة العرض" : "Display"}</span>
             <select data-media-fit="${idx}" aria-label="${isAr ? "طريقة عرض الصورة" : "Image display mode"}" data-media-control>
@@ -800,9 +824,9 @@
           const block = cmsDraftBlocks[index];
           if (!block) return;
           block.fit = select.value === "contain" ? "contain" : "cover";
+          if (block.fit === "contain" && cmsActiveCropUid === block.uid) cmsActiveCropUid = "";
           cmsDraftGalleryChanged = true;
-          const image = select.closest("[data-media-block]")?.querySelector("img");
-          if (image) image.style.objectFit = block.fit;
+          renderCmsMediaBlocksEditor();
         });
       });
       container.querySelectorAll("[data-media-remove]").forEach((button) => {
@@ -810,11 +834,38 @@
           removeCmsMediaBlock(Number(button.dataset.mediaRemove));
         });
       });
+      container.querySelectorAll("[data-media-layer]").forEach((button) => {
+        button.addEventListener("click", () => {
+          moveCmsMediaLayer(Number(button.dataset.mediaIndex), button.dataset.mediaLayer === "front" ? 1 : -1);
+        });
+      });
+      container.querySelectorAll("[data-media-crop]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const block = cmsDraftBlocks[Number(button.dataset.mediaCrop)];
+          if (!block) return;
+          cmsActiveCropUid = cmsActiveCropUid === block.uid ? "" : block.uid;
+          if (cmsActiveCropUid) block.fit = "cover";
+          cmsDraftGalleryChanged = true;
+          renderCmsMediaBlocksEditor();
+          container.querySelector(`[data-block-uid="${CSS.escape(block.uid)}"] [data-media-crop]`)?.focus();
+        });
+      });
+      container.querySelectorAll("[data-media-crop-zoom]").forEach((input) => {
+        input.addEventListener("input", () => {
+          const block = cmsDraftBlocks[Number(input.dataset.mediaCropZoom)];
+          if (!block) return;
+          block.cropZoom = Number(input.value);
+          cmsDraftGalleryChanged = true;
+          updateCmsMediaCanvasLayout(container);
+          const label = input.parentElement?.querySelector("span:last-child");
+          if (label) label.textContent = `${block.cropZoom.toFixed(1)}×`;
+        });
+      });
 
       container.querySelectorAll("[data-media-block]").forEach((tile) => {
         tile.addEventListener("pointerdown", (event) => {
           if (event.button !== 0 || event.target.closest("[data-media-control]")) return;
-          startCmsMediaTransform(event, tile, "move");
+          startCmsMediaTransform(event, tile, cmsActiveCropUid === tile.dataset.blockUid ? "crop" : "move");
         });
         tile.addEventListener("keydown", (event) => {
           if (event.target !== tile || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
@@ -824,7 +875,10 @@
           if (!block) return;
           const layout = normalizeCmsMediaLayout(block, index);
           const direction = event.key === "ArrowLeft" ? [-1, 0] : event.key === "ArrowRight" ? [1, 0] : event.key === "ArrowUp" ? [0, -1] : [0, 1];
-          if (event.shiftKey) {
+          if (event.altKey && cmsActiveCropUid === block.uid) {
+            block.cropX = Math.max(0, Math.min(100, layout.cropX - direction[0] * 2));
+            block.cropY = Math.max(0, Math.min(100, layout.cropY - direction[1] * 2));
+          } else if (event.shiftKey) {
             block.width = Math.max(1, Math.min(12 - layout.x, layout.width + direction[0]));
             block.height = Math.max(1, Math.min(120 - layout.y, layout.height + direction[1]));
           } else {
@@ -832,8 +886,7 @@
             block.y = Math.max(0, Math.min(120 - layout.height, layout.y + direction[1]));
           }
           cmsDraftGalleryChanged = true;
-          renderCmsMediaBlocksEditor();
-          container.querySelector(`[data-block-uid="${CSS.escape(block.uid)}"]`)?.focus();
+          updateCmsMediaCanvasLayout(container);
         });
         tile.querySelector("[data-media-resize]")?.addEventListener("pointerdown", (event) => {
           if (event.button !== 0) return;
@@ -858,29 +911,53 @@
       const initialY = layout.y;
       const initialWidth = layout.width;
       const initialHeight = layout.height;
+      const tileRect = tile.getBoundingClientRect();
+      const initialCropX = layout.cropX;
+      const initialCropY = layout.cropY;
       tile.setPointerCapture(event.pointerId);
       tile.classList.add("is-transforming");
       event.preventDefault();
 
+      const applyPointer = (pointerEvent) => {
+        if (mode === "crop") {
+          block.cropX = Math.max(0, Math.min(100, initialCropX - ((pointerEvent.clientX - startX) / tileRect.width) * 100));
+          block.cropY = Math.max(0, Math.min(100, initialCropY - ((pointerEvent.clientY - startY) / tileRect.height) * 100));
+        } else {
+          const columns = (pointerEvent.clientX - startX) / cellWidth;
+          const movedRows = (pointerEvent.clientY - startY) / cellHeight;
+          if (mode === "resize") {
+            block.width = Math.max(1, Math.min(12 - initialX, initialWidth + columns));
+            block.height = Math.max(1, Math.min(120 - initialY, initialHeight + movedRows));
+          } else {
+            block.x = Math.max(0, Math.min(12 - layout.width, initialX + columns));
+            block.y = Math.max(0, Math.min(120 - layout.height, initialY + movedRows));
+          }
+        }
+        cmsDraftGalleryChanged = true;
+        updateCmsMediaCanvasLayout(container);
+      };
+      let frameId = 0;
+      let latestPointerEvent = event;
       const finish = () => {
+        if (frameId) {
+          cancelAnimationFrame(frameId);
+          frameId = 0;
+          applyPointer(latestPointerEvent);
+        }
         tile.removeEventListener("pointermove", move);
         tile.removeEventListener("pointerup", finish);
         tile.removeEventListener("pointercancel", finish);
         tile.classList.remove("is-transforming");
+        tile.classList.toggle("is-cropping", mode === "crop");
         renderCmsMediaBlocksEditor();
       };
       const move = (pointerEvent) => {
-        const columns = (pointerEvent.clientX - startX) / cellWidth;
-        const movedRows = (pointerEvent.clientY - startY) / cellHeight;
-        if (mode === "resize") {
-          block.width = Math.max(1, Math.min(12 - initialX, initialWidth + columns));
-          block.height = Math.max(1, Math.min(120 - initialY, initialHeight + movedRows));
-        } else {
-          block.x = Math.max(0, Math.min(12 - layout.width, initialX + columns));
-          block.y = Math.max(0, Math.min(120 - layout.height, initialY + movedRows));
-        }
-        cmsDraftGalleryChanged = true;
-        updateCmsMediaCanvasLayout(container);
+        latestPointerEvent = pointerEvent;
+        if (frameId) return;
+        frameId = requestAnimationFrame(() => {
+          frameId = 0;
+          applyPointer(latestPointerEvent);
+        });
       };
       tile.addEventListener("pointermove", move);
       tile.addEventListener("pointerup", finish, { once: true });
@@ -900,6 +977,17 @@
       cmsDraftBlocks.splice(destination, 0, block);
       cmsDraftGalleryChanged = true;
       renderCmsMediaBlocksEditor();
+    }
+
+    function moveCmsMediaLayer(index, direction) {
+      const destination = Math.max(0, Math.min(cmsDraftBlocks.length - 1, index + direction));
+      if (destination === index) return;
+      const [block] = cmsDraftBlocks.splice(index, 1);
+      cmsDraftBlocks.splice(destination, 0, block);
+      cmsDraftGalleryChanged = true;
+      renderCmsMediaBlocksEditor();
+      document.getElementById("cmsMediaBlocksContainer")
+        ?.querySelector(`[data-block-uid="${CSS.escape(block.uid)}"] [data-media-layer]`)?.focus();
     }
 
     function validateCmsImageFile(file) {
@@ -1311,8 +1399,9 @@
       cmsDraftPdfs = getCmsProjectPdfFiles(proj);
       renderCmsProjectPdfs();
       updateCmsCoverPreviewCard();
-      cmsDraftFreeformGallery = proj.freeformGallery === true;
+      cmsDraftFreeformGallery = false;
       cmsDraftGalleryChanged = false;
+      cmsActiveCropUid = "";
 
       if (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0) {
         cmsDraftBlocks = proj.mediaBlocks.map((b, index) => ({
@@ -1350,6 +1439,7 @@
       document.getElementById("cmsCancelEditProjectBtn").classList.add("hidden");
       cmsDraftFreeformGallery = true;
       cmsDraftGalleryChanged = false;
+      cmsActiveCropUid = "";
       updateCmsMediaEditorDescription();
       document.getElementById("cmsProjCountry").value = "";
       populateCmsProjectYearOptions();
@@ -1371,13 +1461,17 @@
       const description = document.getElementById("cmsMediaEditorDescription");
       if (!description) return;
       const isAr = currentLang === "ar";
+      const importLabel = document.getElementById("cmsMediaImportButtonLabel");
+      const importButton = document.getElementById("cmsMediaImportButton");
+      if (importLabel) importLabel.textContent = isAr ? "استيراد الصور" : "Import images";
+      if (importButton) importButton.setAttribute("aria-label", isAr ? "استيراد صور المشروع" : "Import project images");
       description.textContent = cmsDraftFreeformGallery
         ? (isAr
-          ? "رتّب الصور بحرية على المساحة. اسحب الصورة لتحريكها، واسحب الزاوية لتغيير حجمها، وحدد طريقة ملاءمتها."
-          : "Arrange images freely on the canvas. Drag an image to move it, pull its corner to resize, and choose how it should fit.")
+          ? "رتّب الصور بحرية، اسحب لتحريكها أو لقصها، غيّر الحجم والتكبير، واستورد الصور من الزر العائم."
+          : "Arrange images freely: drag to move or crop, resize and zoom, and import images from the floating button.")
         : (isAr
-          ? "هذه الصور تتبع تنسيق المعرض الحالي. يمكنك إضافة صور وتغيير ترتيبها ونسبة عرضها دون تغيير تخطيط المشروع المنشور."
-          : "These images keep the existing gallery layout. Add images, reorder them, and change their aspect ratio without changing the published layout.");
+          ? "يحتفظ هذا المشروع بمحرر المعرض الحالي. المساحة الحرة متاحة للمشاريع الجديدة فقط."
+          : "This project keeps the existing gallery editor. The freeform canvas is available for new projects only.");
     }
 
     async function deleteCmsProject(id) {
@@ -3200,7 +3294,7 @@
           const layout = normalizeCmsMediaLayout(block, index);
           return `
             <figure class="project-media-item group" data-gallery-image-index="${index}" style="left:${(layout.x / 12) * 100}%;top:${(layout.y / galleryRows) * 100}%;width:${(layout.width / 12) * 100}%;height:${(layout.height / galleryRows) * 100}%;z-index:${index + 1}" role="button" tabindex="0" aria-label="${isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size"} ${index + 1}">
-              <img src="${escapeCmsHtml(block.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" style="object-fit:${layout.fit}" />
+              <img src="${escapeCmsHtml(block.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" style="object-fit:${layout.fit};object-position:${layout.cropX}% ${layout.cropY}%;transform:scale(${layout.cropZoom})" />
               ${caption ? `<figcaption><span>0${index + 1}.</span>${escapeCmsHtml(caption)}</figcaption>` : ""}
             </figure>
           `;
@@ -3929,6 +4023,9 @@
         });
       }
       document.getElementById("cmsPublishProjectPdfsBtn")?.addEventListener("click", publishCmsProjectPdfs);
+      document.getElementById("cmsMediaImportButton")?.addEventListener("click", () => {
+        document.getElementById("cmsBatchImagesInput")?.click();
+      });
 
       // Read multiple selected images and show a large preview for each one.
       const batchImagesInput = document.getElementById("cmsBatchImagesInput");
@@ -4132,7 +4229,7 @@
           const preserveExistingGallery = Boolean(editId && !cmsDraftGalleryChanged);
           const existingProject = editId ? portfolioProjects[editIndex] : null;
           const galleryUrls = preserveExistingGallery
-            ? existingProject.gallery
+            ? (existingProject.gallery || [])
             : (validMediaBlocks.length > 0 ? validMediaBlocks.map((b) => b.url) : [imgUrl]);
           const mediaBlocks = preserveExistingGallery ? existingProject.mediaBlocks : validMediaBlocks;
 
