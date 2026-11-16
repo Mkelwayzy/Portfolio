@@ -643,7 +643,7 @@
                   <div class="flex items-center gap-2">
                     <span class="w-6 h-6 rounded-lg bg-obsidian text-white text-[11px] font-bold flex items-center justify-center">3</span>
                     <div>
-                      <h4 class="text-xs sm:text-sm font-bold text-obsidian">Project Images</h4>
+                      <h4 class="text-xs sm:text-sm font-bold text-obsidian">Project Media</h4>
                       <p id="cmsMediaEditorDescription" class="text-[10px] text-slateText">Arrange images freely on the canvas. Drag an image to move it, pull its corner to resize, and choose how it should fit.</p>
                     </div>
                   </div>
@@ -652,12 +652,12 @@
                   </label>
                 </div>
 
-                <input id="cmsBatchImagesInput" type="file" accept="image/*" multiple class="hidden" />
+                <input id="cmsBatchImagesInput" type="file" accept="image/*,video/mp4,video/webm,application/pdf,.pdf" multiple class="hidden" />
                 <div class="cms-layout-workspace">
                   <div id="cmsMediaBlocksContainer" class="cms-layout-canvas" aria-label="Project image layout canvas"></div>
                   <button id="cmsMediaImportButton" type="button" class="cms-layout-import" aria-label="Import project images">
                     <span aria-hidden="true">＋</span>
-                    <span id="cmsMediaImportButtonLabel">Import images</span>
+                    <span id="cmsMediaImportButtonLabel">Import media</span>
                   </button>
                 </div>
                 <p id="cmsMediaBlocksStatus" class="sr-only" role="status" aria-live="polite"></p>

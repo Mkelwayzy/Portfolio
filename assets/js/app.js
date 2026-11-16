@@ -12,6 +12,8 @@
     const CMS_ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif", "image/svg+xml"]);
     const CMS_PROJECT_PDF_TYPE = "application/pdf";
     const CMS_PROJECT_PDF_MAX_BYTES = 100 * 1024 * 1024;
+    const CMS_PROJECT_VIDEO_TYPES = new Set(["video/mp4", "video/webm"]);
+    const CMS_PROJECT_MEDIA_MAX_BYTES = 100 * 1024 * 1024;
     const CMS_MEDIA_ASPECTS = ["aspect-auto", "aspect-[4/3]", "aspect-video", "aspect-square", "aspect-[3/4]", "aspect-[21/9]"];
     const CMS_PROJECT_COUNTRIES = [
       { value: "Egypt", arabic: "مصر" },
@@ -211,7 +213,7 @@
       return data.publicUrl;
     }
 
-    async function uploadCmsPdfFile(file, path, onProgress) {
+    async function uploadCmsResumableFile(file, path, onProgress) {
       if (!supabaseClient || !isAdminAuthenticated) {
         throw new Error("Sign in as an authorized administrator before uploading project files.");
       }
@@ -225,6 +227,8 @@
       }
 
       const uploadUrl = `${supabaseConfig.url.replace(/\/+$/, "")}/storage/v1/upload/resumable`;
+      const contentType = file.type || (path.toLowerCase().endsWith(".pdf") ? CMS_PROJECT_PDF_TYPE : "");
+      if (!contentType) throw new Error("The project media file type could not be determined.");
       await new Promise((resolve, reject) => {
         const upload = new window.tus.Upload(file, {
           endpoint: uploadUrl,
@@ -240,7 +244,7 @@
           metadata: {
             bucketName: CMS_MEDIA_BUCKET,
             objectName: path,
-            contentType: CMS_PROJECT_PDF_TYPE,
+            contentType,
             cacheControl: "31536000"
           },
           onError: reject,
@@ -257,6 +261,10 @@
 
       const { data } = supabaseClient.storage.from(CMS_MEDIA_BUCKET).getPublicUrl(path);
       return data.publicUrl;
+    }
+
+    async function uploadCmsPdfFile(file, path, onProgress) {
+      return uploadCmsResumableFile(file, path, onProgress);
     }
 
     async function prepareCmsStateForRemote(onUploadProgress) {
@@ -631,10 +639,11 @@
       return Array.from(document.querySelectorAll('input[name="cmsProjTools"]:checked'), (checkbox) => checkbox.value);
     }
 
-    function createDefaultMediaBlock(url = "", captionEn = "", captionAr = "", index = cmsDraftBlocks.length) {
+    function createDefaultMediaBlock(url = "", captionEn = "", captionAr = "", index = cmsDraftBlocks.length, type = "image") {
       return {
         uid: "blk_" + Math.random().toString(36).slice(2, 9),
         url,
+        type,
         aspect: "aspect-auto",
         x: index % 2 === 0 ? 0 : 6,
         y: Math.floor(index / 2) * 6,
@@ -644,6 +653,7 @@
         cropX: 50,
         cropY: 50,
         cropZoom: 1,
+        name: "",
         captionEn,
         captionAr
       };
@@ -712,6 +722,8 @@
       const legacyImport = document.getElementById("cmsLegacyImagesImport");
       if (floatingImport) floatingImport.classList.toggle("hidden", !cmsDraftFreeformGallery);
       if (legacyImport) legacyImport.classList.toggle("hidden", cmsDraftFreeformGallery);
+      container.classList.toggle("is-freeform", cmsDraftFreeformGallery);
+      container.classList.toggle("is-legacy", !cmsDraftFreeformGallery);
 
       if (!cmsDraftFreeformGallery) {
         container.className = "grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3";
@@ -720,7 +732,7 @@
         if (cmsDraftBlocks.length === 0) {
           container.innerHTML = `
             <div class="rounded-2xl border border-dashed border-black/15 bg-white/40 p-6 text-center sm:col-span-2 lg:col-span-3">
-              <p class="text-xs font-semibold text-obsidian">${isAr ? "لم يتم اختيار صور للمشروع بعد." : "No project images selected."}</p>
+              <p class="text-xs font-semibold text-obsidian">${isAr ? "لم تتم إضافة وسائط للمشروع بعد." : "No project media selected."}</p>
             </div>
           `;
           return;
@@ -783,7 +795,7 @@
       if (cmsDraftBlocks.length === 0) {
         container.innerHTML = `
         <div class="cms-layout-empty rounded-2xl border border-dashed border-black/15 bg-white/40 p-6 text-center">
-            <p class="text-xs font-semibold text-obsidian">${isAr ? "لم يتم اختيار صور للمشروع بعد." : "No project images selected."}</p>
+            <p class="text-xs font-semibold text-obsidian">${isAr ? "لم تتم إضافة وسائط للمشروع بعد." : "No project media selected."}</p>
           <p class="text-[11px] text-slateText mt-1">${isAr ? "أضف صورًا ثم اسحبها إلى مواضعها، واستخدم مقبض الزاوية لتغيير حجمها." : "Add images, drag them into place, and use the corner handle to resize them."}</p>
           </div>
         `;
@@ -794,24 +806,33 @@
       container.innerHTML = cmsDraftBlocks.map((blk, idx) => {
         const layout = normalizeCmsMediaLayout(blk, idx);
         const cropping = cmsActiveCropUid === blk.uid;
+        const type = blk.type || "image";
+        const previewUrl = blk.previewUrl || blk.url;
+        const mediaPreview = type === "video"
+          ? (previewUrl
+            ? `<video src="${escapeCmsHtml(previewUrl)}" class="cms-layout-video" preload="metadata" muted playsinline controls data-media-control aria-label="${escapeCmsHtml(blk.name || (isAr ? "معاينة فيديو" : "Video preview"))}"></video>`
+            : `<div class="cms-layout-file-placeholder"><span>▶</span><strong>${escapeCmsHtml(blk.name || "Video")}</strong><small>${isAr ? "فيديو" : "Video"}</small></div>`)
+          : type === "pdf"
+            ? `<div class="cms-layout-file-placeholder"><span>PDF</span><strong>${escapeCmsHtml(blk.name || (isAr ? "ملف PDF" : "PDF document"))}</strong><small>${isAr ? "ملف مستند" : "Document"}</small></div>`
+            : (blk.url
+              ? `<img src="${escapeCmsHtml(blk.url)}" alt="${isAr ? "صورة المشروع" : "Project image"} ${idx + 1}" loading="lazy" decoding="async" style="object-fit:${layout.fit};object-position:${layout.cropX}% ${layout.cropY}%;transform:scale(${layout.cropZoom})" />`
+              : `<div class="cms-layout-reading"><span data-image-read-progress-text>${isAr ? "جارٍ قراءة الصورة" : "Reading image"}… ${Math.round(blk.readProgress || 0)}%</span><div class="cms-layout-progress" role="progressbar" aria-valuenow="${Math.round(blk.readProgress || 0)}" aria-valuemin="0" aria-valuemax="100"><span data-image-read-progress-bar style="width:${Math.round(blk.readProgress || 0)}%"></span></div></div>`);
         return `
-        <article class="cms-layout-tile${cropping ? " is-cropping" : ""}" data-media-block data-block-uid="${escapeCmsHtml(blk.uid)}" tabindex="0" aria-label="${isAr ? "صورة" : "Image"} ${idx + 1}. ${isAr ? "اسحب للتحريك، Alt مع الأسهم لضبط القص، وShift مع الأسهم لتغيير الحجم." : "Drag to move; Alt with arrows to adjust crop, Shift with arrows to resize."}" style="left:${(layout.x / 12) * 100}%;top:${(layout.y / canvasRows) * 100}%;width:${(layout.width / 12) * 100}%;height:${(layout.height / canvasRows) * 100}%;z-index:${idx + 1}">
-          ${blk.url
-            ? `<img src="${escapeCmsHtml(blk.url)}" alt="${isAr ? "صورة المشروع" : "Project image"} ${idx + 1}" loading="lazy" decoding="async" style="object-fit:${layout.fit};object-position:${layout.cropX}% ${layout.cropY}%;transform:scale(${layout.cropZoom})" />`
-            : `<div class="cms-layout-reading"><span data-image-read-progress-text>${isAr ? "جارٍ قراءة الصورة" : "Reading image"}… ${Math.round(blk.readProgress || 0)}%</span><div class="cms-layout-progress" role="progressbar" aria-valuenow="${Math.round(blk.readProgress || 0)}" aria-valuemin="0" aria-valuemax="100"><span data-image-read-progress-bar style="width:${Math.round(blk.readProgress || 0)}%"></span></div></div>`}
-          <span class="cms-layout-number">${idx + 1}</span>
+        <article class="cms-layout-tile${cropping ? " is-cropping" : ""}" data-media-block data-block-uid="${escapeCmsHtml(blk.uid)}" tabindex="0" aria-label="${type === "pdf" ? "PDF" : type === "video" ? "Video" : (isAr ? "صورة" : "Image")} ${idx + 1}. ${isAr ? "اسحب للتحريك، Alt مع الأسهم لضبط القص، وShift مع الأسهم لتغيير الحجم." : "Drag to move; Alt with arrows to adjust crop, Shift with arrows to resize."}" style="left:${(layout.x / 12) * 100}%;top:${(layout.y / canvasRows) * 100}%;width:${(layout.width / 12) * 100}%;height:${(layout.height / canvasRows) * 100}%;z-index:${idx + 1}">
+          ${mediaPreview}
+          <span class="cms-layout-number">${idx + 1}${type === "pdf" ? " · PDF" : type === "video" ? " · VIDEO" : ""}</span>
           <button type="button" data-media-remove="${idx}" aria-label="${isAr ? "حذف الصورة" : "Remove image"} ${idx + 1}" class="cms-layout-remove" data-media-control>×</button>
           <button type="button" data-media-layer="front" data-media-index="${idx}" aria-label="${isAr ? "إحضار الصورة للأمام" : "Bring image forward"}" class="cms-layout-layer cms-layout-layer-front" data-media-control>↑</button>
           <button type="button" data-media-layer="back" data-media-index="${idx}" aria-label="${isAr ? "إرسال الصورة للخلف" : "Send image backward"}" class="cms-layout-layer cms-layout-layer-back" data-media-control>↓</button>
-          <button type="button" data-media-crop="${idx}" aria-pressed="${cropping}" class="cms-layout-crop-toggle" data-media-control>${cropping ? (isAr ? "تم" : "Done") : (isAr ? "قص" : "Crop")}</button>
-          ${cropping ? `<label class="cms-layout-crop-controls" data-media-control><span>${isAr ? "تكبير" : "Zoom"}</span><input type="range" min="1" max="3" step="0.05" value="${layout.cropZoom}" data-media-crop-zoom="${idx}" aria-label="${isAr ? "تكبير القص" : "Crop zoom"}" /><span>${layout.cropZoom.toFixed(1)}×</span></label>` : ""}
-          <label class="cms-layout-fit">
+          ${type === "image" ? `<button type="button" data-media-crop="${idx}" aria-pressed="${cropping}" class="cms-layout-crop-toggle" data-media-control>${cropping ? (isAr ? "تم" : "Done") : (isAr ? "قص" : "Crop")}</button>` : ""}
+          ${type === "image" && cropping ? `<label class="cms-layout-crop-controls" data-media-control><span>${isAr ? "تكبير" : "Zoom"}</span><input type="range" min="1" max="3" step="0.05" value="${layout.cropZoom}" data-media-crop-zoom="${idx}" aria-label="${isAr ? "تكبير القص" : "Crop zoom"}" /><span>${layout.cropZoom.toFixed(1)}×</span></label>` : ""}
+          ${type === "image" ? `<label class="cms-layout-fit">
             <span>${isAr ? "طريقة العرض" : "Display"}</span>
             <select data-media-fit="${idx}" aria-label="${isAr ? "طريقة عرض الصورة" : "Image display mode"}" data-media-control>
               <option value="cover" ${layout.fit === "cover" ? "selected" : ""}>${isAr ? "ملء مع قص" : "Fill / crop"}</option>
               <option value="contain" ${layout.fit === "contain" ? "selected" : ""}>${isAr ? "الصورة كاملة" : "Show full image"}</option>
             </select>
-          </label>
+          </label>` : ""}
           <span data-media-resize aria-hidden="true" class="cms-layout-resize" data-media-control></span>
         </article>
       `;
@@ -965,7 +986,8 @@
     }
 
     function removeCmsMediaBlock(idx) {
-      cmsDraftBlocks.splice(idx, 1);
+      const [block] = cmsDraftBlocks.splice(idx, 1);
+      if (block?.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(block.previewUrl);
       cmsDraftGalleryChanged = true;
       renderCmsMediaBlocksEditor();
     }
@@ -1021,6 +1043,40 @@
         return false;
       }
       return true;
+    }
+
+    function validateCmsCanvasMediaFile(file) {
+      if (file.type === CMS_PROJECT_PDF_TYPE) {
+        return validateCmsPdfFile(file) ? "pdf" : "";
+      }
+      if (CMS_PROJECT_VIDEO_TYPES.has(file.type)) {
+        if (file.size === 0) {
+          showCmsToast("The selected video file is empty.");
+          return "";
+        }
+        if (file.size > CMS_PROJECT_MEDIA_MAX_BYTES) {
+          showCmsToast("Videos must be 100 MB or smaller.");
+          return "";
+        }
+        return "video";
+      }
+      if (file.type.startsWith("image/")) {
+        return validateCmsImageFile(file) ? "image" : "";
+      }
+      showCmsToast("Choose an image, MP4/WebM video, or PDF document.");
+      return "";
+    }
+
+    function releaseCmsDraftMediaPreviews() {
+      cmsDraftBlocks.forEach((block) => {
+        if (block.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(block.previewUrl);
+      });
+    }
+
+    function getCmsCanvasMediaPath(file, type) {
+      const extension = type === "pdf" ? "pdf" : file.type === "video/webm" ? "webm" : "mp4";
+      const id = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      return `${id}.${extension}`;
     }
 
     async function compressCmsImageFile(file) {
@@ -1362,6 +1418,7 @@
     function editCmsProject(id) {
       const proj = portfolioProjects.find((p) => p.id === id);
       if (!proj) return;
+      releaseCmsDraftMediaPreviews();
       setCmsProjectPublishStatus("");
       cmsCoverReadVersion += 1;
       cmsCoverReadPending = false;
@@ -1453,6 +1510,7 @@
       cmsDraftPdfs = [];
       renderCmsProjectPdfs();
       resetCmsProjectUploadProgress();
+      releaseCmsDraftMediaPreviews();
       cmsDraftBlocks = [];
       renderCmsMediaBlocksEditor();
     }
@@ -1463,12 +1521,12 @@
       const isAr = currentLang === "ar";
       const importLabel = document.getElementById("cmsMediaImportButtonLabel");
       const importButton = document.getElementById("cmsMediaImportButton");
-      if (importLabel) importLabel.textContent = isAr ? "استيراد الصور" : "Import images";
-      if (importButton) importButton.setAttribute("aria-label", isAr ? "استيراد صور المشروع" : "Import project images");
+      if (importLabel) importLabel.textContent = isAr ? "استيراد ملفات" : "Import media";
+      if (importButton) importButton.setAttribute("aria-label", isAr ? "استيراد وسائط المشروع" : "Import project media");
       description.textContent = cmsDraftFreeformGallery
         ? (isAr
-          ? "رتّب الصور بحرية، اسحب لتحريكها أو لقصها، غيّر الحجم والتكبير، واستورد الصور من الزر العائم."
-          : "Arrange images freely: drag to move or crop, resize and zoom, and import images from the floating button.")
+          ? "رتّب الصور والفيديو وملفات PDF بحرية. اسحب للتحريك أو القص، غيّر الحجم والطبقات، واستورد من الزر العائم."
+          : "Arrange images, video, and PDFs freely. Drag to move or crop, resize and layer items, and import from the floating button.")
         : (isAr
           ? "يحتفظ هذا المشروع بمحرر المعرض الحالي. المساحة الحرة متاحة للمشاريع الجديدة فقط."
           : "This project keeps the existing gallery editor. The freeform canvas is available for new projects only.");
@@ -3292,9 +3350,15 @@
         galleryContainer.innerHTML = visibleBlocks.map((block, index) => {
           const caption = isAr ? (block.captionAr || block.captionEn) : (block.captionEn || block.captionAr);
           const layout = normalizeCmsMediaLayout(block, index);
+          const type = block.type || "image";
+          const mediaMarkup = type === "video"
+            ? `<video src="${escapeCmsHtml(block.url)}" class="project-media-content" controls playsinline preload="metadata" aria-label="${escapeCmsHtml(block.name || (isAr ? "فيديو المشروع" : "Project video"))}"></video>`
+            : type === "pdf"
+              ? `<iframe src="${escapeCmsHtml(block.url)}#toolbar=0&navpanes=0&view=FitH" class="project-media-content project-media-pdf" title="${escapeCmsHtml(block.name || (isAr ? "ملف PDF للمشروع" : "Project PDF"))}" loading="lazy"></iframe>`
+              : `<img src="${escapeCmsHtml(block.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" style="object-fit:${layout.fit};object-position:${layout.cropX}% ${layout.cropY}%;transform:scale(${layout.cropZoom})" />`;
           return `
-            <figure class="project-media-item group" data-gallery-image-index="${index}" style="left:${(layout.x / 12) * 100}%;top:${(layout.y / galleryRows) * 100}%;width:${(layout.width / 12) * 100}%;height:${(layout.height / galleryRows) * 100}%;z-index:${index + 1}" role="button" tabindex="0" aria-label="${isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size"} ${index + 1}">
-              <img src="${escapeCmsHtml(block.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" style="object-fit:${layout.fit};object-position:${layout.cropX}% ${layout.cropY}%;transform:scale(${layout.cropZoom})" />
+            <figure class="project-media-item group${type === "image" ? " is-zoomable" : ""}" ${type === "image" ? `data-gallery-image-index="${index}" role="button" tabindex="0" aria-label="${isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size"} ${index + 1}"` : ""} style="left:${(layout.x / 12) * 100}%;top:${(layout.y / galleryRows) * 100}%;width:${(layout.width / 12) * 100}%;height:${(layout.height / galleryRows) * 100}%;z-index:${index + 1}">
+              ${mediaMarkup}
               ${caption ? `<figcaption><span>0${index + 1}.</span>${escapeCmsHtml(caption)}</figcaption>` : ""}
             </figure>
           `;
@@ -4034,8 +4098,23 @@
           const files = Array.from(e.target.files || []);
           if (!files.length) return;
           files.forEach((file) => {
-            if (!validateCmsImageFile(file)) return;
-            const block = createDefaultMediaBlock();
+            const type = validateCmsCanvasMediaFile(file);
+            if (!type) return;
+            if (!cmsDraftFreeformGallery && type !== "image") {
+              showCmsToast("Videos and PDFs can only be added to new projects in the freeform canvas.");
+              return;
+            }
+            const block = createDefaultMediaBlock("", "", "", cmsDraftBlocks.length, type);
+            if (type !== "image") {
+              block.file = file;
+              block.name = file.name;
+              block.path = getCmsCanvasMediaPath(file, type);
+              block.previewUrl = URL.createObjectURL(file);
+              cmsDraftBlocks.push(block);
+              cmsDraftGalleryChanged = true;
+              renderCmsMediaBlocksEditor();
+              return;
+            }
             block.readProgress = 0;
             cmsDraftBlocks.push(block);
             renderCmsMediaBlocksEditor();
@@ -4187,8 +4266,8 @@
         cmsProjectForm.addEventListener("submit", async (e) => {
           e.preventDefault();
           setCmsProjectPublishStatus("");
-          if (cmsCoverReadPending || cmsDraftBlocks.some((block) => !block.url)) {
-            showCmsToast("Wait for all selected images to finish loading before publishing.");
+          if (cmsCoverReadPending || cmsDraftBlocks.some((block) => !block.url && !(block.file instanceof File))) {
+            showCmsToast("Wait for all selected project media to finish loading before publishing.");
             return;
           }
           const editId = document.getElementById("cmsEditProjectId").value;
@@ -4212,39 +4291,39 @@
             showCmsToast("Select a cover image before publishing the project.");
             return;
           }
-          const validMediaBlocks = cmsDraftBlocks
-            .filter((b) => b.url && b.url.trim() !== "")
-            .map((b, index) => {
-              const { x, y, width, height, fit, ...legacyBlock } = b;
-              return {
-                ...(cmsDraftFreeformGallery ? b : legacyBlock),
-                url: b.url.trim(),
-                aspect: normalizeCmsMediaAspect(b.aspect),
-                ...(cmsDraftFreeformGallery ? normalizeCmsMediaLayout(b, index) : {}),
-                captionEn: b.captionEn || "",
-                captionAr: b.captionAr || ""
-              };
-            });
-
           const preserveExistingGallery = Boolean(editId && !cmsDraftGalleryChanged);
           const existingProject = editId ? portfolioProjects[editIndex] : null;
-          const galleryUrls = preserveExistingGallery
-            ? (existingProject.gallery || [])
-            : (validMediaBlocks.length > 0 ? validMediaBlocks.map((b) => b.url) : [imgUrl]);
-          const mediaBlocks = preserveExistingGallery ? existingProject.mediaBlocks : validMediaBlocks;
 
           const submitButton = document.getElementById("cmsProjectSubmitBtn");
           const submitButtonLabel = submitButton.textContent;
           submitButton.disabled = true;
-          submitButton.textContent = "Uploading project PDFs…";
+          submitButton.textContent = "Uploading project media…";
           setCmsProjectPublishStatus("pending", "Publishing project and files…");
           cmsProjectPdfUploadActive = true;
           renderCmsProjectPdfs();
+          const pendingCanvasFiles = cmsDraftBlocks.filter((block) => block.file instanceof File);
           const pendingPdfs = cmsDraftPdfs.filter((pdf) => pdf.file instanceof File);
-          const totalPdfBytes = pendingPdfs.reduce((total, pdf) => total + pdf.file.size, 0);
-          let completedPdfBytes = 0;
+          const totalUploadBytes = [...pendingCanvasFiles.map((block) => block.file), ...pendingPdfs.map((pdf) => pdf.file)]
+            .reduce((total, file) => total + file.size, 0);
+          let completedUploadBytes = 0;
           const projectPdfFiles = [];
           try {
+            for (const block of pendingCanvasFiles) {
+              const url = await uploadCmsResumableFile(block.file, block.path, (loaded) => {
+                updateCmsProjectUploadProgress({
+                  loaded: completedUploadBytes + loaded,
+                  total: totalUploadBytes,
+                  fileIndex: pendingCanvasFiles.indexOf(block) + 1,
+                  fileCount: pendingCanvasFiles.length + pendingPdfs.length
+                });
+              });
+              completedUploadBytes += block.file.size;
+              block.url = url;
+              delete block.file;
+              if (block.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(block.previewUrl);
+              delete block.previewUrl;
+              renderCmsMediaBlocksEditor();
+            }
             for (const pdf of cmsDraftPdfs) {
               if (!(pdf.file instanceof File)) {
                 if (pdf.url) projectPdfFiles.push({ name: pdf.name, url: pdf.url, size: Number(pdf.size) || 0 });
@@ -4252,30 +4331,30 @@
               }
               const url = await uploadCmsPdfFile(pdf.file, pdf.path, (loaded, total) => {
                 updateCmsProjectUploadProgress({
-                  loaded: completedPdfBytes + loaded,
-                  total: totalPdfBytes,
-                  fileIndex: pendingPdfs.indexOf(pdf) + 1,
-                  fileCount: pendingPdfs.length
+                  loaded: completedUploadBytes + loaded,
+                  total: totalUploadBytes,
+                  fileIndex: pendingCanvasFiles.length + pendingPdfs.indexOf(pdf) + 1,
+                  fileCount: pendingCanvasFiles.length + pendingPdfs.length
                 });
               });
-              completedPdfBytes += pdf.file.size;
+              completedUploadBytes += pdf.file.size;
               const uploadedPdf = { name: pdf.name, url, size: pdf.file.size };
               projectPdfFiles.push(uploadedPdf);
               cmsDraftPdfs[cmsDraftPdfs.indexOf(pdf)] = { ...uploadedPdf, pending: true };
               renderCmsProjectPdfs();
             }
-            if (pendingPdfs.length) {
+            if (totalUploadBytes) {
               updateCmsProjectUploadProgress({
-                loaded: totalPdfBytes,
-                total: totalPdfBytes,
-                fileIndex: pendingPdfs.length,
-                fileCount: pendingPdfs.length,
+                loaded: totalUploadBytes,
+                total: totalUploadBytes,
+                fileIndex: pendingCanvasFiles.length + pendingPdfs.length,
+                fileCount: pendingCanvasFiles.length + pendingPdfs.length,
                 saving: true
               });
             }
           } catch (error) {
-            console.error("Unable to upload project PDF files.", error);
-            const errorMessage = getCmsErrorMessage(error, "Unable to upload project PDF files.");
+            console.error("Unable to upload project media files.", error);
+            const errorMessage = getCmsErrorMessage(error, "Unable to upload project media files.");
             setCmsProjectPublishStatus("error", `Project was not published: ${errorMessage}`);
             showCmsToast(errorMessage);
             cmsProjectPdfUploadActive = false;
@@ -4285,6 +4364,29 @@
             resetCmsProjectUploadProgress();
             return;
           }
+
+          const validMediaBlocks = cmsDraftBlocks
+            .filter((block) => block.url && block.url.trim() !== "")
+            .map((block, index) => {
+              const savedBlock = { ...block };
+              delete savedBlock.file;
+              delete savedBlock.path;
+              delete savedBlock.previewUrl;
+              delete savedBlock.readProgress;
+              return {
+                ...savedBlock,
+                url: block.url.trim(),
+                type: ["image", "video", "pdf"].includes(block.type) ? block.type : "image",
+                aspect: normalizeCmsMediaAspect(block.aspect),
+                ...(cmsDraftFreeformGallery ? normalizeCmsMediaLayout(block, index) : {}),
+                captionEn: block.captionEn || "",
+                captionAr: block.captionAr || ""
+              };
+            });
+          const galleryUrls = preserveExistingGallery
+            ? (existingProject.gallery || [])
+            : (validMediaBlocks.length > 0 ? validMediaBlocks.filter((block) => block.type === "image").map((block) => block.url) : [imgUrl]);
+          const mediaBlocks = preserveExistingGallery ? existingProject.mediaBlocks : validMediaBlocks;
 
           const summaryEn = document.getElementById("cmsProjSummaryEn").value.trim();
           const summaryAr = document.getElementById("cmsProjSummaryAr").value.trim() || summaryEn;
