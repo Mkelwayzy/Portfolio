@@ -644,7 +644,7 @@
         uid: "blk_" + Math.random().toString(36).slice(2, 9),
         url,
         type,
-        aspect: "aspect-auto",
+        aspect: "aspect-[3/4]",
         x: index % 2 === 0 ? 0 : 6,
         y: Math.floor(index / 2) * 6,
         width: 6,
@@ -728,7 +728,7 @@
       container.classList.toggle("is-legacy", !cmsDraftFreeformGallery);
 
       if (!cmsDraftFreeformGallery) {
-        container.className = "grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3";
+        container.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 items-start gap-4";
         container.style.removeProperty("aspect-ratio");
         container.style.removeProperty("--cms-canvas-rows");
         if (cmsDraftBlocks.length === 0) {
@@ -1524,7 +1524,7 @@
         cmsDraftBlocks = (proj.gallery || []).map((url, index) => ({
           uid: `blk_${Math.random().toString(36).slice(2, 9)}`,
           url,
-          aspect: "aspect-auto",
+          aspect: "aspect-[3/4]",
           ...(cmsDraftFreeformGallery ? normalizeCmsMediaLayout({}, index) : {}),
           captionEn: "",
           captionAr: ""
@@ -3402,7 +3402,7 @@
         ? proj.mediaBlocks
         : (Array.isArray(proj.gallery) && proj.gallery.length > 0 ? proj.gallery : [proj.imageUrl]).map((imgSrc) => ({
             url: imgSrc,
-            aspect: "aspect-auto",
+            aspect: "aspect-[3/4]",
             captionEn: "",
             captionAr: ""
           }));
@@ -3433,7 +3433,7 @@
           `;
         }).join("");
       } else {
-        galleryContainer.className = "grid grid-cols-1 items-start gap-5 sm:grid-cols-2 lg:grid-cols-3";
+        galleryContainer.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 items-start gap-5";
         galleryContainer.removeAttribute("style");
         galleryContainer.innerHTML = visibleBlocks.map((block, index) => {
           const caption = isAr ? (block.captionAr || block.captionEn) : (block.captionEn || block.captionAr);
