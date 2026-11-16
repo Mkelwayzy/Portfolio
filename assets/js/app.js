@@ -4174,17 +4174,9 @@
                 }, CMS_PROJECT_DRAFTS_BUCKET);
                 uploaded = true;
                 const assetPath = getCmsProjectDraftAssetPath(block.url);
-                try {
-                  block.previewUrl = await getCmsProjectDraftAssetUrl(block.url);
-                } catch (previewError) {
-                  block.localPreviewUrl = URL.createObjectURL(optimizedFile);
-                  block.previewUrl = block.localPreviewUrl;
-                  if (assetPath) cmsDraftAssetLocalBlobs.set(assetPath, optimizedFile);
-                  console.warn(`Unable to create a private preview URL for "${file.name}". Using the local image preview.`, previewError);
-                  showCmsToast(
-                    `"${file.name}" uploaded; using a local preview because the private preview link failed: ${getCmsErrorMessage(previewError, "unknown Storage error.")}`
-                  );
-                }
+                if (assetPath) cmsDraftAssetLocalBlobs.set(assetPath, optimizedFile);
+                block.localPreviewUrl = URL.createObjectURL(optimizedFile);
+                block.previewUrl = block.localPreviewUrl;
                 delete block.readProgress;
                 renderCmsMediaBlocksEditor();
               } catch (error) {
