@@ -283,6 +283,7 @@
         if (Array.isArray(project.pdfFiles)) project.pdfFiles.forEach((pdf) => collectMedia(pdf?.url));
         if (Array.isArray(project.gallery)) project.gallery.forEach(collectMedia);
         if (Array.isArray(project.mediaBlocks)) project.mediaBlocks.forEach((block) => collectMedia(block.url));
+        if (Array.isArray(project.gridGallery)) project.gridGallery.forEach((image) => collectMedia(image?.url));
       }
 
       const totalBytes = Array.from(mediaDataUrls).reduce((sum, dataUrl) => sum + getDataUrlByteLength(dataUrl), 0);
@@ -328,6 +329,12 @@
           project.mediaBlocks = project.mediaBlocks.map((block) => ({
             ...block,
             url: prepareMedia(block.url)
+          }));
+        }
+        if (Array.isArray(project.gridGallery)) {
+          project.gridGallery = project.gridGallery.map((image) => ({
+            ...image,
+            url: prepareMedia(image?.url)
           }));
         }
       }
@@ -596,8 +603,10 @@
 
     // ==================== PROJECT IMAGE GALLERY ====================
     let cmsDraftBlocks = [];
+    let cmsDraftGridImages = [];
     let cmsDraftFreeformGallery = true;
     let cmsDraftGalleryChanged = false;
+    let cmsDraftGridGalleryChanged = false;
     let cmsActiveCropUid = "";
     let cmsDraftPdfs = [];
     let cmsProjectPdfUploadActive = false;
@@ -687,6 +696,49 @@
         const layout = normalizeCmsMediaLayout(block, index);
         return Math.ceil(layout.y + layout.height);
       }));
+    }
+
+    function renderCmsGridImagesEditor() {
+      const container = document.getElementById("cmsGridImagesContainer");
+      const editor = document.getElementById("cmsGridGalleryEditor");
+      if (!container || !editor) return;
+      const isAr = currentLang === "ar";
+      editor.classList.toggle("hidden", !cmsDraftFreeformGallery);
+      container.classList.toggle("is-empty", cmsDraftGridImages.length === 0);
+      if (cmsDraftGridImages.length === 0) {
+        container.innerHTML = `<p class="cms-grid-empty">${isAr ? "أضف صورًا لتظهر هنا في شبكة من ثلاثة أعمدة بنسبة 3:4." : "Add images to create a three-column grid with 3:4 portrait frames."}</p>`;
+        return;
+      }
+
+      container.innerHTML = cmsDraftGridImages.map((image, index) => `
+        <article class="cms-grid-editor-item" data-grid-image-uid="${escapeCmsHtml(image.uid)}">
+          ${image.url
+            ? `<img src="${escapeCmsHtml(image.url)}" alt="${escapeCmsHtml(image.name || (isAr ? "صورة الشبكة" : "Grid image"))} ${index + 1}" loading="lazy" decoding="async" />`
+            : `<div class="cms-grid-reading"><span data-grid-read-text>${isAr ? "جارٍ قراءة الصورة" : "Reading image"}… ${Math.round(image.readProgress || 0)}%</span><div class="cms-layout-progress" role="progressbar" aria-valuenow="${Math.round(image.readProgress || 0)}" aria-valuemin="0" aria-valuemax="100"><span data-grid-read-bar style="width:${Math.round(image.readProgress || 0)}%"></span></div></div>`}
+          <span class="cms-grid-item-number">${index + 1}</span>
+          <div class="cms-grid-item-actions">
+            <button type="button" data-grid-action="up" data-grid-index="${index}" ${index === 0 ? "disabled" : ""} aria-label="${isAr ? "تحريك الصورة لأعلى" : "Move image up"}">↑</button>
+            <button type="button" data-grid-action="down" data-grid-index="${index}" ${index === cmsDraftGridImages.length - 1 ? "disabled" : ""} aria-label="${isAr ? "تحريك الصورة لأسفل" : "Move image down"}">↓</button>
+            <button type="button" data-grid-action="remove" data-grid-index="${index}" aria-label="${isAr ? "حذف الصورة" : "Remove image"}">×</button>
+          </div>
+        </article>
+      `).join("");
+
+      container.querySelectorAll("[data-grid-action]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const index = Number(button.dataset.gridIndex);
+          const action = button.dataset.gridAction;
+          if (action === "remove") {
+            cmsDraftGridImages.splice(index, 1);
+          } else {
+            const nextIndex = index + (action === "up" ? -1 : 1);
+            if (nextIndex < 0 || nextIndex >= cmsDraftGridImages.length) return;
+            [cmsDraftGridImages[index], cmsDraftGridImages[nextIndex]] = [cmsDraftGridImages[nextIndex], cmsDraftGridImages[index]];
+          }
+          cmsDraftGridGalleryChanged = true;
+          renderCmsGridImagesEditor();
+        });
+      });
     }
 
     function updateCmsMediaCanvasLayout(container) {
@@ -1379,10 +1431,11 @@
 
     function updateCmsMediaBlockReadProgress(uid, percent) {
       const container = document.getElementById("cmsMediaBlocksContainer");
-      const card = Array.from(container?.children || []).find((item) => item.dataset.blockUid === uid);
+      const card = Array.from(container?.children || []).find((item) => item.dataset.blockUid === uid)
+        || document.querySelector(`#cmsGridImagesContainer [data-grid-image-uid="${CSS.escape(uid)}"]`);
       if (!card) return;
-      const text = card.querySelector("[data-image-read-progress-text]");
-      const bar = card.querySelector("[data-image-read-progress-bar]");
+      const text = card.querySelector("[data-image-read-progress-text], [data-grid-read-text]");
+      const bar = card.querySelector("[data-image-read-progress-bar], [data-grid-read-bar]");
       const progress = card.querySelector('[role="progressbar"]');
       if (text) text.textContent = `Reading image… ${percent}%`;
       if (bar) bar.style.width = `${percent}%`;
@@ -1509,6 +1562,9 @@
       updateCmsCoverPreviewCard();
       cmsDraftFreeformGallery = false;
       cmsDraftGalleryChanged = false;
+      cmsDraftGridGalleryChanged = false;
+      cmsDraftGridImages = [];
+      document.getElementById("cmsGridImagesInput").value = "";
       cmsActiveCropUid = "";
 
       if (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0) {
@@ -1531,6 +1587,7 @@
         }));
       }
       updateCmsMediaEditorDescription();
+      renderCmsGridImagesEditor();
       renderCmsMediaBlocksEditor();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -1547,6 +1604,8 @@
       document.getElementById("cmsCancelEditProjectBtn").classList.add("hidden");
       cmsDraftFreeformGallery = true;
       cmsDraftGalleryChanged = false;
+      cmsDraftGridGalleryChanged = false;
+      cmsDraftGridImages = [];
       cmsActiveCropUid = "";
       updateCmsMediaEditorDescription();
       document.getElementById("cmsProjCountry").value = "";
@@ -1557,12 +1616,14 @@
       document.getElementById("cmsProjCoverReadProgress").classList.add("hidden");
       document.getElementById("cmsProjImgFile").value = "";
       document.getElementById("cmsBatchImagesInput").value = "";
+      document.getElementById("cmsGridImagesInput").value = "";
       document.getElementById("cmsProjPdfFile").value = "";
       cmsDraftPdfs = [];
       renderCmsProjectPdfs();
       resetCmsProjectUploadProgress();
       releaseCmsDraftMediaPreviews();
       cmsDraftBlocks = [];
+      renderCmsGridImagesEditor();
       renderCmsMediaBlocksEditor();
     }
 
@@ -1599,6 +1660,15 @@
         : (isAr
           ? "يحتفظ هذا المشروع بمحرر المعرض الحالي. المساحة الحرة متاحة للمشاريع الجديدة فقط."
           : "This project keeps the existing gallery editor. The freeform canvas is available for new projects only.");
+      const gridHeading = document.getElementById("cmsGridGalleryHeading");
+      const gridDescription = document.getElementById("cmsGridGalleryDescription");
+      const gridButton = document.querySelector('label[for="cmsGridImagesInput"]');
+      if (gridHeading) gridHeading.textContent = isAr ? "شبكة صور من ثلاثة أعمدة" : "Three-column image grid";
+      if (gridDescription) gridDescription.textContent = isAr
+        ? "أضف الصور في شبكة ثابتة من ثلاثة أعمدة. لكل صورة إطار رأسي بنسبة 3:4، وتُضاف الصفوف تلقائيًا."
+        : "Add images in a fixed three-column grid. Every image uses a 3:4 portrait frame; rows continue automatically.";
+      if (gridButton) gridButton.firstChild.textContent = isAr ? "+ إضافة صور للشبكة" : "+ Add grid images";
+      renderCmsGridImagesEditor();
     }
 
     async function deleteCmsProject(id) {
@@ -3397,6 +3467,23 @@
       document.getElementById("galleryHeading").textContent = isAr ? "لقطات ومخرجات المشروع" : "Project Visual Frames";
       document.getElementById("inquireProjectBtnLbl").textContent = isAr ? "اطلب مشروعاً مشابهاً" : "Request Similar Project";
       const galleryContainer = document.getElementById("modalProjectGallery");
+      const gridGalleryContainer = document.getElementById("modalProjectGridGallery");
+      const gridImages = Array.isArray(proj.gridGallery)
+        ? proj.gridGallery.map((image) => typeof image === "string" ? { url: image } : image)
+          .filter((image) => typeof image?.url === "string" && image.url)
+        : [];
+      gridGalleryContainer.classList.toggle("hidden", gridImages.length === 0);
+      gridGalleryContainer.innerHTML = gridImages.map((image, index) => `
+        <button type="button" class="project-grid-gallery-item" data-project-grid-image="${index}" aria-label="${isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size"} ${index + 1}">
+          <img src="${escapeCmsHtml(image.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" />
+        </button>
+      `).join("");
+      gridGalleryContainer.querySelectorAll("[data-project-grid-image]").forEach((imageButton) => {
+        imageButton.addEventListener("click", () => {
+          const image = gridImages[Number(imageButton.dataset.projectGridImage)];
+          if (image) document.getElementById("modalProjectImage").src = image.url;
+        });
+      });
 
       const activeBlocks = (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0)
         ? proj.mediaBlocks
@@ -4207,6 +4294,39 @@
         });
       }
 
+      const gridImagesInput = document.getElementById("cmsGridImagesInput");
+      if (gridImagesInput) {
+        gridImagesInput.addEventListener("change", (event) => {
+          const files = Array.from(event.target.files || []);
+          files.forEach((file) => {
+            if (!validateCmsImageFile(file)) return;
+            const image = {
+              uid: `grid_${Math.random().toString(36).slice(2, 9)}`,
+              name: file.name,
+              url: "",
+              readProgress: 0
+            };
+            cmsDraftGridImages.push(image);
+            renderCmsGridImagesEditor();
+            readCmsFileAsDataUrl(file, (percent) => {
+              image.readProgress = percent;
+              updateCmsMediaBlockReadProgress(image.uid, percent);
+            }).then((dataUrl) => {
+              image.url = dataUrl;
+              delete image.readProgress;
+              cmsDraftGridGalleryChanged = true;
+              renderCmsGridImagesEditor();
+            }).catch((error) => {
+              cmsDraftGridImages = cmsDraftGridImages.filter((item) => item.uid !== image.uid);
+              renderCmsGridImagesEditor();
+              console.error(`Unable to read grid image "${file.name}".`, error);
+              showCmsToast(`Unable to read "${file.name}": ${error.message || "image file error."}`);
+            });
+          });
+          event.target.value = "";
+        });
+      }
+
       // Publish or Update Precision Project
       const cmsProjectForm = document.getElementById("cmsProjectForm");
       if (cmsProjectForm) {
@@ -4336,7 +4456,7 @@
         cmsProjectForm.addEventListener("submit", async (e) => {
           e.preventDefault();
           setCmsProjectPublishStatus("");
-          if (cmsCoverReadPending || cmsDraftBlocks.some((block) => !block.url && !(block.file instanceof File))) {
+          if (cmsCoverReadPending || cmsDraftBlocks.some((block) => !block.url && !(block.file instanceof File)) || cmsDraftGridImages.some((image) => !image.url)) {
             showCmsToast("Wait for all selected project media to finish loading before publishing.");
             return;
           }
@@ -4457,6 +4577,9 @@
             ? (existingProject.gallery || [])
             : (validMediaBlocks.length > 0 ? validMediaBlocks.filter((block) => block.type === "image").map((block) => block.url) : [imgUrl]);
           const mediaBlocks = preserveExistingGallery ? existingProject.mediaBlocks : validMediaBlocks;
+          const gridGallery = cmsDraftGridGalleryChanged
+            ? cmsDraftGridImages.map((image) => ({ url: image.url, name: image.name || "" }))
+            : [];
 
           const summaryEn = document.getElementById("cmsProjSummaryEn").value.trim();
           const summaryAr = document.getElementById("cmsProjSummaryAr").value.trim() || summaryEn;
@@ -4499,6 +4622,9 @@
             coverAspect: document.getElementById("cmsProjCoverAspect").value || "aspect-[3/4]",
             mediaBlocks,
             gallery: galleryUrls,
+            ...(editId
+              ? (Array.isArray(existingProject.gridGallery) ? { gridGallery: existingProject.gridGallery } : {})
+              : { gridGallery }),
             ...(cmsDraftFreeformGallery ? { freeformGallery: true } : {})
           };
           const successMessage = editId
