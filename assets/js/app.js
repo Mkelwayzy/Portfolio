@@ -628,11 +628,16 @@
       return Array.from(document.querySelectorAll('input[name="cmsProjTools"]:checked'), (checkbox) => checkbox.value);
     }
 
-    function createDefaultMediaBlock(url = "", captionEn = "", captionAr = "") {
+    function createDefaultMediaBlock(url = "", captionEn = "", captionAr = "", index = cmsDraftBlocks.length) {
       return {
         uid: "blk_" + Math.random().toString(36).slice(2, 9),
         url,
         aspect: "aspect-auto",
+        x: index % 2 === 0 ? 0 : 6,
+        y: Math.floor(index / 2) * 6,
+        width: 6,
+        height: 6,
+        fit: "cover",
         captionEn,
         captionAr
       };
@@ -642,16 +647,43 @@
       return CMS_MEDIA_ASPECTS.includes(aspect) ? aspect : "aspect-auto";
     }
 
-    function getCmsMediaAspectLabel(aspect, isAr) {
-      const labels = {
-        "aspect-auto": isAr ? "الأبعاد الأصلية" : "Original proportions",
-        "aspect-[4/3]": "4:3",
-        "aspect-video": "16:9",
-        "aspect-square": isAr ? "مربع 1:1" : "Square 1:1",
-        "aspect-[3/4]": isAr ? "طولي 3:4" : "Portrait 3:4",
-        "aspect-[21/9]": "21:9"
+    function normalizeCmsMediaLayout(block, index = 0) {
+      const defaultX = index % 2 === 0 ? 0 : 6;
+      const defaultY = Math.floor(index / 2) * 6;
+      const width = Math.max(1, Math.min(12, Number(block.width) || 6));
+      const height = Math.max(1, Math.min(120, Number(block.height) || 6));
+      const x = Math.max(0, Math.min(12 - width, Number.isFinite(Number(block.x)) ? Number(block.x) : defaultX));
+      const y = Math.max(0, Math.min(120 - height, Number.isFinite(Number(block.y)) ? Number(block.y) : defaultY));
+      return {
+        x,
+        y,
+        width,
+        height,
+        fit: block.fit === "contain" ? "contain" : (block.fit === "cover" ? "cover" : (block.aspect === "aspect-auto" ? "contain" : "cover"))
       };
-      return labels[aspect] || labels["aspect-auto"];
+    }
+
+    function getCmsMediaCanvasRows() {
+      return Math.max(12, ...cmsDraftBlocks.map((block, index) => {
+        const layout = normalizeCmsMediaLayout(block, index);
+        return Math.ceil(layout.y + layout.height);
+      }));
+    }
+
+    function updateCmsMediaCanvasLayout(container) {
+      const rows = getCmsMediaCanvasRows();
+      container.style.setProperty("--cms-canvas-rows", String(rows));
+      container.style.aspectRatio = `12 / ${rows}`;
+      cmsDraftBlocks.forEach((block, index) => {
+        const tile = container.querySelector(`[data-block-uid="${CSS.escape(block.uid)}"]`);
+        if (!tile) return;
+        const layout = normalizeCmsMediaLayout(block, index);
+        tile.style.left = `${(layout.x / 12) * 100}%`;
+        tile.style.top = `${(layout.y / rows) * 100}%`;
+        tile.style.width = `${(layout.width / 12) * 100}%`;
+        tile.style.height = `${(layout.height / rows) * 100}%`;
+        tile.style.zIndex = String(index + 1);
+      });
     }
 
     function renderCmsMediaBlocksEditor() {
@@ -661,142 +693,125 @@
 
       if (cmsDraftBlocks.length === 0) {
         container.innerHTML = `
-          <div class="rounded-2xl border border-dashed border-black/15 bg-white/40 p-6 text-center sm:col-span-2 lg:col-span-3">
+        <div class="cms-layout-empty rounded-2xl border border-dashed border-black/15 bg-white/40 p-6 text-center">
             <p class="text-xs font-semibold text-obsidian">${isAr ? "لم يتم اختيار صور للمشروع بعد." : "No project images selected."}</p>
-            <p class="text-[11px] text-slateText mt-1">${isAr ? "اختر صورًا ثم اسحبها لترتيبها، وحدد نسبة العرض المناسبة لكل صورة." : "Choose images, drag them to reorder, and select a suitable aspect ratio for each."}</p>
+          <p class="text-[11px] text-slateText mt-1">${isAr ? "أضف صورًا ثم اسحبها إلى مواضعها، واستخدم مقبض الزاوية لتغيير حجمها." : "Add images, drag them into place, and use the corner handle to resize them."}</p>
           </div>
         `;
         return;
       }
 
+      const canvasRows = getCmsMediaCanvasRows();
       container.innerHTML = cmsDraftBlocks.map((blk, idx) => {
-        const aspect = normalizeCmsMediaAspect(blk.aspect);
-        const imageClass = aspect === "aspect-auto"
-          ? "w-full max-h-[28rem] object-contain"
-          : "h-full w-full object-cover";
-        const aspectOptions = CMS_MEDIA_ASPECTS.map((value) =>
-          `<option value="${value}" ${aspect === value ? "selected" : ""}>${getCmsMediaAspectLabel(value, isAr)}</option>`
-        ).join("");
+        const layout = normalizeCmsMediaLayout(blk, idx);
         return `
-        <article class="cms-media-block rounded-2xl border border-white bg-white/80 p-3.5 shadow-sm" data-media-block data-block-uid="${escapeCmsHtml(blk.uid)}">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
-              <button type="button" draggable="true" data-media-drag-handle aria-label="${isAr ? "اسحب لإعادة ترتيب الصورة" : "Drag to reorder image"}" title="${isAr ? "اسحب لترتيب الصورة" : "Drag to reorder"}" class="cms-media-drag-handle touch-none rounded-lg bg-black/5 px-2 py-1 text-base font-bold text-obsidian cursor-grab active:cursor-grabbing">⠿</button>
-              <span class="px-2.5 py-0.5 rounded-full bg-obsidian text-white text-[10px] font-bold">${isAr ? "صورة" : "Image"} #${idx + 1}</span>
-            </div>
-            <div class="flex items-center gap-1">
-              <button type="button" data-media-action="move-up" data-media-index="${idx}" ${idx === 0 ? "disabled" : ""} class="px-2 py-1 rounded-lg bg-black/5 hover:bg-black/10 disabled:opacity-30 text-[10px] font-bold text-obsidian" aria-label="${isAr ? "تحريك الصورة لأعلى" : "Move image up"}">↑</button>
-              <button type="button" data-media-action="move-down" data-media-index="${idx}" ${idx === cmsDraftBlocks.length - 1 ? "disabled" : ""} class="px-2 py-1 rounded-lg bg-black/5 hover:bg-black/10 disabled:opacity-30 text-[10px] font-bold text-obsidian" aria-label="${isAr ? "تحريك الصورة لأسفل" : "Move image down"}">↓</button>
-              <button type="button" data-media-action="remove" data-media-index="${idx}" class="px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-700 text-[10px] font-bold">${isAr ? "حذف" : "Remove"}</button>
-            </div>
-          </div>
+        <article class="cms-layout-tile" data-media-block data-block-uid="${escapeCmsHtml(blk.uid)}" tabindex="0" aria-label="${isAr ? "صورة" : "Image"} ${idx + 1}. ${isAr ? "استخدم الأسهم للتحريك وShift مع الأسهم لتغيير الحجم." : "Use arrow keys to move; hold Shift to resize."}" style="left:${(layout.x / 12) * 100}%;top:${(layout.y / canvasRows) * 100}%;width:${(layout.width / 12) * 100}%;height:${(layout.height / canvasRows) * 100}%;z-index:${idx + 1}">
           ${blk.url
-            ? `<div data-media-preview-frame class="cms-media-preview-frame ${aspect} mt-3 overflow-hidden rounded-xl border border-black/10 bg-black/5">
-                 <img src="${escapeCmsHtml(blk.url)}" alt="${isAr ? "صورة المشروع" : "Project image"} ${idx + 1}" loading="lazy" decoding="async" class="${imageClass}" />
-               </div>`
-            : `<div class="mt-3 flex min-h-40 flex-col items-center justify-center gap-3 rounded-xl border border-black/10 bg-black/5 p-6">
-                <span data-image-read-progress-text class="text-xs font-semibold text-slateText">${isAr ? "جارٍ قراءة الصورة" : "Reading image"}… ${Math.round(blk.readProgress || 0)}%</span>
-                <div class="h-2 w-full max-w-md overflow-hidden rounded-full bg-black/10" role="progressbar" aria-valuenow="${Math.round(blk.readProgress || 0)}" aria-valuemin="0" aria-valuemax="100">
-                  <div data-image-read-progress-bar class="h-full rounded-full bg-obsidian transition-[width] duration-150" style="width:${Math.round(blk.readProgress || 0)}%"></div>
-                </div>
-              </div>`}
-          <label class="mt-3 block text-[10px] font-semibold text-obsidian">${isAr ? "نسبة عرض الصورة" : "Image aspect ratio"}
-            <select data-media-aspect data-media-index="${idx}" class="mt-1 w-full rounded-lg px-2.5 py-2 text-[11px]">${aspectOptions}</select>
+            ? `<img src="${escapeCmsHtml(blk.url)}" alt="${isAr ? "صورة المشروع" : "Project image"} ${idx + 1}" loading="lazy" decoding="async" style="object-fit:${layout.fit}" />`
+            : `<div class="cms-layout-reading"><span data-image-read-progress-text>${isAr ? "جارٍ قراءة الصورة" : "Reading image"}… ${Math.round(blk.readProgress || 0)}%</span><div class="cms-layout-progress" role="progressbar" aria-valuenow="${Math.round(blk.readProgress || 0)}" aria-valuemin="0" aria-valuemax="100"><span data-image-read-progress-bar style="width:${Math.round(blk.readProgress || 0)}%"></span></div></div>`}
+          <span class="cms-layout-number">${idx + 1}</span>
+          <button type="button" data-media-remove="${idx}" aria-label="${isAr ? "حذف الصورة" : "Remove image"} ${idx + 1}" class="cms-layout-remove" data-media-control>×</button>
+          <label class="cms-layout-fit">
+            <span>${isAr ? "طريقة العرض" : "Display"}</span>
+            <select data-media-fit="${idx}" aria-label="${isAr ? "طريقة عرض الصورة" : "Image display mode"}" data-media-control>
+              <option value="cover" ${layout.fit === "cover" ? "selected" : ""}>${isAr ? "ملء مع قص" : "Fill / crop"}</option>
+              <option value="contain" ${layout.fit === "contain" ? "selected" : ""}>${isAr ? "الصورة كاملة" : "Show full image"}</option>
+            </select>
           </label>
+          <span data-media-resize aria-hidden="true" class="cms-layout-resize" data-media-control></span>
         </article>
       `;
       }).join("");
 
-      container.querySelectorAll("[data-media-aspect]").forEach((select) => {
+      updateCmsMediaCanvasLayout(container);
+      container.querySelectorAll("[data-media-fit]").forEach((select) => {
         select.addEventListener("change", () => {
-          const index = Number(select.dataset.mediaIndex);
+          const index = Number(select.dataset.mediaFit);
           const block = cmsDraftBlocks[index];
           if (!block) return;
-          block.aspect = normalizeCmsMediaAspect(select.value);
-          const frame = select.closest("[data-media-block]")?.querySelector("[data-media-preview-frame]");
-          const image = frame?.querySelector("img");
-          if (!frame || !image) return;
-          frame.classList.remove(...CMS_MEDIA_ASPECTS);
-          frame.classList.add(block.aspect);
-          image.className = block.aspect === "aspect-auto"
-            ? "w-full max-h-[28rem] object-contain"
-            : "h-full w-full object-cover";
+          block.fit = select.value === "contain" ? "contain" : "cover";
+          const image = select.closest("[data-media-block]")?.querySelector("img");
+          if (image) image.style.objectFit = block.fit;
         });
       });
-      container.querySelectorAll("[data-media-action]").forEach((button) => {
+      container.querySelectorAll("[data-media-remove]").forEach((button) => {
         button.addEventListener("click", () => {
-          const index = Number(button.dataset.mediaIndex);
-          if (button.dataset.mediaAction === "move-up") moveCmsMediaBlock(index, -1);
-          if (button.dataset.mediaAction === "move-down") moveCmsMediaBlock(index, 1);
-          if (button.dataset.mediaAction === "remove") removeCmsMediaBlock(index);
+          removeCmsMediaBlock(Number(button.dataset.mediaRemove));
         });
       });
 
-      if (!container.dataset.dragHandlersAttached) {
-        container.addEventListener("dragstart", (event) => {
-          const target = event.target instanceof Element ? event.target : null;
-          const handle = target?.closest("[data-media-drag-handle]");
-          const card = handle?.closest("[data-media-block]");
-          if (!card) {
-            event.preventDefault();
-            return;
-          }
-          container.dataset.draggingUid = card.dataset.blockUid;
-          card.classList.add("is-dragging");
-          if (event.dataTransfer) {
-            event.dataTransfer.effectAllowed = "move";
-            event.dataTransfer.setData("text/plain", card.dataset.blockUid);
-          }
+      container.querySelectorAll("[data-media-block]").forEach((tile) => {
+        tile.addEventListener("pointerdown", (event) => {
+          if (event.button !== 0 || event.target.closest("[data-media-control]")) return;
+          startCmsMediaTransform(event, tile, "move");
         });
-        container.addEventListener("dragover", (event) => {
-          const target = event.target instanceof Element ? event.target : null;
-          if (!container.dataset.draggingUid || !target?.closest("[data-media-block]")) return;
+        tile.addEventListener("keydown", (event) => {
+          if (event.target !== tile || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
           event.preventDefault();
-          if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-        });
-        container.addEventListener("drop", (event) => {
-          const target = event.target instanceof Element ? event.target : null;
-          const targetBlock = target?.closest("[data-media-block]");
-          if (!targetBlock || !container.dataset.draggingUid) return;
-          event.preventDefault();
-          const sourceUid = event.dataTransfer?.getData("text/plain") || container.dataset.draggingUid;
-          const fromIndex = cmsDraftBlocks.findIndex((block) => block.uid === sourceUid);
-          const toIndex = cmsDraftBlocks.findIndex((block) => block.uid === targetBlock.dataset.blockUid);
-          if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
-            moveCmsMediaBlockToIndex(fromIndex, toIndex);
+          const index = cmsDraftBlocks.findIndex((item) => item.uid === tile.dataset.blockUid);
+          const block = cmsDraftBlocks[index];
+          if (!block) return;
+          const layout = normalizeCmsMediaLayout(block, index);
+          const direction = event.key === "ArrowLeft" ? [-1, 0] : event.key === "ArrowRight" ? [1, 0] : event.key === "ArrowUp" ? [0, -1] : [0, 1];
+          if (event.shiftKey) {
+            block.width = Math.max(1, Math.min(12 - layout.x, layout.width + direction[0]));
+            block.height = Math.max(1, Math.min(120 - layout.y, layout.height + direction[1]));
+          } else {
+            block.x = Math.max(0, Math.min(12 - layout.width, layout.x + direction[0]));
+            block.y = Math.max(0, Math.min(120 - layout.height, layout.y + direction[1]));
           }
+          renderCmsMediaBlocksEditor();
+          container.querySelector(`[data-block-uid="${CSS.escape(block.uid)}"]`)?.focus();
         });
-        container.addEventListener("dragend", () => {
-          delete container.dataset.draggingUid;
-          container.querySelectorAll(".is-dragging, .is-drop-target").forEach((card) => {
-            card.classList.remove("is-dragging", "is-drop-target");
-          });
+        tile.querySelector("[data-media-resize]")?.addEventListener("pointerdown", (event) => {
+          if (event.button !== 0) return;
+          event.stopPropagation();
+          startCmsMediaTransform(event, tile, "resize");
         });
-        container.addEventListener("dragenter", (event) => {
-          const target = event.target instanceof Element ? event.target.closest("[data-media-block]") : null;
-          if (target && container.dataset.draggingUid) target.classList.add("is-drop-target");
-        });
-        container.addEventListener("dragleave", (event) => {
-          const target = event.target instanceof Element ? event.target.closest("[data-media-block]") : null;
-          if (target && !target.contains(event.relatedTarget)) target.classList.remove("is-drop-target");
-        });
-        container.dataset.dragHandlersAttached = "true";
-      }
+      });
     }
 
-    function moveCmsMediaBlock(idx, dir) {
-      moveCmsMediaBlockToIndex(idx, idx + dir);
-    }
+    function startCmsMediaTransform(event, tile, mode) {
+      const blockIndex = cmsDraftBlocks.findIndex((item) => item.uid === tile.dataset.blockUid);
+      const block = cmsDraftBlocks[blockIndex];
+      const container = document.getElementById("cmsMediaBlocksContainer");
+      if (!block || !container) return;
+      const layout = normalizeCmsMediaLayout(block, blockIndex);
+      const rows = getCmsMediaCanvasRows();
+      const cellWidth = container.clientWidth / 12;
+      const cellHeight = container.clientHeight / rows;
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const initialX = layout.x;
+      const initialY = layout.y;
+      const initialWidth = layout.width;
+      const initialHeight = layout.height;
+      tile.setPointerCapture(event.pointerId);
+      tile.classList.add("is-transforming");
+      event.preventDefault();
 
-    function moveCmsMediaBlockToIndex(fromIndex, toIndex) {
-      if (fromIndex < 0 || fromIndex >= cmsDraftBlocks.length || toIndex < 0 || toIndex >= cmsDraftBlocks.length) return;
-      const [block] = cmsDraftBlocks.splice(fromIndex, 1);
-      cmsDraftBlocks.splice(toIndex, 0, block);
-      renderCmsMediaBlocksEditor();
-      const status = document.getElementById("cmsMediaBlocksStatus");
-      if (status) status.textContent = currentLang === "ar"
-        ? `تم نقل الصورة إلى الموضع ${toIndex + 1}.`
-        : `Image moved to position ${toIndex + 1}.`;
+      const finish = () => {
+        tile.removeEventListener("pointermove", move);
+        tile.removeEventListener("pointerup", finish);
+        tile.removeEventListener("pointercancel", finish);
+        tile.classList.remove("is-transforming");
+        renderCmsMediaBlocksEditor();
+      };
+      const move = (pointerEvent) => {
+        const columns = (pointerEvent.clientX - startX) / cellWidth;
+        const movedRows = (pointerEvent.clientY - startY) / cellHeight;
+        if (mode === "resize") {
+          block.width = Math.max(1, Math.min(12 - initialX, initialWidth + columns));
+          block.height = Math.max(1, Math.min(120 - initialY, initialHeight + movedRows));
+        } else {
+          block.x = Math.max(0, Math.min(12 - layout.width, initialX + columns));
+          block.y = Math.max(0, Math.min(120 - layout.height, initialY + movedRows));
+        }
+        updateCmsMediaCanvasLayout(container);
+      };
+      tile.addEventListener("pointermove", move);
+      tile.addEventListener("pointerup", finish, { once: true });
+      tile.addEventListener("pointercancel", finish, { once: true });
     }
 
     function removeCmsMediaBlock(idx) {
@@ -1215,15 +1230,16 @@
       updateCmsCoverPreviewCard();
 
       if (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0) {
-        cmsDraftBlocks = proj.mediaBlocks.map((b) => ({
+        cmsDraftBlocks = proj.mediaBlocks.map((b, index) => ({
           uid: b.uid || `blk_${Math.random().toString(36).slice(2, 9)}`,
           url: b.url || "",
           aspect: normalizeCmsMediaAspect(b.aspect),
+          ...normalizeCmsMediaLayout(b, index),
           captionEn: b.captionEn || "",
           captionAr: b.captionAr || ""
         }));
       } else {
-        cmsDraftBlocks = (proj.gallery || []).map((url) => createDefaultMediaBlock(url));
+        cmsDraftBlocks = (proj.gallery || []).map((url, index) => createDefaultMediaBlock(url, "", "", index));
       }
       renderCmsMediaBlocksEditor();
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -3061,28 +3077,29 @@
             captionAr: ""
           }));
 
+      const visibleBlocks = activeBlocks.filter((block) => typeof block?.url === "string" && block.url);
+      const galleryRows = Math.max(12, ...visibleBlocks.map((block, index) => {
+        const layout = normalizeCmsMediaLayout(block, index);
+        return Math.ceil(layout.y + layout.height);
+      }));
+      galleryContainer.className = "project-media-canvas";
+      galleryContainer.style.setProperty("--project-gallery-rows", String(galleryRows));
+      galleryContainer.style.aspectRatio = `12 / ${galleryRows}`;
       galleryContainer.innerHTML = activeBlocks
         .filter((block) => typeof block?.url === "string" && block.url)
         .map((blk, idx) => {
         const cap = isAr ? (blk.captionAr || blk.captionEn) : (blk.captionEn || blk.captionAr);
-        const aspectCls = normalizeCmsMediaAspect(blk.aspect);
-        const imgFitCls = aspectCls === "aspect-auto" ? "w-full h-auto object-contain" : "w-full h-full object-cover";
+        const layout = normalizeCmsMediaLayout(blk, idx);
         return `
-          <figure class="min-w-0 flex flex-col overflow-hidden rounded-2xl bg-white/55 border border-white/85 shadow-sm group cursor-pointer" data-gallery-image-index="${idx}" role="button" tabindex="0" aria-label="${isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size"} ${idx + 1}">
-            <div class="overflow-hidden bg-[#E5E6E8] ${aspectCls} w-full">
-              <img src="${escapeCmsHtml(blk.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${idx + 1}" loading="${idx === 0 ? "eager" : "lazy"}" decoding="async" class="${imgFitCls} transition-transform duration-500 group-hover:scale-[1.03]" />
-            </div>
-            ${cap ? `
-              <figcaption class="px-4 py-3 text-xs font-medium text-[#2A2C30] bg-white/75 backdrop-blur-md border-t border-white/80 leading-relaxed">
-                <span class="inline-block font-bold text-[#111214] me-1.5">0${idx + 1}.</span>${escapeCmsHtml(cap)}
-              </figcaption>
-            ` : ""}
+          <figure class="project-media-item group" data-gallery-image-index="${idx}" style="left:${(layout.x / 12) * 100}%;top:${(layout.y / galleryRows) * 100}%;width:${(layout.width / 12) * 100}%;height:${(layout.height / galleryRows) * 100}%;z-index:${idx + 1}" role="button" tabindex="0" aria-label="${isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size"} ${idx + 1}">
+            <img src="${escapeCmsHtml(blk.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${idx + 1}" loading="${idx === 0 ? "eager" : "lazy"}" decoding="async" style="object-fit:${layout.fit}" />
+            ${cap ? `<figcaption><span>0${idx + 1}.</span>${escapeCmsHtml(cap)}</figcaption>` : ""}
           </figure>
         `;
       }).join("");
       galleryContainer.querySelectorAll("[data-gallery-image-index]").forEach((figure) => {
         const showFullImage = () => {
-          const block = activeBlocks.filter((item) => typeof item?.url === "string" && item.url)[Number(figure.dataset.galleryImageIndex)];
+          const block = visibleBlocks[Number(figure.dataset.galleryImageIndex)];
           if (block) document.getElementById("modalProjectImage").src = block.url;
         };
         figure.addEventListener("click", showFullImage);
@@ -3974,10 +3991,11 @@
           }
           const validMediaBlocks = cmsDraftBlocks
             .filter((b) => b.url && b.url.trim() !== "")
-            .map((b) => ({
+            .map((b, index) => ({
               ...b,
               url: b.url.trim(),
               aspect: normalizeCmsMediaAspect(b.aspect),
+              ...normalizeCmsMediaLayout(b, index),
               captionEn: b.captionEn || "",
               captionAr: b.captionAr || ""
             }));

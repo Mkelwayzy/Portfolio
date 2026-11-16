@@ -637,14 +637,14 @@
                 </div>
               </div>
 
-              <!-- Step 3: Multi-Size Media Gallery & Editorial Blocks Builder -->
+              <!-- Step 3: Freeform project image layout -->
               <div class="ios-subcard rounded-2xl p-4 sm:p-5 space-y-4">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                   <div class="flex items-center gap-2">
                     <span class="w-6 h-6 rounded-lg bg-obsidian text-white text-[11px] font-bold flex items-center justify-center">3</span>
                     <div>
                       <h4 class="text-xs sm:text-sm font-bold text-obsidian">Project Images</h4>
-                      <p class="text-[10px] text-slateText">Images display in three columns with as many rows as needed. Drag to reorder, and choose original proportions or a crop ratio for each image.</p>
+                      <p class="text-[10px] text-slateText">Arrange images freely on the canvas. Drag an image to move it, pull its corner to resize, and choose how it should fit.</p>
                     </div>
                   </div>
                   <label class="px-4 py-2.5 rounded-full bg-obsidian text-[11px] font-bold text-white cursor-pointer shadow-sm transition hover:opacity-90">
@@ -653,8 +653,7 @@
                   </label>
                 </div>
 
-                <!-- Dynamic Blocks List -->
-                <div id="cmsMediaBlocksContainer" class="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
+                <div id="cmsMediaBlocksContainer" class="cms-layout-canvas" aria-label="Project image layout canvas"></div>
                 <p id="cmsMediaBlocksStatus" class="sr-only" role="status" aria-live="polite"></p>
                 <div id="cmsProjectUploadProgress" class="hidden rounded-xl border border-black/5 bg-white/70 p-4" aria-live="polite">
                   <div class="mb-2 flex justify-between gap-3 text-[10px] font-semibold text-slateText">
