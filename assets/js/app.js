@@ -588,6 +588,8 @@
 
     // ==================== PROJECT IMAGE GALLERY ====================
     let cmsDraftBlocks = [];
+    let cmsDraftFreeformGallery = true;
+    let cmsDraftGalleryChanged = false;
     let cmsDraftPdfs = [];
     let cmsProjectPdfUploadActive = false;
     let cmsCoverReadPending = false;
@@ -690,7 +692,75 @@
       const container = document.getElementById("cmsMediaBlocksContainer");
       if (!container) return;
       const isAr = currentLang === "ar";
+      updateCmsMediaEditorDescription();
 
+      if (!cmsDraftFreeformGallery) {
+        container.className = "grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3";
+        container.style.removeProperty("aspect-ratio");
+        container.style.removeProperty("--cms-canvas-rows");
+        if (cmsDraftBlocks.length === 0) {
+          container.innerHTML = `
+            <div class="rounded-2xl border border-dashed border-black/15 bg-white/40 p-6 text-center sm:col-span-2 lg:col-span-3">
+              <p class="text-xs font-semibold text-obsidian">${isAr ? "لم يتم اختيار صور للمشروع بعد." : "No project images selected."}</p>
+            </div>
+          `;
+          return;
+        }
+        container.innerHTML = cmsDraftBlocks.map((block, index) => {
+          const aspect = normalizeCmsMediaAspect(block.aspect);
+          const imageClass = aspect === "aspect-auto" ? "w-full h-auto object-contain" : "w-full h-full object-cover";
+          const options = CMS_MEDIA_ASPECTS.map((value) => {
+            const labels = {
+              "aspect-auto": isAr ? "الأبعاد الأصلية" : "Original proportions",
+              "aspect-[4/3]": "4:3",
+              "aspect-video": "16:9",
+              "aspect-square": isAr ? "مربع 1:1" : "Square 1:1",
+              "aspect-[3/4]": isAr ? "طولي 3:4" : "Portrait 3:4",
+              "aspect-[21/9]": "21:9"
+            };
+            return `<option value="${value}" ${aspect === value ? "selected" : ""}>${labels[value]}</option>`;
+          }).join("");
+          return `
+            <article class="cms-media-block min-w-0 rounded-2xl border border-white bg-white/80 p-3.5 shadow-sm" data-block-uid="${escapeCmsHtml(block.uid)}">
+              <div class="flex items-center justify-between gap-2">
+                <span class="rounded-full bg-obsidian px-2.5 py-0.5 text-[10px] font-bold text-white">${isAr ? "صورة" : "Image"} #${index + 1}</span>
+                <div class="flex items-center gap-1">
+                  <button type="button" data-legacy-media-action="up" data-media-index="${index}" ${index === 0 ? "disabled" : ""} class="rounded-lg bg-black/5 px-2 py-1 text-[10px] font-bold text-obsidian disabled:opacity-30" aria-label="${isAr ? "تحريك الصورة لأعلى" : "Move image up"}">↑</button>
+                  <button type="button" data-legacy-media-action="down" data-media-index="${index}" ${index === cmsDraftBlocks.length - 1 ? "disabled" : ""} class="rounded-lg bg-black/5 px-2 py-1 text-[10px] font-bold text-obsidian disabled:opacity-30" aria-label="${isAr ? "تحريك الصورة لأسفل" : "Move image down"}">↓</button>
+                  <button type="button" data-legacy-media-action="remove" data-media-index="${index}" class="rounded-lg bg-red-500/10 px-2.5 py-1 text-[10px] font-bold text-red-700">${isAr ? "حذف" : "Remove"}</button>
+                </div>
+              </div>
+              ${block.url
+                ? `<div class="mt-3 overflow-hidden rounded-xl border border-black/10 bg-black/5 ${aspect}" data-legacy-preview><img src="${escapeCmsHtml(block.url)}" alt="${isAr ? "صورة المشروع" : "Project image"} ${index + 1}" loading="lazy" decoding="async" class="${imageClass}" /></div>`
+                : `<div class="mt-3 flex min-h-40 flex-col items-center justify-center gap-3 rounded-xl border border-black/10 bg-black/5 p-6"><span data-image-read-progress-text class="text-xs font-semibold text-slateText">${isAr ? "جارٍ قراءة الصورة" : "Reading image"}… ${Math.round(block.readProgress || 0)}%</span><div class="h-2 w-full max-w-md overflow-hidden rounded-full bg-black/10" role="progressbar" aria-valuenow="${Math.round(block.readProgress || 0)}" aria-valuemin="0" aria-valuemax="100"><div data-image-read-progress-bar class="h-full rounded-full bg-obsidian transition-[width] duration-150" style="width:${Math.round(block.readProgress || 0)}%"></div></div></div>`}
+              <label class="mt-3 block text-[10px] font-semibold text-obsidian">${isAr ? "نسبة عرض الصورة" : "Image aspect ratio"}
+                <select data-legacy-media-aspect="${index}" class="mt-1 w-full rounded-lg px-2.5 py-2 text-[11px]">${options}</select>
+              </label>
+            </article>
+          `;
+        }).join("");
+        container.querySelectorAll("[data-legacy-media-aspect]").forEach((select) => {
+          select.addEventListener("change", () => {
+            const index = Number(select.dataset.legacyMediaAspect);
+            const block = cmsDraftBlocks[index];
+            if (!block) return;
+            block.aspect = normalizeCmsMediaAspect(select.value);
+            cmsDraftGalleryChanged = true;
+            renderCmsMediaBlocksEditor();
+          });
+        });
+        container.querySelectorAll("[data-legacy-media-action]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const index = Number(button.dataset.mediaIndex);
+            const action = button.dataset.legacyMediaAction;
+            if (action === "remove") removeCmsMediaBlock(index);
+            else moveCmsMediaBlock(index, action === "up" ? -1 : 1);
+          });
+        });
+        return;
+      }
+
+      container.className = "cms-layout-canvas";
       if (cmsDraftBlocks.length === 0) {
         container.innerHTML = `
         <div class="cms-layout-empty rounded-2xl border border-dashed border-black/15 bg-white/40 p-6 text-center">
@@ -730,6 +800,7 @@
           const block = cmsDraftBlocks[index];
           if (!block) return;
           block.fit = select.value === "contain" ? "contain" : "cover";
+          cmsDraftGalleryChanged = true;
           const image = select.closest("[data-media-block]")?.querySelector("img");
           if (image) image.style.objectFit = block.fit;
         });
@@ -760,6 +831,7 @@
             block.x = Math.max(0, Math.min(12 - layout.width, layout.x + direction[0]));
             block.y = Math.max(0, Math.min(120 - layout.height, layout.y + direction[1]));
           }
+          cmsDraftGalleryChanged = true;
           renderCmsMediaBlocksEditor();
           container.querySelector(`[data-block-uid="${CSS.escape(block.uid)}"]`)?.focus();
         });
@@ -807,6 +879,7 @@
           block.x = Math.max(0, Math.min(12 - layout.width, initialX + columns));
           block.y = Math.max(0, Math.min(120 - layout.height, initialY + movedRows));
         }
+        cmsDraftGalleryChanged = true;
         updateCmsMediaCanvasLayout(container);
       };
       tile.addEventListener("pointermove", move);
@@ -816,6 +889,16 @@
 
     function removeCmsMediaBlock(idx) {
       cmsDraftBlocks.splice(idx, 1);
+      cmsDraftGalleryChanged = true;
+      renderCmsMediaBlocksEditor();
+    }
+
+    function moveCmsMediaBlock(idx, direction) {
+      const destination = Math.max(0, Math.min(cmsDraftBlocks.length - 1, idx + direction));
+      if (destination === idx) return;
+      const [block] = cmsDraftBlocks.splice(idx, 1);
+      cmsDraftBlocks.splice(destination, 0, block);
+      cmsDraftGalleryChanged = true;
       renderCmsMediaBlocksEditor();
     }
 
@@ -1228,19 +1311,29 @@
       cmsDraftPdfs = getCmsProjectPdfFiles(proj);
       renderCmsProjectPdfs();
       updateCmsCoverPreviewCard();
+      cmsDraftFreeformGallery = proj.freeformGallery === true;
+      cmsDraftGalleryChanged = false;
 
       if (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0) {
         cmsDraftBlocks = proj.mediaBlocks.map((b, index) => ({
           uid: b.uid || `blk_${Math.random().toString(36).slice(2, 9)}`,
           url: b.url || "",
           aspect: normalizeCmsMediaAspect(b.aspect),
-          ...normalizeCmsMediaLayout(b, index),
+          ...(cmsDraftFreeformGallery ? normalizeCmsMediaLayout(b, index) : {}),
           captionEn: b.captionEn || "",
           captionAr: b.captionAr || ""
         }));
       } else {
-        cmsDraftBlocks = (proj.gallery || []).map((url, index) => createDefaultMediaBlock(url, "", "", index));
+        cmsDraftBlocks = (proj.gallery || []).map((url, index) => ({
+          uid: `blk_${Math.random().toString(36).slice(2, 9)}`,
+          url,
+          aspect: "aspect-auto",
+          ...(cmsDraftFreeformGallery ? normalizeCmsMediaLayout({}, index) : {}),
+          captionEn: "",
+          captionAr: ""
+        }));
       }
+      updateCmsMediaEditorDescription();
       renderCmsMediaBlocksEditor();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -1255,6 +1348,9 @@
       document.getElementById("cmsProjectFormHeading").textContent = "Publish New Precision Project";
       document.getElementById("cmsProjectSubmitBtn").textContent = "Publish Complete Project to Platform";
       document.getElementById("cmsCancelEditProjectBtn").classList.add("hidden");
+      cmsDraftFreeformGallery = true;
+      cmsDraftGalleryChanged = false;
+      updateCmsMediaEditorDescription();
       document.getElementById("cmsProjCountry").value = "";
       populateCmsProjectYearOptions();
       cmsCoverReadVersion += 1;
@@ -1269,6 +1365,19 @@
       resetCmsProjectUploadProgress();
       cmsDraftBlocks = [];
       renderCmsMediaBlocksEditor();
+    }
+
+    function updateCmsMediaEditorDescription() {
+      const description = document.getElementById("cmsMediaEditorDescription");
+      if (!description) return;
+      const isAr = currentLang === "ar";
+      description.textContent = cmsDraftFreeformGallery
+        ? (isAr
+          ? "رتّب الصور بحرية على المساحة. اسحب الصورة لتحريكها، واسحب الزاوية لتغيير حجمها، وحدد طريقة ملاءمتها."
+          : "Arrange images freely on the canvas. Drag an image to move it, pull its corner to resize, and choose how it should fit.")
+        : (isAr
+          ? "هذه الصور تتبع تنسيق المعرض الحالي. يمكنك إضافة صور وتغيير ترتيبها ونسبة عرضها دون تغيير تخطيط المشروع المنشور."
+          : "These images keep the existing gallery layout. Add images, reorder them, and change their aspect ratio without changing the published layout.");
     }
 
     async function deleteCmsProject(id) {
@@ -3078,25 +3187,41 @@
           }));
 
       const visibleBlocks = activeBlocks.filter((block) => typeof block?.url === "string" && block.url);
-      const galleryRows = Math.max(12, ...visibleBlocks.map((block, index) => {
-        const layout = normalizeCmsMediaLayout(block, index);
-        return Math.ceil(layout.y + layout.height);
-      }));
-      galleryContainer.className = "project-media-canvas";
-      galleryContainer.style.setProperty("--project-gallery-rows", String(galleryRows));
-      galleryContainer.style.aspectRatio = `12 / ${galleryRows}`;
-      galleryContainer.innerHTML = activeBlocks
-        .filter((block) => typeof block?.url === "string" && block.url)
-        .map((blk, idx) => {
-        const cap = isAr ? (blk.captionAr || blk.captionEn) : (blk.captionEn || blk.captionAr);
-        const layout = normalizeCmsMediaLayout(blk, idx);
-        return `
-          <figure class="project-media-item group" data-gallery-image-index="${idx}" style="left:${(layout.x / 12) * 100}%;top:${(layout.y / galleryRows) * 100}%;width:${(layout.width / 12) * 100}%;height:${(layout.height / galleryRows) * 100}%;z-index:${idx + 1}" role="button" tabindex="0" aria-label="${isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size"} ${idx + 1}">
-            <img src="${escapeCmsHtml(blk.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${idx + 1}" loading="${idx === 0 ? "eager" : "lazy"}" decoding="async" style="object-fit:${layout.fit}" />
-            ${cap ? `<figcaption><span>0${idx + 1}.</span>${escapeCmsHtml(cap)}</figcaption>` : ""}
-          </figure>
-        `;
-      }).join("");
+      if (proj.freeformGallery === true) {
+        const galleryRows = Math.max(12, ...visibleBlocks.map((block, index) => {
+          const layout = normalizeCmsMediaLayout(block, index);
+          return Math.ceil(layout.y + layout.height);
+        }));
+        galleryContainer.className = "project-media-canvas";
+        galleryContainer.style.setProperty("--project-gallery-rows", String(galleryRows));
+        galleryContainer.style.aspectRatio = `12 / ${galleryRows}`;
+        galleryContainer.innerHTML = visibleBlocks.map((block, index) => {
+          const caption = isAr ? (block.captionAr || block.captionEn) : (block.captionEn || block.captionAr);
+          const layout = normalizeCmsMediaLayout(block, index);
+          return `
+            <figure class="project-media-item group" data-gallery-image-index="${index}" style="left:${(layout.x / 12) * 100}%;top:${(layout.y / galleryRows) * 100}%;width:${(layout.width / 12) * 100}%;height:${(layout.height / galleryRows) * 100}%;z-index:${index + 1}" role="button" tabindex="0" aria-label="${isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size"} ${index + 1}">
+              <img src="${escapeCmsHtml(block.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" style="object-fit:${layout.fit}" />
+              ${caption ? `<figcaption><span>0${index + 1}.</span>${escapeCmsHtml(caption)}</figcaption>` : ""}
+            </figure>
+          `;
+        }).join("");
+      } else {
+        galleryContainer.className = "grid grid-cols-1 items-start gap-5 sm:grid-cols-2 lg:grid-cols-3";
+        galleryContainer.removeAttribute("style");
+        galleryContainer.innerHTML = visibleBlocks.map((block, index) => {
+          const caption = isAr ? (block.captionAr || block.captionEn) : (block.captionEn || block.captionAr);
+          const aspect = normalizeCmsMediaAspect(block.aspect);
+          const imageClass = aspect === "aspect-auto" ? "w-full h-auto object-contain" : "w-full h-full object-cover";
+          return `
+            <figure class="min-w-0 flex flex-col overflow-hidden rounded-2xl bg-white/55 border border-white/85 shadow-sm group cursor-pointer" data-gallery-image-index="${index}" role="button" tabindex="0" aria-label="${isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size"} ${index + 1}">
+              <div class="overflow-hidden bg-[#E5E6E8] ${aspect} w-full">
+                <img src="${escapeCmsHtml(block.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" class="${imageClass} transition-transform duration-500 group-hover:scale-[1.03]" />
+              </div>
+              ${caption ? `<figcaption class="border-t border-white/80 bg-white/75 px-4 py-3 text-xs font-medium leading-relaxed text-[#2A2C30] backdrop-blur-md"><span class="me-1.5 inline-block font-bold text-[#111214]">0${index + 1}.</span>${escapeCmsHtml(caption)}</figcaption>` : ""}
+            </figure>
+          `;
+        }).join("");
+      }
       galleryContainer.querySelectorAll("[data-gallery-image-index]").forEach((figure) => {
         const showFullImage = () => {
           const block = visibleBlocks[Number(figure.dataset.galleryImageIndex)];
@@ -3823,6 +3948,7 @@
             }).then((dataUrl) => {
               block.url = dataUrl;
               delete block.readProgress;
+              cmsDraftGalleryChanged = true;
               renderCmsMediaBlocksEditor();
             }).catch((error) => {
               cmsDraftBlocks = cmsDraftBlocks.filter((item) => item.uid !== block.uid);
@@ -3991,18 +4117,24 @@
           }
           const validMediaBlocks = cmsDraftBlocks
             .filter((b) => b.url && b.url.trim() !== "")
-            .map((b, index) => ({
-              ...b,
-              url: b.url.trim(),
-              aspect: normalizeCmsMediaAspect(b.aspect),
-              ...normalizeCmsMediaLayout(b, index),
-              captionEn: b.captionEn || "",
-              captionAr: b.captionAr || ""
-            }));
+            .map((b, index) => {
+              const { x, y, width, height, fit, ...legacyBlock } = b;
+              return {
+                ...(cmsDraftFreeformGallery ? b : legacyBlock),
+                url: b.url.trim(),
+                aspect: normalizeCmsMediaAspect(b.aspect),
+                ...(cmsDraftFreeformGallery ? normalizeCmsMediaLayout(b, index) : {}),
+                captionEn: b.captionEn || "",
+                captionAr: b.captionAr || ""
+              };
+            });
 
-          const galleryUrls = validMediaBlocks.length > 0
-            ? validMediaBlocks.map((b) => b.url)
-            : [imgUrl];
+          const preserveExistingGallery = Boolean(editId && !cmsDraftGalleryChanged);
+          const existingProject = editId ? portfolioProjects[editIndex] : null;
+          const galleryUrls = preserveExistingGallery
+            ? existingProject.gallery
+            : (validMediaBlocks.length > 0 ? validMediaBlocks.map((b) => b.url) : [imgUrl]);
+          const mediaBlocks = preserveExistingGallery ? existingProject.mediaBlocks : validMediaBlocks;
 
           const submitButton = document.getElementById("cmsProjectSubmitBtn");
           const submitButtonLabel = submitButton.textContent;
@@ -4096,8 +4228,9 @@
             pdfUrl: projectPdfFiles[0]?.url || "",
             imageUrl: imgUrl,
             coverAspect: document.getElementById("cmsProjCoverAspect").value || "aspect-[3/4]",
-            mediaBlocks: validMediaBlocks,
-            gallery: galleryUrls
+            mediaBlocks,
+            gallery: galleryUrls,
+            ...(cmsDraftFreeformGallery ? { freeformGallery: true } : {})
           };
           const successMessage = editId
             ? "Project and files updated."
