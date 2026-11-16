@@ -463,6 +463,33 @@
       setTimeout(() => banner.classList.add("hidden"), 3200);
     }
 
+    function setCmsProjectPublishStatus(state, message = "") {
+      const status = document.getElementById("cmsProjectPublishStatus");
+      const icon = document.getElementById("cmsProjectPublishStatusIcon");
+      const text = document.getElementById("cmsProjectPublishStatusText");
+      if (!status || !icon || !text) return;
+      if (!state) {
+        status.classList.add("hidden");
+        status.classList.remove("flex");
+        return;
+      }
+
+      const styles = {
+        pending: ["#eff6ff", "#1e40af", "…"],
+        success: ["#f0fdf4", "#166534", "✓"],
+        error: ["#fef2f2", "#991b1b", "✕"]
+      };
+      const style = styles[state];
+      if (!style) return;
+      const [backgroundColor, textColor, symbol] = style;
+      status.classList.remove("hidden");
+      status.classList.add("flex");
+      status.style.backgroundColor = backgroundColor;
+      status.style.color = textColor;
+      icon.textContent = symbol;
+      text.textContent = message;
+    }
+
     function applyCmsThemeAndContact() {
       // Apply Brand Colors via CSS Variables
       document.documentElement.style.setProperty("--brand-primary", cmsConfig.primaryColor || "#111214");
@@ -1137,6 +1164,7 @@
     function editCmsProject(id) {
       const proj = portfolioProjects.find((p) => p.id === id);
       if (!proj) return;
+      setCmsProjectPublishStatus("");
       cmsCoverReadVersion += 1;
       cmsCoverReadPending = false;
       document.getElementById("cmsProjImgFile").value = "";
@@ -1190,6 +1218,7 @@
     }
 
     function resetCmsProjectForm() {
+      setCmsProjectPublishStatus("");
       document.getElementById("cmsProjectForm").reset();
       document.getElementById("cmsProjectNarrative").value = "";
       document.getElementById("cmsProjectAiConsent").checked = false;
@@ -3905,6 +3934,7 @@
 
         cmsProjectForm.addEventListener("submit", async (e) => {
           e.preventDefault();
+          setCmsProjectPublishStatus("");
           if (cmsCoverReadPending || cmsDraftBlocks.some((block) => !block.url)) {
             showCmsToast("Wait for all selected images to finish loading before publishing.");
             return;
@@ -3948,6 +3978,7 @@
           const submitButtonLabel = submitButton.textContent;
           submitButton.disabled = true;
           submitButton.textContent = "Uploading project PDFs…";
+          setCmsProjectPublishStatus("pending", "Publishing project and files…");
           cmsProjectPdfUploadActive = true;
           renderCmsProjectPdfs();
           const pendingPdfs = cmsDraftPdfs.filter((pdf) => pdf.file instanceof File);
@@ -4061,11 +4092,13 @@
           }
           if (!saved) {
             portfolioProjects = previousProjects;
+            setCmsProjectPublishStatus("error", "Project was not published. Check the error message and try again.");
             return;
           }
           resetCmsProjectForm();
           buildCarouselCards();
           renderAdminDashboard();
+          setCmsProjectPublishStatus("success", editId ? "Project updated and published successfully." : "Project published successfully.");
           showCmsToast(successMessage);
         });
       }
