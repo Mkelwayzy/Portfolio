@@ -313,6 +313,14 @@
         <div id="modalProjectGallery" class="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 lg:grid-cols-3"></div>
       </div>
 
+      <section id="projectPdfSection" class="hidden glass-card rounded-[32px] p-6 sm:p-8" aria-labelledby="projectPdfHeading">
+        <div class="mb-5">
+          <span id="projectPdfSubheading" class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.2em] text-[#5A5C60]">Project documents</span>
+          <h3 id="projectPdfHeading" class="text-base font-bold text-[#111214] sm:text-xl">PDF Documents</h3>
+        </div>
+        <div id="projectPdfList" class="grid grid-cols-1 gap-4"></div>
+      </section>
+
       <!-- Related / Similar Projects Suggestions -->
       <div class="glass-card inner-anim-card rounded-[32px] p-6 sm:p-8" style="animation-delay: 0.42s">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
@@ -660,19 +668,16 @@
                 <div class="rounded-2xl border border-dashed border-black/10 bg-white/50 p-4">
                   <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h4 class="text-xs font-bold text-obsidian">Project PDF (optional)</h4>
-                      <p class="mt-1 text-[10px] text-slateText">Attach a PDF that visitors can open from the project details. Maximum file size: 15 MB.</p>
+                      <h4 class="text-xs font-bold text-obsidian">Project PDFs (optional)</h4>
+                      <p class="mt-1 text-[10px] text-slateText">Attach multiple PDFs for visitors to preview inside the project page. Maximum file size: 100 MB per PDF.</p>
                     </div>
                     <label class="inline-flex cursor-pointer rounded-full bg-obsidian px-4 py-2.5 text-[11px] font-bold text-white transition hover:opacity-90">
-                      Select PDF
-                      <input id="cmsProjPdfFile" type="file" accept=".pdf,application/pdf" class="hidden" />
+                      Select PDFs
+                      <input id="cmsProjPdfFile" type="file" accept=".pdf,application/pdf" multiple class="hidden" />
                     </label>
                   </div>
-                  <input id="cmsProjPdfUrl" type="hidden" value="" />
-                  <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <p id="cmsProjectPdfStatus" role="status" aria-live="polite" class="text-[11px] font-medium text-slateText">No PDF attached.</p>
-                    <button id="cmsRemoveProjectPdfBtn" type="button" class="hidden rounded-full bg-red-500/10 px-3 py-1.5 text-[10px] font-bold text-red-700 transition hover:bg-red-500/20">Remove PDF</button>
-                  </div>
+                  <p id="cmsProjectPdfStatus" role="status" aria-live="polite" class="mt-3 text-[11px] font-medium text-slateText">No PDFs attached.</p>
+                  <div id="cmsProjectPdfList" class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2"></div>
                 </div>
               </div>
 
@@ -1008,6 +1013,7 @@
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js"></script>
   <script src="./assets/js/supabase-config.js"></script>
   <script src="./assets/js/app.js"></script>
 </body>

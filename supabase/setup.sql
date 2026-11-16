@@ -75,7 +75,7 @@ values (
   'portfolio-assets',
   'portfolio-assets',
   true,
-  15728640,
+  104857600,
   array['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif', 'image/svg+xml', 'application/pdf']
 )
 on conflict (id) do update

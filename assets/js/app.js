@@ -10,6 +10,7 @@
     const CMS_MEDIA_BUCKET = "portfolio-assets";
     const CMS_ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif", "image/svg+xml"]);
     const CMS_PROJECT_PDF_TYPE = "application/pdf";
+    const CMS_PROJECT_PDF_MAX_BYTES = 100 * 1024 * 1024;
     const CMS_MEDIA_ASPECTS = ["aspect-auto", "aspect-[4/3]", "aspect-video", "aspect-square", "aspect-[3/4]", "aspect-[21/9]"];
     const CMS_PROJECT_COUNTRIES = [
       { value: "Egypt", arabic: "مصر" },
@@ -147,8 +148,11 @@
         "image/avif": "avif",
         [CMS_PROJECT_PDF_TYPE]: "pdf"
       };
-      if (blob.size > 15 * 1024 * 1024) {
-        throw new Error("Images and PDFs must be 15 MB or smaller.");
+      const maxSize = blob.type === CMS_PROJECT_PDF_TYPE ? CMS_PROJECT_PDF_MAX_BYTES : 15 * 1024 * 1024;
+      if (blob.size > maxSize) {
+        throw new Error(blob.type === CMS_PROJECT_PDF_TYPE
+          ? "PDF files must be 100 MB or smaller."
+          : "Images must be 15 MB or smaller.");
       }
       const extension = extensions[blob.type] || "img";
       const randomId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -193,6 +197,54 @@
       return data.publicUrl;
     }
 
+    async function uploadCmsPdfFile(file, path, onProgress) {
+      if (!supabaseClient || !isAdminAuthenticated) {
+        throw new Error("Sign in as an authorized administrator before uploading project files.");
+      }
+      if (!window.tus?.Upload) {
+        throw new Error("The resumable upload component could not load. Check your connection and reload the page.");
+      }
+      const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!sessionData.session?.access_token) {
+        throw new Error("Your administrator session expired. Sign in again before uploading project files.");
+      }
+
+      const uploadUrl = `${supabaseConfig.url.replace(/\/+$/, "")}/storage/v1/upload/resumable`;
+      await new Promise((resolve, reject) => {
+        const upload = new window.tus.Upload(file, {
+          endpoint: uploadUrl,
+          chunkSize: 6 * 1024 * 1024,
+          retryDelays: [0, 3000, 5000, 10000, 20000],
+          uploadDataDuringCreation: true,
+          removeFingerprintOnSuccess: true,
+          headers: {
+            authorization: `Bearer ${sessionData.session.access_token}`,
+            apikey: supabaseConfig.publishableKey,
+            "x-upsert": "false"
+          },
+          metadata: {
+            bucketName: CMS_MEDIA_BUCKET,
+            objectName: path,
+            contentType: CMS_PROJECT_PDF_TYPE,
+            cacheControl: "31536000"
+          },
+          onError: reject,
+          onProgress: (bytesUploaded, bytesTotal) => {
+            if (onProgress) onProgress(bytesUploaded, bytesTotal);
+          },
+          onSuccess: resolve
+        });
+        upload.findPreviousUploads().then((previousUploads) => {
+          if (previousUploads.length) upload.resumeFromPreviousUpload(previousUploads[0]);
+          upload.start();
+        }).catch(reject);
+      });
+
+      const { data } = supabaseClient.storage.from(CMS_MEDIA_BUCKET).getPublicUrl(path);
+      return data.publicUrl;
+    }
+
     async function prepareCmsStateForRemote(onUploadProgress) {
       const snapshot = JSON.parse(JSON.stringify(getCmsStateSnapshot()));
       const uploadedFiles = new Map();
@@ -206,6 +258,7 @@
       for (const project of snapshot.projects) {
         collectMedia(project.imageUrl);
         collectMedia(project.pdfUrl);
+        if (Array.isArray(project.pdfFiles)) project.pdfFiles.forEach((pdf) => collectMedia(pdf?.url));
         if (Array.isArray(project.gallery)) project.gallery.forEach(collectMedia);
         if (Array.isArray(project.mediaBlocks)) project.mediaBlocks.forEach((block) => collectMedia(block.url));
       }
@@ -242,6 +295,12 @@
       for (const project of snapshot.projects) {
         project.imageUrl = prepareMedia(project.imageUrl);
         project.pdfUrl = prepareMedia(project.pdfUrl);
+        if (Array.isArray(project.pdfFiles)) {
+          project.pdfFiles = project.pdfFiles.map((pdf) => ({
+            ...pdf,
+            url: prepareMedia(pdf?.url)
+          }));
+        }
         if (Array.isArray(project.gallery)) project.gallery = project.gallery.map(prepareMedia);
         if (Array.isArray(project.mediaBlocks)) {
           project.mediaBlocks = project.mediaBlocks.map((block) => ({
@@ -467,10 +526,10 @@
 
     // ==================== PROJECT IMAGE GALLERY ====================
     let cmsDraftBlocks = [];
+    let cmsDraftPdfs = [];
+    let cmsProjectPdfUploadActive = false;
     let cmsCoverReadPending = false;
     let cmsCoverReadVersion = 0;
-    let cmsPdfReadPending = false;
-    let cmsPdfReadVersion = 0;
     let cmsProjectOrderSaving = false;
 
     function getCmsProjectCountry(project) {
@@ -709,8 +768,8 @@
         showCmsToast("The selected PDF file is empty.");
         return false;
       }
-      if (file.size > 15 * 1024 * 1024) {
-        showCmsToast("PDF files must be 15 MB or smaller.");
+      if (file.size > CMS_PROJECT_PDF_MAX_BYTES) {
+        showCmsToast("PDF files must be 100 MB or smaller.");
         return false;
       }
       return true;
@@ -756,11 +815,40 @@
       });
     }
 
-    function setCmsProjectPdfUrl(url, statusMessage = "") {
-      document.getElementById("cmsProjPdfUrl").value = url || "";
-      document.getElementById("cmsProjectPdfStatus").textContent = statusMessage
-        || (url ? "A PDF is attached and will open from the project details." : "No PDF attached.");
-      document.getElementById("cmsRemoveProjectPdfBtn").classList.toggle("hidden", !url);
+    function renderCmsProjectPdfs() {
+      const container = document.getElementById("cmsProjectPdfList");
+      const status = document.getElementById("cmsProjectPdfStatus");
+      if (!container || !status) return;
+      const fileInput = document.getElementById("cmsProjPdfFile");
+      if (fileInput) fileInput.disabled = cmsProjectPdfUploadActive;
+      const cancelButton = document.getElementById("cmsCancelEditProjectBtn");
+      if (cancelButton) cancelButton.disabled = cmsProjectPdfUploadActive;
+      status.textContent = cmsDraftPdfs.length
+        ? `${cmsDraftPdfs.length} PDF${cmsDraftPdfs.length === 1 ? "" : "s"} attached. New files upload when you publish.`
+        : "No PDFs attached.";
+      container.innerHTML = cmsDraftPdfs.map((pdf, index) => {
+        const isPending = pdf.file instanceof File;
+        const validUrl = typeof pdf.url === "string" && /^https?:\/\//i.test(pdf.url);
+        const sizeLabel = pdf.size ? `${(pdf.size / (1024 * 1024)).toFixed(1)} MB` : "PDF";
+        return `
+          <article class="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-black/5 bg-white/75 p-3">
+            <div class="min-w-0">
+              <p class="truncate text-[11px] font-semibold text-obsidian" title="${escapeCmsHtml(pdf.name || `Project document ${index + 1}`)}">${escapeCmsHtml(pdf.name || `Project document ${index + 1}`)}</p>
+              <p class="mt-1 text-[10px] text-slateText">${isPending ? "Ready to upload" : (pdf.pending ? "Uploaded — publish to attach" : "Published")} · ${sizeLabel}</p>
+            </div>
+            <div class="flex shrink-0 items-center gap-2">
+              ${validUrl ? `<a href="${escapeCmsHtml(pdf.url)}" target="_blank" rel="noopener noreferrer" class="rounded-full bg-black/5 px-2.5 py-1.5 text-[10px] font-semibold text-obsidian hover:bg-black/10">Open</a>` : ""}
+              <button type="button" data-pdf-remove="${index}" aria-label="Remove ${escapeCmsHtml(pdf.name || `PDF ${index + 1}`)}" ${cmsProjectPdfUploadActive ? "disabled" : ""} class="rounded-full bg-red-500/10 px-2.5 py-1.5 text-[10px] font-semibold text-red-700 hover:bg-red-500/20 disabled:opacity-40">Remove</button>
+            </div>
+          </article>
+        `;
+      }).join("");
+      container.querySelectorAll("[data-pdf-remove]").forEach((button) => {
+        button.addEventListener("click", () => {
+          cmsDraftPdfs.splice(Number(button.dataset.pdfRemove), 1);
+          renderCmsProjectPdfs();
+        });
+      });
     }
 
     function setPageMetadata(title, description) {
@@ -921,8 +1009,6 @@
       if (!proj) return;
       cmsCoverReadVersion += 1;
       cmsCoverReadPending = false;
-      cmsPdfReadVersion += 1;
-      cmsPdfReadPending = false;
       document.getElementById("cmsProjImgFile").value = "";
       document.getElementById("cmsProjPdfFile").value = "";
       document.getElementById("cmsProjCoverReadProgress").classList.add("hidden");
@@ -954,7 +1040,17 @@
       document.getElementById("cmsProjSolutionAr").value = proj.solutionAr || "";
       document.getElementById("cmsProjOutcomeEn").value = proj.outcomeEn || "";
       document.getElementById("cmsProjOutcomeAr").value = proj.outcomeAr || "";
-      setCmsProjectPdfUrl(proj.pdfUrl || "");
+      const savedPdfs = Array.isArray(proj.pdfFiles) && proj.pdfFiles.length
+        ? proj.pdfFiles
+        : (proj.pdfUrl ? [{ url: proj.pdfUrl, name: "Project PDF" }] : []);
+      cmsDraftPdfs = savedPdfs
+        .filter((pdf) => pdf && typeof pdf === "object" && !Array.isArray(pdf))
+        .map((pdf) => ({
+          name: typeof pdf.name === "string" && pdf.name ? pdf.name : "Project PDF",
+          url: typeof pdf.url === "string" ? pdf.url : "",
+          size: Number(pdf.size) || 0
+        }));
+      renderCmsProjectPdfs();
       updateCmsCoverPreviewCard();
 
       if (Array.isArray(proj.mediaBlocks) && proj.mediaBlocks.length > 0) {
@@ -985,14 +1081,13 @@
       populateCmsProjectYearOptions();
       cmsCoverReadVersion += 1;
       cmsCoverReadPending = false;
-      cmsPdfReadVersion += 1;
-      cmsPdfReadPending = false;
       setCmsProjectCoverImage("");
       document.getElementById("cmsProjCoverReadProgress").classList.add("hidden");
       document.getElementById("cmsProjImgFile").value = "";
       document.getElementById("cmsBatchImagesInput").value = "";
       document.getElementById("cmsProjPdfFile").value = "";
-      setCmsProjectPdfUrl("");
+      cmsDraftPdfs = [];
+      renderCmsProjectPdfs();
       resetCmsProjectUploadProgress();
       cmsDraftBlocks = [];
       renderCmsMediaBlocksEditor();
@@ -2749,6 +2844,58 @@
       document.getElementById("outcomeHeading").textContent = isAr ? "النتيجة والأثر" : "Outcome & Impact";
       document.getElementById("modalProjectOutcome").textContent = outcome;
       outcomeCard.classList.toggle("hidden", !outcome);
+      const projectPdfSection = document.getElementById("projectPdfSection");
+      const projectPdfList = document.getElementById("projectPdfList");
+      const projectPdfs = (Array.isArray(proj.pdfFiles) && proj.pdfFiles.length
+        ? proj.pdfFiles
+        : (proj.pdfUrl ? [{ url: proj.pdfUrl, name: "Project PDF" }] : []))
+        .filter((pdf) => {
+          if (pdf && typeof pdf.url === "string" && /^https?:\/\//i.test(pdf.url)) return true;
+          console.error("Ignoring a project PDF URL that does not use HTTP or HTTPS.");
+          return false;
+        });
+      document.getElementById("projectPdfSubheading").textContent = isAr ? "ملفات المشروع" : "Project documents";
+      document.getElementById("projectPdfHeading").textContent = isAr ? "ملفات PDF" : "PDF Documents";
+      projectPdfSection.classList.toggle("hidden", projectPdfs.length === 0);
+      projectPdfList.innerHTML = projectPdfs.map((pdf, index) => {
+        const pdfUrl = escapeCmsHtml(pdf.url);
+        const pdfName = escapeCmsHtml(pdf.name || `${isAr ? "ملف المشروع" : "Project PDF"} ${index + 1}`);
+        const fileSize = Number(pdf.size) > 0
+          ? `${(Number(pdf.size) / (1024 * 1024)).toFixed(1)} MB`
+          : "";
+        return `
+          <article class="rounded-2xl border border-white/80 bg-white/55 p-4 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="min-w-0">
+                <h4 class="truncate text-sm font-bold text-[#111214]" title="${pdfName}">${pdfName}</h4>
+                ${fileSize ? `<p class="mt-1 text-[10px] text-[#5A5C60]">${fileSize}</p>` : ""}
+              </div>
+              <div class="flex shrink-0 flex-wrap gap-2">
+                <button type="button" data-pdf-preview="${index}" aria-expanded="false" class="rounded-full bg-[#111214] px-4 py-2 text-[11px] font-semibold text-white transition hover:opacity-90">${isAr ? "معاينة داخل الصفحة" : "Preview here"}</button>
+                <a href="${pdfUrl}" target="_blank" rel="noopener noreferrer" class="rounded-full bg-white/80 px-4 py-2 text-[11px] font-semibold text-[#111214] transition hover:bg-white">${isAr ? "فتح / تنزيل" : "Open / Download"} ↗</a>
+              </div>
+            </div>
+            <div data-pdf-viewer="${index}" class="mt-4 hidden overflow-hidden rounded-xl border border-black/10 bg-white">
+              <iframe title="${isAr ? "معاينة ملف PDF: " : "PDF preview: "}${pdfName}" data-pdf-src="${pdfUrl}#toolbar=1&navpanes=0&view=FitH" loading="lazy" class="h-[65vh] min-h-96 w-full" allow="fullscreen"></iframe>
+            </div>
+          </article>
+        `;
+      }).join("");
+      projectPdfList.querySelectorAll("[data-pdf-preview]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const index = button.dataset.pdfPreview;
+          const viewer = projectPdfList.querySelector(`[data-pdf-viewer="${index}"]`);
+          const iframe = viewer?.querySelector("iframe");
+          const willOpen = viewer?.classList.contains("hidden");
+          if (!viewer || !iframe) return;
+          viewer.classList.toggle("hidden", !willOpen);
+          button.setAttribute("aria-expanded", String(willOpen));
+          button.textContent = willOpen
+            ? (isAr ? "إخفاء المعاينة" : "Hide preview")
+            : (isAr ? "معاينة داخل الصفحة" : "Preview here");
+          if (willOpen && !iframe.src) iframe.src = iframe.dataset.pdfSrc;
+        });
+      });
       // Gallery Shots (Supports Multi-Size Editorial Grid Blocks & Captions)
       document.getElementById("gallerySubHeading").textContent = isAr ? "معرض الصور والتفاصيل متعدد المقاسات" : "Multi-Size Visual Showcase & Details";
       document.getElementById("galleryHeading").textContent = isAr ? "لقطات ومخرجات المشروع" : "Project Visual Frames";
@@ -3474,50 +3621,19 @@
 
       const projPdfFile = document.getElementById("cmsProjPdfFile");
       if (projPdfFile) {
-        projPdfFile.addEventListener("change", async (event) => {
-          const file = event.target.files && event.target.files[0];
-          if (!file) return;
-          const readVersion = ++cmsPdfReadVersion;
-          if (!validateCmsPdfFile(file)) {
-            cmsPdfReadPending = false;
-            event.target.value = "";
-            return;
-          }
-
-          cmsPdfReadPending = true;
-          const status = document.getElementById("cmsProjectPdfStatus");
-          status.textContent = `Reading ${file.name}…`;
-          try {
-            const pdfBlob = new Blob([file], { type: CMS_PROJECT_PDF_TYPE });
-            const pdfDataUrl = await readCmsFileAsDataUrl(pdfBlob, (percent) => {
-              if (readVersion === cmsPdfReadVersion) status.textContent = `Reading ${file.name}… ${percent}%`;
+        projPdfFile.addEventListener("change", (event) => {
+          const files = Array.from(event.target.files || []);
+          files.forEach((file) => {
+            if (!validateCmsPdfFile(file)) return;
+            cmsDraftPdfs.push({
+              file,
+              path: `${window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`}.pdf`,
+              name: file.name,
+              size: file.size
             });
-            if (readVersion !== cmsPdfReadVersion) return;
-            setCmsProjectPdfUrl(pdfDataUrl, `${file.name} is ready to publish.`);
-          } catch (error) {
-            if (readVersion !== cmsPdfReadVersion) return;
-            console.error("Unable to read the project PDF.", error);
-            const previousPdfUrl = document.getElementById("cmsProjPdfUrl").value;
-            setCmsProjectPdfUrl(previousPdfUrl, previousPdfUrl
-              ? `Unable to read ${file.name}; the previous attachment was kept.`
-              : `Unable to read ${file.name}.`);
-            showCmsToast(error.message || "Unable to read the selected PDF.");
-          } finally {
-            if (readVersion === cmsPdfReadVersion) {
-              cmsPdfReadPending = false;
-              event.target.value = "";
-            }
-          }
-        });
-      }
-
-      const removeProjectPdfBtn = document.getElementById("cmsRemoveProjectPdfBtn");
-      if (removeProjectPdfBtn) {
-        removeProjectPdfBtn.addEventListener("click", () => {
-          cmsPdfReadVersion += 1;
-          cmsPdfReadPending = false;
-          document.getElementById("cmsProjPdfFile").value = "";
-          setCmsProjectPdfUrl("");
+          });
+          renderCmsProjectPdfs();
+          event.target.value = "";
         });
       }
 
@@ -3679,8 +3795,8 @@
 
         cmsProjectForm.addEventListener("submit", async (e) => {
           e.preventDefault();
-          if (cmsCoverReadPending || cmsPdfReadPending || cmsDraftBlocks.some((block) => !block.url)) {
-            showCmsToast("Wait for all selected images and PDFs to finish loading before publishing.");
+          if (cmsCoverReadPending || cmsDraftBlocks.some((block) => !block.url)) {
+            showCmsToast("Wait for all selected images to finish loading before publishing.");
             return;
           }
           const editId = document.getElementById("cmsEditProjectId").value;
@@ -3689,6 +3805,15 @@
           const projectCountry = CMS_PROJECT_COUNTRIES.find((country) => country.value === document.getElementById("cmsProjCountry").value);
           if (!projectCountry) {
             showCmsToast("Choose a country from the available options.");
+            return;
+          }
+          const editIndex = editId ? portfolioProjects.findIndex((project) => project.id === Number(editId)) : -1;
+          if (editId && editIndex === -1) {
+            showCmsToast("The selected project record no longer exists. Refresh the project list and try again.");
+            return;
+          }
+          if (editId && portfolioProjects.some((project, index) => index !== editIndex && project.id === Number(editId))) {
+            showCmsToast("This project ID is shared by multiple records. Reload the page to repair the duplicates first.");
             return;
           }
           if (!imgUrl) {
@@ -3708,6 +3833,56 @@
           const galleryUrls = validMediaBlocks.length > 0
             ? validMediaBlocks.map((b) => b.url)
             : [imgUrl];
+
+          const submitButton = document.getElementById("cmsProjectSubmitBtn");
+          const submitButtonLabel = submitButton.textContent;
+          submitButton.disabled = true;
+          submitButton.textContent = "Uploading project PDFs…";
+          cmsProjectPdfUploadActive = true;
+          renderCmsProjectPdfs();
+          const pendingPdfs = cmsDraftPdfs.filter((pdf) => pdf.file instanceof File);
+          const totalPdfBytes = pendingPdfs.reduce((total, pdf) => total + pdf.file.size, 0);
+          let completedPdfBytes = 0;
+          const projectPdfFiles = [];
+          try {
+            for (const pdf of cmsDraftPdfs) {
+              if (!(pdf.file instanceof File)) {
+                if (pdf.url) projectPdfFiles.push({ name: pdf.name, url: pdf.url, size: Number(pdf.size) || 0 });
+                continue;
+              }
+              const url = await uploadCmsPdfFile(pdf.file, pdf.path, (loaded, total) => {
+                updateCmsProjectUploadProgress({
+                  loaded: completedPdfBytes + loaded,
+                  total: totalPdfBytes,
+                  fileIndex: pendingPdfs.indexOf(pdf) + 1,
+                  fileCount: pendingPdfs.length
+                });
+              });
+              completedPdfBytes += pdf.file.size;
+              const uploadedPdf = { name: pdf.name, url, size: pdf.file.size };
+              projectPdfFiles.push(uploadedPdf);
+              cmsDraftPdfs[cmsDraftPdfs.indexOf(pdf)] = { ...uploadedPdf, pending: true };
+              renderCmsProjectPdfs();
+            }
+            if (pendingPdfs.length) {
+              updateCmsProjectUploadProgress({
+                loaded: totalPdfBytes,
+                total: totalPdfBytes,
+                fileIndex: pendingPdfs.length,
+                fileCount: pendingPdfs.length,
+                saving: true
+              });
+            }
+          } catch (error) {
+            console.error("Unable to upload project PDF files.", error);
+            showCmsToast(error.message || "Unable to upload project PDF files.");
+            cmsProjectPdfUploadActive = false;
+            renderCmsProjectPdfs();
+            submitButton.disabled = false;
+            submitButton.textContent = submitButtonLabel;
+            resetCmsProjectUploadProgress();
+            return;
+          }
 
           const summaryEn = document.getElementById("cmsProjSummaryEn").value.trim();
           const summaryAr = document.getElementById("cmsProjSummaryAr").value.trim() || summaryEn;
@@ -3744,7 +3919,8 @@
             solutionAr: document.getElementById("cmsProjSolutionAr").value.trim(),
             outcomeEn: document.getElementById("cmsProjOutcomeEn").value.trim(),
             outcomeAr: document.getElementById("cmsProjOutcomeAr").value.trim(),
-            pdfUrl: document.getElementById("cmsProjPdfUrl").value.trim(),
+            pdfFiles: projectPdfFiles,
+            pdfUrl: projectPdfFiles[0]?.url || "",
             imageUrl: imgUrl,
             coverAspect: document.getElementById("cmsProjCoverAspect").value || "aspect-[4/3]",
             mediaBlocks: validMediaBlocks,
@@ -3756,29 +3932,21 @@
           const previousProjects = [...portfolioProjects];
 
           if (editId) {
-            const idx = portfolioProjects.findIndex((p) => p.id === Number(editId));
-            if (idx === -1) {
-              showCmsToast("The selected project record no longer exists. Refresh the project list and try again.");
-              return;
-            }
-            if (portfolioProjects.some((project, index) => index !== idx && project.id === Number(editId))) {
-              showCmsToast("This project ID is shared by multiple records. Reload the page to repair the duplicates first.");
-              return;
-            }
-            portfolioProjects[idx] = { ...portfolioProjects[idx], ...projectPayload };
+            portfolioProjects[editIndex] = { ...portfolioProjects[editIndex], ...projectPayload };
           } else {
             const nextId = getNextProjectId();
             portfolioProjects.unshift({ id: nextId, ...projectPayload });
           }
 
-          const submitButton = document.getElementById("cmsProjectSubmitBtn");
-          submitButton.disabled = true;
           submitButton.textContent = "Publishing project…";
           let saved = false;
           try {
             saved = await saveCmsState(updateCmsProjectUploadProgress);
           } finally {
             submitButton.disabled = false;
+            submitButton.textContent = submitButtonLabel;
+            cmsProjectPdfUploadActive = false;
+            renderCmsProjectPdfs();
             resetCmsProjectUploadProgress();
           }
           if (!saved) {
