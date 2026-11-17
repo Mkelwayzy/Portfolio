@@ -1816,9 +1816,10 @@
 
     const CMS_MARKETING_FORMATS = {
       post: { width: 1080, height: 1440, label: "Post · 1080 × 1440 px" },
-      story: { width: 1920, height: 1080, label: "Story · 1920 × 1080 px" }
+      story: { width: 1080, height: 1920, label: "Story · 1080 × 1920 px" }
     };
     let cmsMarketingFormat = "post";
+    let cmsMarketingTemplate = "classic";
     let cmsMarketingProjectId = null;
     let cmsMarketingRenderVersion = 0;
 
@@ -1913,6 +1914,223 @@
       context.fillRect(0, 0, width, height);
     }
 
+    function getCmsMarketingImageSources(project) {
+      const gallerySources = [
+        ...(Array.isArray(project.gallery) ? project.gallery.map((item) => typeof item === "string" ? item : item?.url) : []),
+        ...(Array.isArray(project.mediaBlocks)
+          ? project.mediaBlocks.filter((block) => block?.type === "image").map((block) => block.url)
+          : [])
+      ];
+      return [...new Set([project.imageUrl, ...gallerySources].filter((source) => typeof source === "string" && source))].slice(0, 8);
+    }
+
+    function drawCmsMarketingImageCard(context, image, x, y, width, height, radius = 18) {
+      context.save();
+      context.beginPath();
+      context.roundRect(x, y, width, height, radius);
+      context.clip();
+      const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+      const imageWidth = image.naturalWidth * scale;
+      const imageHeight = image.naturalHeight * scale;
+      context.drawImage(image, x + (width - imageWidth) / 2, y + (height - imageHeight) / 2, imageWidth, imageHeight);
+      context.restore();
+    }
+
+    function drawCmsMarketingBrandBadge(context, logo, brandText, x, y, width, height) {
+      context.fillStyle = "rgba(255,255,255,0.96)";
+      context.beginPath();
+      context.roundRect(x, y, width, height, height / 2);
+      context.fill();
+      const padding = Math.round(height * 0.18);
+      const logoWidth = width * 0.36;
+      const logoHeight = height - padding * 2;
+      const logoScale = Math.min(logoWidth / logo.naturalWidth, logoHeight / logo.naturalHeight);
+      const drawnLogoWidth = logo.naturalWidth * logoScale;
+      const drawnLogoHeight = logo.naturalHeight * logoScale;
+      context.drawImage(
+        logo,
+        x + padding,
+        y + (height - drawnLogoHeight) / 2,
+        drawnLogoWidth,
+        drawnLogoHeight
+      );
+      context.fillStyle = "#111214";
+      context.font = `700 ${Math.round(height * 0.2)}px "IBM Plex Sans", sans-serif`;
+      context.textAlign = "left";
+      context.textBaseline = "middle";
+      context.direction = "ltr";
+      context.fillText(brandText, x + width * 0.45, y + height / 2, width * 0.48);
+    }
+
+    function drawCmsMarketingShowcase(context, project, images, logo, width, height, cta, website) {
+      const margin = Math.round(width * 0.075);
+      context.fillStyle = "#f4f5f4";
+      context.fillRect(0, 0, width, height);
+
+      context.fillStyle = "#8b9090";
+      context.textAlign = "center";
+      context.textBaseline = "top";
+      context.direction = "ltr";
+      context.font = `700 ${Math.round(width * 0.018)}px "IBM Plex Sans", sans-serif`;
+      context.fillText("PROJECT SHOWCASE", width / 2, height * 0.045);
+      context.fillStyle = "#17191a";
+      context.font = `700 ${Math.round(width * 0.065)}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+      context.fillText("Social Media Design", width / 2, height * 0.085, width * 0.86);
+
+      const sideWidth = Math.round(width * 0.35);
+      const sideHeight = Math.round(height * 0.39);
+      const sideY = Math.round(height * 0.36);
+      [-1, 1].forEach((side, index) => {
+        const image = images[(index + 1) % images.length];
+        context.save();
+        context.translate(width / 2 + side * width * 0.35, sideY + sideHeight / 2);
+        context.rotate(side * 0.09);
+        context.shadowColor = "rgba(20,25,25,0.2)";
+        context.shadowBlur = width * 0.025;
+        context.shadowOffsetY = height * 0.012;
+        drawCmsMarketingImageCard(context, image, -sideWidth / 2, -sideHeight / 2, sideWidth, sideHeight, width * 0.025);
+        context.restore();
+      });
+
+      const cardX = Math.round(width * 0.19);
+      const cardY = Math.round(height * 0.29);
+      const cardWidth = Math.round(width * 0.62);
+      const cardHeight = Math.round(height * 0.55);
+      context.save();
+      context.shadowColor = "rgba(20,25,25,0.18)";
+      context.shadowBlur = width * 0.035;
+      context.shadowOffsetY = height * 0.012;
+      context.fillStyle = "#fff";
+      context.beginPath();
+      context.roundRect(cardX, cardY, cardWidth, cardHeight, width * 0.03);
+      context.fill();
+      context.restore();
+      drawCmsMarketingImageCard(
+        context,
+        images[0],
+        cardX + 2,
+        cardY + Math.round(cardHeight * 0.34),
+        cardWidth - 4,
+        Math.round(cardHeight * 0.66),
+        width * 0.025
+      );
+
+      const title = project.titleEn || project.titleAr || "Featured project";
+      const isArabicTitle = /[\u0600-\u06ff]/.test(title);
+      const titleX = isArabicTitle ? cardX + cardWidth - margin * 0.45 : cardX + margin * 0.45;
+      context.textAlign = isArabicTitle ? "right" : "left";
+      context.direction = isArabicTitle ? "rtl" : "ltr";
+      context.textBaseline = "top";
+      context.fillStyle = "#818686";
+      context.font = `600 ${Math.round(width * 0.018)}px "IBM Plex Sans", sans-serif`;
+      context.fillText(project.categoryEn || "SELECTED PROJECT", titleX, cardY + cardHeight * 0.07, cardWidth - margin * 0.9);
+      context.fillStyle = "#17191a";
+      let titleSize = Math.round(width * 0.036);
+      let titleLines;
+      do {
+        context.font = `700 ${titleSize}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+        titleLines = getCmsMarketingLines(context, title, cardWidth - margin * 0.9);
+        if (titleLines.length <= 2 || titleSize <= 28) break;
+        titleSize -= 3;
+      } while (titleSize > 25);
+      titleLines.slice(0, 2).forEach((line, index) => {
+        context.fillText(line, titleX, cardY + cardHeight * 0.16 + index * titleSize * 1.15, cardWidth - margin * 0.9);
+      });
+
+      const footerY = Math.round(height * 0.88);
+      drawCmsMarketingBrandBadge(
+        context,
+        logo,
+        cmsConfig.customLogoText || cmsConfig.studioTagEn || "Mostafa Khaled Studio",
+        margin,
+        footerY,
+        Math.round(width * 0.4),
+        Math.round(height * 0.07)
+      );
+      context.fillStyle = "#17191a";
+      context.textAlign = "right";
+      context.direction = /[\u0600-\u06ff]/.test(cta) ? "rtl" : "ltr";
+      context.textBaseline = "middle";
+      context.font = `600 ${Math.round(width * 0.021)}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+      context.fillText(cta, width - margin, footerY + height * 0.025, width * 0.42);
+      context.fillStyle = "#858a89";
+      context.font = `500 ${Math.round(width * 0.016)}px "IBM Plex Sans", sans-serif`;
+      context.direction = "ltr";
+      context.fillText(website, width - margin, footerY + height * 0.058, width * 0.42);
+    }
+
+    function drawCmsMarketingCampaign(context, project, images, logo, width, height, cta, website) {
+      const margin = Math.round(width * 0.045);
+      const gap = Math.round(width * 0.018);
+      const tileWidth = (width - margin * 2 - gap * 3) / 4;
+      const tileHeight = Math.round(height * 0.215);
+      context.fillStyle = "#090b0b";
+      context.fillRect(0, 0, width, height);
+
+      for (let index = 0; index < 8; index += 1) {
+        const row = Math.floor(index / 4);
+        const column = index % 4;
+        const x = margin + column * (tileWidth + gap);
+        const y = Math.round(height * 0.045) + row * (tileHeight + Math.round(height * 0.018));
+        drawCmsMarketingImageCard(context, images[index % images.length], x, y, tileWidth, tileHeight, width * 0.012);
+        context.fillStyle = "rgba(0,0,0,0.12)";
+        context.beginPath();
+        context.roundRect(x, y, tileWidth, tileHeight, width * 0.012);
+        context.fill();
+      }
+
+      context.fillStyle = "#fff";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.direction = "ltr";
+      context.font = `italic 700 ${Math.round(Math.min(width * 0.19, height * 0.13))}px Georgia, serif`;
+      context.fillText("Portfolio", width / 2, height * 0.675, width * 0.92);
+
+      const title = project.titleEn || project.titleAr || "Featured project";
+      const isArabicTitle = /[\u0600-\u06ff]/.test(title);
+      context.fillStyle = "rgba(255,255,255,0.86)";
+      context.font = `600 ${Math.round(width * 0.032)}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+      context.textAlign = "center";
+      context.direction = isArabicTitle ? "rtl" : "ltr";
+      context.fillText(title, width / 2, height * 0.755, width * 0.84);
+      context.fillStyle = "#47e394";
+      context.font = `600 ${Math.round(width * 0.023)}px "IBM Plex Sans", sans-serif`;
+      context.direction = "ltr";
+      context.fillText((project.categoryEn || "SOCIAL MEDIA").toUpperCase(), width / 2, height * 0.795, width * 0.82);
+
+      const buttonWidth = Math.min(width * 0.72, Math.max(width * 0.42, context.measureText(cta).width + width * 0.09));
+      const buttonHeight = Math.round(height * 0.058);
+      const buttonX = (width - buttonWidth) / 2;
+      const buttonY = Math.round(height * 0.835);
+      context.fillStyle = "#47e394";
+      context.beginPath();
+      context.roundRect(buttonX, buttonY, buttonWidth, buttonHeight, buttonHeight / 2);
+      context.fill();
+      context.fillStyle = "#08120c";
+      context.font = `700 ${Math.round(width * 0.022)}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+      context.textAlign = "center";
+      context.direction = /[\u0600-\u06ff]/.test(cta) ? "rtl" : "ltr";
+      context.textBaseline = "middle";
+      context.fillText(cta, width / 2, buttonY + buttonHeight / 2, buttonWidth - width * 0.06);
+
+      const footerY = Math.round(height * 0.92);
+      drawCmsMarketingBrandBadge(
+        context,
+        logo,
+        cmsConfig.customLogoText || cmsConfig.studioTagEn || "Mostafa Khaled Studio",
+        margin,
+        footerY,
+        Math.round(width * 0.45),
+        Math.round(height * 0.06)
+      );
+      context.fillStyle = "rgba(255,255,255,0.74)";
+      context.font = `500 ${Math.round(width * 0.018)}px "IBM Plex Sans", sans-serif`;
+      context.textAlign = "right";
+      context.direction = "ltr";
+      context.textBaseline = "middle";
+      context.fillText(website, width - margin, footerY + height * 0.03, width * 0.43);
+    }
+
     async function renderCmsMarketingPreview() {
       const canvas = document.getElementById("cmsMarketingCanvas");
       const status = document.getElementById("cmsMarketingStatus");
@@ -1920,8 +2138,12 @@
       const dimensions = document.getElementById("cmsMarketingDimensions");
       if (!canvas) return;
       const format = CMS_MARKETING_FORMATS[cmsMarketingFormat];
+      const renderVersion = ++cmsMarketingRenderVersion;
       const project = portfolioProjects.find((item) => item.id === cmsMarketingProjectId) || portfolioProjects[0];
       if (!project) {
+        canvas.width = format.width;
+        canvas.height = format.height;
+        canvas.getContext("2d")?.clearRect(0, 0, format.width, format.height);
         if (status) {
           status.textContent = "Publish a project before creating a social media design.";
           status.classList.remove("hidden");
@@ -1930,7 +2152,6 @@
         return;
       }
 
-      const renderVersion = ++cmsMarketingRenderVersion;
       if (downloadButton) downloadButton.disabled = true;
       if (status) status.classList.add("hidden");
       if (dimensions) dimensions.textContent = format.label;
@@ -1939,99 +2160,109 @@
 
       try {
         if (document.fonts?.ready) await document.fonts.ready;
-        const [cover, logo] = await Promise.all([
+        const additionalImageSources = cmsMarketingTemplate === "classic" ? [] : getCmsMarketingImageSources(project).slice(1);
+        const [logo, cover, ...galleryImages] = await Promise.all([
+          loadCmsMarketingImage(getCmsMarketingLogoSource()),
           loadCmsMarketingImage(project.imageUrl),
-          loadCmsMarketingImage(getCmsMarketingLogoSource())
+          ...additionalImageSources.map(loadCmsMarketingImage)
         ]);
         if (renderVersion !== cmsMarketingRenderVersion) return;
 
         const context = canvas.getContext("2d");
         if (!context) throw new Error("Your browser could not prepare the image canvas.");
+        const images = [cover, ...galleryImages];
         const { width, height } = format;
         const landscape = width > height;
         const margin = Math.round(width * 0.075);
-        drawCmsMarketingCover(context, cover, width, height);
-
-        const logoBoxWidth = Math.round(width * (landscape ? 0.34 : 0.48));
-        const logoBoxHeight = Math.round(height * 0.09);
-        const logoX = margin;
-        const logoY = Math.round(height * 0.055);
-        context.fillStyle = "rgba(255,255,255,0.94)";
-        context.beginPath();
-        context.roundRect(logoX, logoY, logoBoxWidth, logoBoxHeight, logoBoxHeight / 2);
-        context.fill();
-        const logoPadding = Math.round(logoBoxHeight * 0.19);
-        const logoWidth = logoBoxWidth * 0.4;
-        const logoHeight = logoBoxHeight - logoPadding * 2;
-        const logoScale = Math.min(logoWidth / logo.naturalWidth, logoHeight / logo.naturalHeight);
-        const drawnLogoWidth = logo.naturalWidth * logoScale;
-        const drawnLogoHeight = logo.naturalHeight * logoScale;
-        context.drawImage(
-          logo,
-          logoX + logoPadding,
-          logoY + (logoBoxHeight - drawnLogoHeight) / 2,
-          drawnLogoWidth,
-          drawnLogoHeight
-        );
-        context.fillStyle = "#111214";
-        context.font = `700 ${Math.round(logoBoxHeight * 0.19)}px "IBM Plex Sans", sans-serif`;
-        context.textAlign = "left";
-        context.textBaseline = "middle";
-        context.fillText(cmsConfig.customLogoText || cmsConfig.studioTagEn || "Mostafa Khaled Studio", logoX + logoBoxWidth * 0.46, logoY + logoBoxHeight / 2, logoBoxWidth * 0.49);
-
-        const textX = margin;
-        const textWidth = Math.round(width * (landscape ? 0.54 : 0.84));
-        const category = project.categoryEn || "Selected project";
-        const title = project.titleEn || project.titleAr || "Featured project";
-        const textTop = Math.round(height * (landscape ? 0.48 : 0.55));
-        context.textAlign = "left";
-        context.textBaseline = "top";
-        context.direction = "ltr";
-        context.fillStyle = "rgba(255,255,255,0.78)";
-        context.font = `600 ${Math.round(width * 0.022)}px "IBM Plex Sans", sans-serif`;
-        context.fillText(category.toUpperCase(), textX, textTop);
-
-        let titleFontSize = Math.round(width * (landscape ? 0.064 : 0.075));
-        let titleLines;
-        do {
-          context.font = `700 ${titleFontSize}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
-          titleLines = getCmsMarketingLines(context, title, textWidth);
-          if (titleLines.length <= 3 || titleFontSize <= 40) break;
-          titleFontSize -= 5;
-        } while (titleFontSize > 35);
-
-        const titleY = textTop + Math.round(height * 0.045);
-        const lineHeight = Math.round(titleFontSize * 1.17);
-        context.fillStyle = "#fff";
-        titleLines.slice(0, 3).forEach((line, index) => {
-          context.fillText(line, textX, titleY + index * lineHeight, textWidth);
-        });
-
         const cta = document.getElementById("cmsMarketingCta")?.value.trim() || "اكتشف المزيد من مشاريعي";
-        const ctaY = Math.min(height - Math.round(height * 0.16), titleY + Math.min(titleLines.length, 3) * lineHeight + Math.round(height * 0.035));
-        const ctaFontSize = Math.round(width * (landscape ? 0.023 : 0.028));
-        context.font = `600 ${ctaFontSize}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
-        const isArabicCta = /[\u0600-\u06ff]/.test(cta);
-        const ctaTextWidth = context.measureText(cta).width;
-        const ctaWidth = Math.min(textWidth, ctaTextWidth + ctaFontSize * 2.2);
-        const ctaHeight = ctaFontSize * 2.6;
-        context.fillStyle = "#fff";
-        context.beginPath();
-        context.roundRect(textX, ctaY, ctaWidth, ctaHeight, ctaHeight / 2);
-        context.fill();
-        context.fillStyle = "#111214";
-        context.textAlign = isArabicCta ? "right" : "left";
-        context.direction = isArabicCta ? "rtl" : "ltr";
-        context.textBaseline = "middle";
-        context.fillText(cta, isArabicCta ? textX + ctaWidth - ctaFontSize : textX + ctaFontSize, ctaY + ctaHeight / 2, ctaWidth - ctaFontSize * 2);
-
         const website = new URL(document.querySelector('link[rel="canonical"]')?.href || window.location.href).hostname;
-        context.fillStyle = "rgba(255,255,255,0.82)";
-        context.font = `500 ${Math.round(width * 0.019)}px "IBM Plex Sans", sans-serif`;
-        context.textAlign = "left";
-        context.direction = "ltr";
-        context.textBaseline = "alphabetic";
-        context.fillText(website, margin, height - Math.round(height * 0.055));
+        if (cmsMarketingTemplate === "showcase") {
+          drawCmsMarketingShowcase(context, project, images, logo, width, height, cta, website);
+        } else if (cmsMarketingTemplate === "campaign") {
+          drawCmsMarketingCampaign(context, project, images, logo, width, height, cta, website);
+        } else {
+          const cover = images[0];
+          drawCmsMarketingCover(context, cover, width, height);
+
+          const logoBoxWidth = Math.round(width * (landscape ? 0.34 : 0.48));
+          const logoBoxHeight = Math.round(height * 0.09);
+          const logoX = margin;
+          const logoY = Math.round(height * 0.055);
+          context.fillStyle = "rgba(255,255,255,0.94)";
+          context.beginPath();
+          context.roundRect(logoX, logoY, logoBoxWidth, logoBoxHeight, logoBoxHeight / 2);
+          context.fill();
+          const logoPadding = Math.round(logoBoxHeight * 0.19);
+          const logoWidth = logoBoxWidth * 0.4;
+          const logoHeight = logoBoxHeight - logoPadding * 2;
+          const logoScale = Math.min(logoWidth / logo.naturalWidth, logoHeight / logo.naturalHeight);
+          const drawnLogoWidth = logo.naturalWidth * logoScale;
+          const drawnLogoHeight = logo.naturalHeight * logoScale;
+          context.drawImage(
+            logo,
+            logoX + logoPadding,
+            logoY + (logoBoxHeight - drawnLogoHeight) / 2,
+            drawnLogoWidth,
+            drawnLogoHeight
+          );
+          context.fillStyle = "#111214";
+          context.font = `700 ${Math.round(logoBoxHeight * 0.19)}px "IBM Plex Sans", sans-serif`;
+          context.textAlign = "left";
+          context.textBaseline = "middle";
+          context.fillText(cmsConfig.customLogoText || cmsConfig.studioTagEn || "Mostafa Khaled Studio", logoX + logoBoxWidth * 0.46, logoY + logoBoxHeight / 2, logoBoxWidth * 0.49);
+
+          const textX = margin;
+          const textWidth = Math.round(width * (landscape ? 0.54 : 0.84));
+          const category = project.categoryEn || "Selected project";
+          const title = project.titleEn || project.titleAr || "Featured project";
+          const textTop = Math.round(height * (landscape ? 0.48 : 0.55));
+          context.textAlign = "left";
+          context.textBaseline = "top";
+          context.direction = "ltr";
+          context.fillStyle = "rgba(255,255,255,0.78)";
+          context.font = `600 ${Math.round(width * 0.022)}px "IBM Plex Sans", sans-serif`;
+          context.fillText(category.toUpperCase(), textX, textTop);
+
+          let titleFontSize = Math.round(width * (landscape ? 0.064 : 0.075));
+          let titleLines;
+          do {
+            context.font = `700 ${titleFontSize}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+            titleLines = getCmsMarketingLines(context, title, textWidth);
+            if (titleLines.length <= 3 || titleFontSize <= 40) break;
+            titleFontSize -= 5;
+          } while (titleFontSize > 35);
+
+          const titleY = textTop + Math.round(height * 0.045);
+          const lineHeight = Math.round(titleFontSize * 1.17);
+          context.fillStyle = "#fff";
+          titleLines.slice(0, 3).forEach((line, index) => {
+            context.fillText(line, textX, titleY + index * lineHeight, textWidth);
+          });
+
+          const ctaY = Math.min(height - Math.round(height * 0.16), titleY + Math.min(titleLines.length, 3) * lineHeight + Math.round(height * 0.035));
+          const ctaFontSize = Math.round(width * (landscape ? 0.023 : 0.028));
+          context.font = `600 ${ctaFontSize}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+          const isArabicCta = /[\u0600-\u06ff]/.test(cta);
+          const ctaTextWidth = context.measureText(cta).width;
+          const ctaWidth = Math.min(textWidth, ctaTextWidth + ctaFontSize * 2.2);
+          const ctaHeight = ctaFontSize * 2.6;
+          context.fillStyle = "#fff";
+          context.beginPath();
+          context.roundRect(textX, ctaY, ctaWidth, ctaHeight, ctaHeight / 2);
+          context.fill();
+          context.fillStyle = "#111214";
+          context.textAlign = isArabicCta ? "right" : "left";
+          context.direction = isArabicCta ? "rtl" : "ltr";
+          context.textBaseline = "middle";
+          context.fillText(cta, isArabicCta ? textX + ctaWidth - ctaFontSize : textX + ctaFontSize, ctaY + ctaHeight / 2, ctaWidth - ctaFontSize * 2);
+
+          context.fillStyle = "rgba(255,255,255,0.82)";
+          context.font = `500 ${Math.round(width * 0.019)}px "IBM Plex Sans", sans-serif`;
+          context.textAlign = "left";
+          context.direction = "ltr";
+          context.textBaseline = "alphabetic";
+          context.fillText(website, margin, height - Math.round(height * 0.055));
+        }
         if (downloadButton) downloadButton.disabled = false;
       } catch (error) {
         if (renderVersion !== cmsMarketingRenderVersion) return;
@@ -4470,6 +4701,17 @@
         });
       });
 
+      document.querySelectorAll("[data-marketing-template]").forEach((button) => {
+        button.addEventListener("click", () => {
+          cmsMarketingTemplate = button.dataset.marketingTemplate;
+          document.querySelectorAll("[data-marketing-template]").forEach((templateButton) => {
+            templateButton.classList.toggle("active", templateButton === button);
+            templateButton.setAttribute("aria-pressed", String(templateButton === button));
+          });
+          renderCmsMarketingPreview();
+        });
+      });
+
       document.querySelectorAll("[data-marketing-format]").forEach((button) => {
         button.addEventListener("click", () => {
           cmsMarketingFormat = button.dataset.marketingFormat;
@@ -4509,7 +4751,7 @@
               const link = document.createElement("a");
               const objectUrl = URL.createObjectURL(blob);
               link.href = objectUrl;
-              link.download = `${safeTitle || "project"}-${cmsMarketingFormat}.png`;
+              link.download = `${safeTitle || "project"}-${cmsMarketingTemplate}-${cmsMarketingFormat}.png`;
               link.click();
               window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
               marketingDownloadButton.disabled = false;

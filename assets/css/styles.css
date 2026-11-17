@@ -791,6 +791,10 @@
       background: var(--brand-primary);
       color: #fff;
     }
+    .cms-marketing-format:focus-visible {
+      outline: 3px solid rgba(17, 18, 20, 0.45);
+      outline-offset: 2px;
+    }
     .cms-marketing-preview {
       position: relative;
       overflow: hidden;
