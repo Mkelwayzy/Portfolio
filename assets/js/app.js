@@ -14,7 +14,7 @@
     const CMS_PROJECT_PDF_MAX_BYTES = 100 * 1024 * 1024;
     const CMS_PROJECT_VIDEO_TYPES = new Set(["video/mp4", "video/webm"]);
     const CMS_PROJECT_MEDIA_MAX_BYTES = 100 * 1024 * 1024;
-    const CMS_MEDIA_ASPECTS = ["aspect-auto", "aspect-[4/3]", "aspect-video", "aspect-square", "aspect-[3/4]", "aspect-[21/9]"];
+    const CMS_MEDIA_ASPECTS = ["aspect-auto", "aspect-[4/3]", "aspect-[9/16]", "aspect-video", "aspect-square", "aspect-[3/4]", "aspect-[21/9]"];
     const CMS_PROJECT_COUNTRIES = [
       { value: "Egypt", arabic: "مصر" },
       { value: "Saudi Arabia", arabic: "السعودية" },
@@ -596,7 +596,7 @@
 
     // ==================== PROJECT IMAGE GALLERY ====================
     let cmsDraftBlocks = [];
-    let cmsDraftFreeformGallery = true;
+    let cmsDraftFreeformGallery = false;
     let cmsDraftGalleryChanged = false;
     let cmsActiveCropUid = "";
     let cmsDraftPdfs = [];
@@ -644,7 +644,7 @@
         uid: "blk_" + Math.random().toString(36).slice(2, 9),
         url,
         type,
-        aspect: "aspect-[3/4]",
+        aspect: "aspect-[4/3]",
         x: index % 2 === 0 ? 0 : 6,
         y: Math.floor(index / 2) * 6,
         width: 6,
@@ -721,6 +721,16 @@
       const floatingImport = document.getElementById("cmsMediaImportButton");
       const legacyImport = document.getElementById("cmsLegacyImagesImport");
       const alignToolbar = document.getElementById("cmsMediaAlignToolbar");
+      const layoutOptions = document.getElementById("cmsMediaLayoutOptions");
+      const isEditingProject = Boolean(document.getElementById("cmsEditProjectId")?.value);
+      if (layoutOptions) {
+        layoutOptions.classList.toggle("hidden", isEditingProject);
+        layoutOptions.querySelectorAll("[data-cms-media-layout]").forEach((button) => {
+          const isActive = button.dataset.cmsMediaLayout === (cmsDraftFreeformGallery ? "freeform" : "grid");
+          button.classList.toggle("active", isActive);
+          button.setAttribute("aria-pressed", String(isActive));
+        });
+      }
       if (floatingImport) floatingImport.classList.toggle("hidden", !cmsDraftFreeformGallery);
       if (legacyImport) legacyImport.classList.toggle("hidden", cmsDraftFreeformGallery);
       if (alignToolbar) alignToolbar.classList.toggle("hidden", !cmsDraftFreeformGallery || cmsDraftBlocks.length < 2);
@@ -728,12 +738,14 @@
       container.classList.toggle("is-legacy", !cmsDraftFreeformGallery);
 
       if (!cmsDraftFreeformGallery) {
-        container.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 items-start gap-4";
+        container.className = isEditingProject
+          ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 items-start gap-4"
+          : "grid grid-cols-3 items-start gap-4 is-new-grid";
         container.style.removeProperty("aspect-ratio");
         container.style.removeProperty("--cms-canvas-rows");
         if (cmsDraftBlocks.length === 0) {
           container.innerHTML = `
-            <div class="rounded-2xl border border-dashed border-black/15 bg-white/40 p-6 text-center sm:col-span-2 lg:col-span-3">
+            <div class="col-span-full rounded-2xl border border-dashed border-black/15 bg-white/40 p-6 text-center">
               <p class="text-xs font-semibold text-obsidian">${isAr ? "لم تتم إضافة وسائط للمشروع بعد." : "No project media selected."}</p>
             </div>
           `;
@@ -746,6 +758,7 @@
             const labels = {
               "aspect-auto": isAr ? "الأبعاد الأصلية" : "Original proportions",
               "aspect-[4/3]": "4:3",
+              "aspect-[9/16]": isAr ? "ستوري 9:16" : "Story 9:16",
               "aspect-video": "16:9",
               "aspect-square": isAr ? "مربع 1:1" : "Square 1:1",
               "aspect-[3/4]": isAr ? "طولي 3:4" : "Portrait 3:4",
@@ -1421,6 +1434,7 @@
       const projectDetails = document.getElementById("cmsProjDeliverables").value.trim();
       const aspectRatios = {
         "aspect-[4/3]": "4 / 3",
+        "aspect-[9/16]": "9 / 16",
         "aspect-video": "16 / 9",
         "aspect-square": "1 / 1",
         "aspect-[3/4]": "3 / 4",
@@ -1507,7 +1521,7 @@
       cmsDraftPdfs = getCmsProjectPdfFiles(proj);
       renderCmsProjectPdfs();
       updateCmsCoverPreviewCard();
-      cmsDraftFreeformGallery = false;
+      cmsDraftFreeformGallery = proj.galleryLayout === "freeform" || (proj.galleryLayout == null && proj.freeformGallery === true);
       cmsDraftGalleryChanged = false;
       cmsActiveCropUid = "";
 
@@ -1545,7 +1559,7 @@
       document.getElementById("cmsProjectFormHeading").textContent = "Publish New Precision Project";
       document.getElementById("cmsProjectSubmitBtn").textContent = "Publish Complete Project to Platform";
       document.getElementById("cmsCancelEditProjectBtn").classList.add("hidden");
-      cmsDraftFreeformGallery = true;
+      cmsDraftFreeformGallery = false;
       cmsDraftGalleryChanged = false;
       cmsActiveCropUid = "";
       updateCmsMediaEditorDescription();
@@ -1570,6 +1584,7 @@
       const description = document.getElementById("cmsMediaEditorDescription");
       if (!description) return;
       const isAr = currentLang === "ar";
+      const isEditingProject = Boolean(document.getElementById("cmsEditProjectId")?.value);
       const importLabel = document.getElementById("cmsMediaImportButtonLabel");
       const importButton = document.getElementById("cmsMediaImportButton");
       const alignLabel = document.getElementById("cmsMediaAlignLabel");
@@ -1596,9 +1611,13 @@
         ? (isAr
           ? "رتّب الصور والفيديو وملفات PDF بحرية. اسحب للتحريك أو القص، غيّر الحجم والطبقات، واستورد من الزر العائم."
           : "Arrange images, video, and PDFs freely. Drag to move or crop, resize and layer items, and import from the floating button.")
-        : (isAr
-          ? "يحتفظ هذا المشروع بمحرر المعرض الحالي. المساحة الحرة متاحة للمشاريع الجديدة فقط."
-          : "This project keeps the existing gallery editor. The freeform canvas is available for new projects only.");
+        : isEditingProject
+          ? (isAr
+            ? "يحتفظ المشروع المنشور بتخطيطه ونسب صوره الحالية."
+            : "This published project keeps its current layout and image proportions.")
+          : (isAr
+            ? "شبكة من 3 أعمدة. اختر نسبة 4:3 أو ستوري 9:16 لكل تصميم، أو الأبعاد الأصلية."
+            : "A three-column grid. Choose 4:3, Story 9:16, or original proportions for each design.");
     }
 
     async function deleteCmsProject(id) {
@@ -3493,11 +3512,63 @@
       switchPage("project", projectId);
     }
 
+    let projectImageLightboxReturnFocus = null;
+
+    function openProjectImageLightbox(imageUrl, imageAlt) {
+      if (!imageUrl) return;
+      const lightbox = document.getElementById("projectImageLightbox");
+      const image = document.getElementById("projectImageLightboxImage");
+      const caption = document.getElementById("projectImageLightboxCaption");
+      const error = document.getElementById("projectImageLightboxError");
+      const closeButton = document.getElementById("closeProjectImageLightboxBtn");
+      if (!lightbox || !image || !caption || !error || !closeButton) return;
+
+      projectImageLightboxReturnFocus = document.activeElement;
+      error.classList.add("hidden");
+      image.alt = imageAlt || "";
+      caption.textContent = imageAlt || "";
+      image.onload = () => {
+        if (!lightbox.classList.contains("hidden")) error.classList.add("hidden");
+      };
+      image.onerror = () => {
+        if (!lightbox.classList.contains("hidden")) error.classList.remove("hidden");
+      };
+      image.src = imageUrl;
+      lightbox.classList.remove("hidden");
+      document.body.classList.add("project-image-lightbox-active");
+      closeButton.focus();
+    }
+
+    function closeProjectImageLightbox() {
+      const lightbox = document.getElementById("projectImageLightbox");
+      const image = document.getElementById("projectImageLightboxImage");
+      if (!lightbox || lightbox.classList.contains("hidden")) return;
+      lightbox.classList.add("hidden");
+      document.body.classList.remove("project-image-lightbox-active");
+      if (image) {
+        image.onload = null;
+        image.onerror = null;
+        image.removeAttribute("src");
+      }
+      if (projectImageLightboxReturnFocus instanceof HTMLElement) {
+        projectImageLightboxReturnFocus.focus();
+      }
+      projectImageLightboxReturnFocus = null;
+    }
+
     function renderProjectPage(projectId) {
       const requestedIndex = portfolioProjects.findIndex((p) => p.id === Number(projectId));
       const projIndex = requestedIndex === -1 ? 0 : requestedIndex;
       const proj = portfolioProjects[projIndex];
       if (!proj) return;
+
+      const normalizedProjectTitle = String(proj.titleEn || "")
+        .trim()
+        .toLocaleLowerCase()
+        .replace(/[–—]/g, "-")
+        .replace(/\s+/g, " ");
+      const isReemCookiesProject = normalizedProjectTitle === "reem cookies - social media & marketing campaign";
+      const isSamsuBrandProject = normalizedProjectTitle === "samsu brand - e-commerce marketing campaign";
 
       activeProjectId = proj.id;
       trackVisitorProjectInterest(proj);
@@ -3525,10 +3596,14 @@
       // Hero Showcase & Metadata
       const coverBox = document.getElementById("modalProjectImage").parentElement;
       if (coverBox) {
-        coverBox.className = `rounded-[24px] overflow-hidden bg-[#E5E6E8] ${proj.coverAspect || "aspect-[3/4]"} shadow-md border border-white/85 relative group`;
+        const coverAspect = isReemCookiesProject ? "aspect-square" : (isSamsuBrandProject ? "project-cover-natural-size" : (proj.coverAspect || "aspect-[3/4]"));
+        coverBox.className = `rounded-[24px] overflow-hidden bg-[#E5E6E8] ${coverAspect} shadow-md border border-white/85 relative group`;
       }
       document.getElementById("modalProjectImage").src = proj.imageUrl;
       document.getElementById("modalProjectImage").alt = isAr ? proj.titleAr : proj.titleEn;
+      document.getElementById("modalProjectImage").setAttribute("role", "button");
+      document.getElementById("modalProjectImage").setAttribute("tabindex", "0");
+      document.getElementById("modalProjectImage").setAttribute("aria-label", isAr ? `عرض الصورة بالحجم الكبير: ${proj.titleAr}` : `View larger image: ${proj.titleEn}`);
       document.getElementById("modalProjectLocationBadge").textContent = isAr ? (proj.locationAr || proj.location) : proj.location;
       document.getElementById("modalProjectCategory").textContent = isAr
         ? (proj.categoryAr || proj.categoryEn)
@@ -3624,7 +3699,7 @@
           if (willOpen && !iframe.src) iframe.src = iframe.dataset.pdfSrc;
         });
       });
-      // Published project media uses the same three-column portrait grid.
+      // New project grids use three columns; older published layouts remain unchanged.
       document.getElementById("gallerySubHeading").textContent = isAr ? "معرض صور المشروع" : "Project Gallery";
       document.getElementById("galleryHeading").textContent = isAr ? "لقطات ومخرجات المشروع" : "Project Visual Frames";
       document.getElementById("inquireProjectBtnLbl").textContent = isAr ? "اطلب مشروعاً مشابهاً" : "Request Similar Project";
@@ -3634,35 +3709,98 @@
         ? proj.mediaBlocks
         : (Array.isArray(proj.gallery) && proj.gallery.length > 0 ? proj.gallery : [proj.imageUrl]).map((imgSrc) => ({
             url: imgSrc,
-            aspect: "aspect-[3/4]",
+            aspect: proj.galleryLayout === "grid" ? "aspect-[4/3]" : "aspect-[3/4]",
             captionEn: "",
             captionAr: ""
           }));
 
       const visibleBlocks = activeBlocks.filter((block) => typeof block?.url === "string" && block.url);
-      galleryContainer.className = "project-images-grid grid grid-cols-3 items-start gap-4";
-      galleryContainer.removeAttribute("style");
-      galleryContainer.innerHTML = visibleBlocks.map((block, index) => {
-        const caption = isAr ? (block.captionAr || block.captionEn) : (block.captionEn || block.captionAr);
-        const layout = normalizeCmsMediaLayout(block, index);
-        const type = block.type || "image";
-        const imageLabel = isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size";
-        const mediaMarkup = type === "video"
-          ? `<video src="${escapeCmsHtml(block.url)}" class="project-media-content" controls playsinline preload="metadata" aria-label="${escapeCmsHtml(block.name || (isAr ? "فيديو المشروع" : "Project video"))}"></video>`
-          : type === "pdf"
-            ? `<iframe src="${escapeCmsHtml(block.url)}#toolbar=0&navpanes=0&view=FitH" class="project-media-content project-media-pdf" title="${escapeCmsHtml(block.name || (isAr ? "ملف PDF للمشروع" : "Project PDF"))}" loading="lazy"></iframe>`
-            : `<img src="${escapeCmsHtml(block.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" style="object-fit:${layout.fit};object-position:${layout.cropX}% ${layout.cropY}%;transform:scale(${layout.cropZoom})" />`;
-        return `
-          <figure class="project-image-item relative group${type === "image" ? " is-zoomable cursor-zoom-in" : ""}" ${type === "image" ? `data-gallery-image-index="${index}" role="button" tabindex="0" aria-label="${imageLabel} ${index + 1}"` : ""}>
-            ${mediaMarkup}
-            ${caption ? `<figcaption><span>0${index + 1}.</span>${escapeCmsHtml(caption)}</figcaption>` : ""}
-          </figure>
-        `;
-      }).join("");
+      const showNewProjectGrid = isReemCookiesProject || isSamsuBrandProject || proj.galleryLayout === "grid";
+      if (showNewProjectGrid) {
+        galleryContainer.className = "project-images-grid project-gallery-new-grid grid grid-cols-3 items-start gap-4";
+        galleryContainer.classList.toggle("project-gallery-square", isReemCookiesProject);
+        galleryContainer.removeAttribute("style");
+        galleryContainer.innerHTML = visibleBlocks.map((block, index) => {
+          const caption = isAr ? (block.captionAr || block.captionEn) : (block.captionEn || block.captionAr);
+          const aspect = normalizeCmsMediaAspect(block.aspect || (proj.galleryLayout === "grid" ? "aspect-[4/3]" : "aspect-[3/4]"));
+          const layout = normalizeCmsMediaLayout(block, index);
+          const type = block.type || "image";
+          const imageLabel = isAr ? "عرض الصورة بالحجم الكبير" : "View image at full size";
+          const aspectClass = isReemCookiesProject
+            ? "project-image-ratio-square"
+            : isSamsuBrandProject || aspect === "aspect-auto"
+              ? ""
+              : ({
+                  "aspect-[4/3]": "project-image-ratio-4-3",
+                  "aspect-[9/16]": "project-image-ratio-story",
+                  "aspect-video": "project-image-ratio-16-9",
+                  "aspect-square": "project-image-ratio-square",
+                  "aspect-[3/4]": "",
+                  "aspect-[21/9]": "project-image-ratio-21-9"
+                }[aspect] || "");
+          const mediaMarkup = type === "video"
+            ? `<video src="${escapeCmsHtml(block.url)}" class="project-media-content" controls playsinline preload="metadata" aria-label="${escapeCmsHtml(block.name || (isAr ? "فيديو المشروع" : "Project video"))}"></video>`
+            : type === "pdf"
+              ? `<iframe src="${escapeCmsHtml(block.url)}#toolbar=0&navpanes=0&view=FitH" class="project-media-content project-media-pdf" title="${escapeCmsHtml(block.name || (isAr ? "ملف PDF للمشروع" : "Project PDF"))}" loading="lazy"></iframe>`
+              : `<img src="${escapeCmsHtml(block.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async"${isSamsuBrandProject || aspect === "aspect-auto" ? "" : ` style="object-fit:${layout.fit};object-position:${layout.cropX}% ${layout.cropY}%;transform:scale(${layout.cropZoom})"`} />`;
+          const naturalSizeClass = type === "image" && !isReemCookiesProject && (isSamsuBrandProject || aspect === "aspect-auto")
+            ? " project-image-natural-size"
+            : "";
+          return `
+            <figure class="project-image-item relative group ${aspectClass}${naturalSizeClass}${type === "image" ? " is-zoomable cursor-zoom-in" : ""}" ${type === "image" ? `data-gallery-image-index="${index}" role="button" tabindex="0" aria-label="${imageLabel} ${index + 1}"` : ""}>
+              ${mediaMarkup}
+              ${caption ? `<figcaption><span>0${index + 1}.</span>${escapeCmsHtml(caption)}</figcaption>` : ""}
+            </figure>
+          `;
+        }).join("");
+      } else if (proj.freeformGallery === true) {
+        const galleryRows = Math.max(12, ...visibleBlocks.map((block, index) => {
+          const layout = normalizeCmsMediaLayout(block, index);
+          return Math.ceil(layout.y + layout.height);
+        }));
+        galleryContainer.className = "project-media-canvas";
+        galleryContainer.style.setProperty("--project-gallery-rows", String(galleryRows));
+        galleryContainer.style.aspectRatio = `12 / ${galleryRows}`;
+        galleryContainer.innerHTML = visibleBlocks.map((block, index) => {
+          const caption = isAr ? (block.captionAr || block.captionEn) : (block.captionEn || block.captionAr);
+          const layout = normalizeCmsMediaLayout(block, index);
+          const type = block.type || "image";
+          const mediaMarkup = type === "video"
+            ? `<video src="${escapeCmsHtml(block.url)}" class="project-media-content" controls playsinline preload="metadata" aria-label="${escapeCmsHtml(block.name || (isAr ? "فيديو المشروع" : "Project video"))}"></video>`
+            : type === "pdf"
+              ? `<iframe src="${escapeCmsHtml(block.url)}#toolbar=0&navpanes=0&view=FitH" class="project-media-content project-media-pdf" title="${escapeCmsHtml(block.name || (isAr ? "ملف PDF للمشروع" : "Project PDF"))}" loading="lazy"></iframe>`
+              : `<img src="${escapeCmsHtml(block.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" style="object-fit:${layout.fit};object-position:${layout.cropX}% ${layout.cropY}%;transform:scale(${layout.cropZoom})" />`;
+          return `
+            <figure class="project-media-item group${type === "image" ? " is-zoomable" : ""}" ${type === "image" ? `data-gallery-image-index="${index}" role="button" tabindex="0" aria-label="${isAr ? "عرض الصورة بالحجم الكبير" : "View image at full size"} ${index + 1}"` : ""} style="left:${(layout.x / 12) * 100}%;top:${(layout.y / galleryRows) * 100}%;width:${(layout.width / 12) * 100}%;height:${(layout.height / galleryRows) * 100}%;z-index:${index + 1}">
+              ${mediaMarkup}
+              ${caption ? `<figcaption><span>0${index + 1}.</span>${escapeCmsHtml(caption)}</figcaption>` : ""}
+            </figure>
+          `;
+        }).join("");
+      } else {
+        galleryContainer.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 items-start gap-5";
+        galleryContainer.removeAttribute("style");
+        galleryContainer.innerHTML = visibleBlocks.map((block, index) => {
+          const caption = isAr ? (block.captionAr || block.captionEn) : (block.captionEn || block.captionAr);
+          const aspect = normalizeCmsMediaAspect(block.aspect);
+          const imageClass = aspect === "aspect-auto" ? "w-full h-auto object-contain" : "w-full h-full object-cover";
+          return `
+            <figure class="min-w-0 flex flex-col overflow-hidden rounded-2xl bg-white/55 border border-white/85 shadow-sm group cursor-pointer" data-gallery-image-index="${index}" role="button" tabindex="0" aria-label="${isAr ? "عرض الصورة بالحجم الكبير" : "View image at full size"} ${index + 1}">
+              <div class="overflow-hidden bg-[#E5E6E8] ${aspect} w-full">
+                <img src="${escapeCmsHtml(block.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" class="${imageClass} transition-transform duration-500 group-hover:scale-[1.03]" />
+              </div>
+              ${caption ? `<figcaption class="border-t border-white/80 bg-white/75 px-4 py-3 text-xs font-medium leading-relaxed text-[#2A2C30] backdrop-blur-md"><span class="me-1.5 inline-block font-bold text-[#111214]">0${index + 1}.</span>${escapeCmsHtml(caption)}</figcaption>` : ""}
+            </figure>
+          `;
+        }).join("");
+      }
       galleryContainer.querySelectorAll("[data-gallery-image-index]").forEach((figure) => {
         const showFullImage = () => {
           const block = visibleBlocks[Number(figure.dataset.galleryImageIndex)];
-          if (block) document.getElementById("modalProjectImage").src = block.url;
+          if (block) {
+            const imageAlt = `${isAr ? (proj.titleAr || proj.titleEn) : (proj.titleEn || proj.titleAr)} - ${Number(figure.dataset.galleryImageIndex) + 1}`;
+            openProjectImageLightbox(block.url, imageAlt);
+          }
         };
         figure.addEventListener("click", showFullImage);
         figure.addEventListener("keydown", (event) => {
@@ -4195,6 +4333,9 @@
       const closeContactBtn = document.getElementById("closeContactModalBtn");
       const closeProjectBtn = document.getElementById("closeProjectPageBtn");
       const pdfBtn = document.getElementById("downloadPdfBtn");
+      const projectCoverImage = document.getElementById("modalProjectImage");
+      const projectImageLightbox = document.getElementById("projectImageLightbox");
+      const closeProjectImageLightboxBtn = document.getElementById("closeProjectImageLightboxBtn");
 
       if (contactBtn) contactBtn.addEventListener("click", openContactModal);
       if (headerAccountBtn) {
@@ -4207,6 +4348,25 @@
       if (closeContactBtn) closeContactBtn.addEventListener("click", closeContactModal);
       if (closeProjectBtn) closeProjectBtn.addEventListener("click", closeProjectPage);
       if (pdfBtn) pdfBtn.addEventListener("click", exportPortfolioPDF);
+      if (projectCoverImage) {
+        projectCoverImage.classList.add("cursor-zoom-in");
+        projectCoverImage.addEventListener("click", () => openProjectImageLightbox(projectCoverImage.src, projectCoverImage.alt));
+        projectCoverImage.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openProjectImageLightbox(projectCoverImage.src, projectCoverImage.alt);
+          }
+        });
+      }
+      if (closeProjectImageLightboxBtn) closeProjectImageLightboxBtn.addEventListener("click", closeProjectImageLightbox);
+      if (projectImageLightbox) {
+        projectImageLightbox.addEventListener("click", (event) => {
+          if (event.target === projectImageLightbox) closeProjectImageLightbox();
+        });
+      }
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeProjectImageLightbox();
+      });
 
       // ==================== ADMIN LOGIN & CMS EVENT WIRING ====================
       const closeAdminLoginBtn = document.getElementById("closeAdminLoginBtn");
@@ -4402,6 +4562,16 @@
       });
       document.getElementById("cmsProjCoverAspect")?.addEventListener("change", updateCmsCoverPreviewCard);
       updateCmsCoverPreviewCard();
+
+      document.querySelectorAll("[data-cms-media-layout]").forEach((button) => {
+        button.addEventListener("click", () => {
+          if (document.getElementById("cmsEditProjectId")?.value) return;
+          cmsDraftFreeformGallery = button.dataset.cmsMediaLayout === "freeform";
+          cmsActiveCropUid = "";
+          updateCmsMediaEditorDescription();
+          renderCmsMediaBlocksEditor();
+        });
+      });
 
       const projPdfFile = document.getElementById("cmsProjPdfFile");
       if (projPdfFile) {
@@ -4764,6 +4934,9 @@
             coverAspect: document.getElementById("cmsProjCoverAspect").value || "aspect-[3/4]",
             mediaBlocks,
             gallery: galleryUrls,
+            ...(editId
+              ? (existingProject.galleryLayout ? { galleryLayout: existingProject.galleryLayout } : {})
+              : { galleryLayout: cmsDraftFreeformGallery ? "freeform" : "grid" }),
             ...(cmsDraftFreeformGallery ? { freeformGallery: true } : {})
           };
           const successMessage = editId

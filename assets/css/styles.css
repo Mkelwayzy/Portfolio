@@ -201,6 +201,9 @@
     body.admin-dashboard-active {
       overflow: hidden;
     }
+    body.project-image-lightbox-active {
+      overflow: hidden;
+    }
     body.admin-dashboard-active > header {
       display: none;
     }
@@ -802,6 +805,21 @@
       border-radius: 16px;
       background: var(--brand-primary);
     }
+    .cms-media-layout-option {
+      min-height: 36px;
+      padding: 0 14px;
+      border: 1px solid rgba(17, 18, 20, 0.12);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.76);
+      color: var(--brand-muted);
+      font-size: 11px;
+      font-weight: 700;
+      transition: background-color 0.18s ease, color 0.18s ease;
+    }
+    .cms-media-layout-option.active {
+      background: var(--brand-primary);
+      color: #fff;
+    }
     #cmsMarketingStatus:not(.hidden) {
       position: absolute;
       inset: auto 18px 18px;
@@ -882,19 +900,17 @@
     }
 
 
-/* ==================== 3-COLUMN 1080x1440 IMAGE GRID (USER REQUEST) ==================== */
+/* ==================== THREE-COLUMN PROJECT IMAGE GRID ==================== */
 .project-images-grid,
-#modalProjectGallery,
-#cmsMediaBlocksContainer.is-legacy {
+#modalProjectGallery.project-gallery-new-grid,
+#cmsMediaBlocksContainer.is-new-grid {
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   gap: 16px !important;
   width: 100% !important;
 }
 
-.project-image-item,
-#modalProjectGallery figure,
-#cmsMediaBlocksContainer.is-legacy > div {
+.project-image-item {
   width: 100% !important;
   aspect-ratio: 1080 / 1440 !important;
   overflow: hidden !important;
@@ -902,8 +918,49 @@
   background-color: #E5E6E8 !important;
 }
 
+#modalProjectGallery.project-gallery-square figure {
+  aspect-ratio: 1 / 1 !important;
+}
+
+#modalProjectGallery.project-gallery-new-grid figure.project-image-ratio-4-3 {
+  aspect-ratio: 4 / 3 !important;
+}
+
+#modalProjectGallery.project-gallery-new-grid figure.project-image-ratio-story {
+  aspect-ratio: 9 / 16 !important;
+}
+
+#modalProjectGallery.project-gallery-new-grid figure.project-image-ratio-square {
+  aspect-ratio: 1 / 1 !important;
+}
+
+#modalProjectGallery.project-gallery-new-grid figure.project-image-ratio-16-9 {
+  aspect-ratio: 16 / 9 !important;
+}
+
+#modalProjectGallery.project-gallery-new-grid figure.project-image-ratio-21-9 {
+  aspect-ratio: 21 / 9 !important;
+}
+
+#modalProjectGallery figure.project-image-natural-size {
+  height: auto !important;
+  aspect-ratio: auto !important;
+}
+
+#modalProjectGallery figure.project-image-natural-size img,
+#projectPageView .project-cover-natural-size > img {
+  display: block;
+  height: auto !important;
+  object-fit: contain !important;
+  transform: none !important;
+}
+
+#projectPageView .project-cover-natural-size {
+  height: auto !important;
+  aspect-ratio: auto !important;
+}
+
 .project-image-item img,
-#modalProjectGallery figure img,
 #cmsMediaBlocksContainer.is-legacy img {
   width: 100% !important;
   height: 100% !important;
