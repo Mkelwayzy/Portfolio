@@ -1822,20 +1822,20 @@
       { id: "01", name: "Glass Bento", mood: "Light", dark: false, layout: "bento", accent: "#326b46", title: "top-left" },
       { id: "02", name: "Editorial Split", mood: "Light", dark: false, layout: "editorial", accent: "#bd9b49", title: "top-right" },
       { id: "03", name: "Filmstrip", mood: "Light", dark: false, layout: "filmstrip", accent: "#3d7754", title: "top-center" },
-      { id: "04", name: "Orbit Gallery", mood: "Light", dark: false, layout: "orbit", accent: "#c5a74e", title: "center" },
-      { id: "05", name: "Masonry", mood: "Light", dark: false, layout: "masonry", accent: "#2c6947", title: "bottom-left" },
+      { id: "04", name: "Editorial Pair", mood: "Light", dark: false, layout: "editorial-pair", accent: "#c5a74e", title: "top-center" },
+      { id: "05", name: "Masonry", mood: "Light", dark: false, layout: "masonry", accent: "#2c6947", title: "top-right" },
       { id: "06", name: "Polaroid Studio", mood: "Light", dark: false, layout: "polaroid", accent: "#c5a65b", title: "top-left" },
       { id: "07", name: "Twin Gallery", mood: "Light", dark: false, layout: "twin", accent: "#397452", title: "top-center" },
-      { id: "08", name: "Portrait Rail", mood: "Light", dark: false, layout: "rail", accent: "#b79847", title: "top-left" },
-      { id: "09", name: "Magazine Grid", mood: "Light", dark: false, layout: "magazine", accent: "#3d7850", title: "center" },
+      { id: "08", name: "Staggered Gallery", mood: "Light", dark: false, layout: "rail", accent: "#b79847", title: "top-left" },
+      { id: "09", name: "Magazine Grid", mood: "Light", dark: false, layout: "magazine", accent: "#3d7850", title: "top-right" },
       { id: "10", name: "Panorama", mood: "Light", dark: false, layout: "panorama", accent: "#c4a24d", title: "top-right" },
-      { id: "11", name: "Window Gallery", mood: "Light", dark: false, layout: "window", accent: "#306a48", title: "center" },
-      { id: "12", name: "Bubble Mosaic", mood: "Light", dark: false, layout: "bubbles", accent: "#b99b51", title: "top-center" },
+      { id: "11", name: "Window Gallery", mood: "Light", dark: false, layout: "window", accent: "#306a48", title: "top-center" },
+      { id: "12", name: "Offset Mosaic", mood: "Light", dark: false, layout: "bubbles", accent: "#b99b51", title: "top-center" },
       { id: "13", name: "Emerald Spotlight", mood: "Dark", dark: true, layout: "spotlight", accent: "#83d69c", title: "top-right" },
-      { id: "14", name: "Noir Orbit", mood: "Dark", dark: true, layout: "noir-orbit", accent: "#c3a95f", title: "center" },
+      { id: "14", name: "Noir Columns", mood: "Dark", dark: true, layout: "noir-orbit", accent: "#c3a95f", title: "top-center" },
       { id: "15", name: "Diagonal Motion", mood: "Dark", dark: true, layout: "diagonal", accent: "#8ce0a4", title: "top-left" },
-      { id: "16", name: "Midnight Tiles", mood: "Dark", dark: true, layout: "midnight-grid", accent: "#cdb05f", title: "center" },
-      { id: "17", name: "Floating Stack", mood: "Dark", dark: true, layout: "floating", accent: "#7ed798", title: "bottom-left" },
+      { id: "16", name: "Midnight Tiles", mood: "Dark", dark: true, layout: "midnight-grid", accent: "#cdb05f", title: "top-center" },
+      { id: "17", name: "Floating Stack", mood: "Dark", dark: true, layout: "floating", accent: "#7ed798", title: "top-left" },
       { id: "18", name: "Neon Gallery", mood: "Dark", dark: true, layout: "neon", accent: "#d0b264", title: "top-center" },
       { id: "19", name: "Luxe Columns", mood: "Dark", dark: true, layout: "columns", accent: "#85d69c", title: "top-left" },
       { id: "20", name: "Glass Wall", mood: "Dark", dark: true, layout: "glass-wall", accent: "#d0b264", title: "top-right" }
@@ -2613,7 +2613,7 @@
       const boxWidth = box.w * width;
       const boxHeight = box.h * height;
       const rotation = box.rotation || 0;
-      const radius = Math.max(12, Math.min(boxWidth, boxHeight) * 0.08);
+      const radius = Math.max(12, Math.min(boxWidth, boxHeight) * 0.055);
 
       context.save();
       context.translate(x + boxWidth / 2, y + boxHeight / 2);
@@ -2622,106 +2622,191 @@
       context.shadowBlur = Math.min(width, height) * 0.022;
       context.shadowOffsetY = Math.min(width, height) * 0.01;
       context.fillStyle = template.dark ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.9)";
+      const drawX = -boxWidth / 2;
+      const drawY = -boxHeight / 2;
+      context.beginPath();
+      context.roundRect(drawX, drawY, boxWidth, boxHeight, radius);
+      context.fill();
+      context.save();
+      context.clip();
+      const scale = Math.max(boxWidth / image.naturalWidth, boxHeight / image.naturalHeight);
+      const imageWidth = image.naturalWidth * scale;
+      const imageHeight = image.naturalHeight * scale;
+      context.drawImage(image, -imageWidth / 2, -imageHeight / 2, imageWidth, imageHeight);
+      context.restore();
 
-      if (box.shape === "circle") {
-        const diameter = Math.min(boxWidth, boxHeight);
-        context.beginPath();
-        context.arc(0, 0, diameter / 2, 0, Math.PI * 2);
-        context.fill();
-        context.clip();
-        const scale = Math.max(diameter / image.naturalWidth, diameter / image.naturalHeight);
-        const imageWidth = image.naturalWidth * scale;
-        const imageHeight = image.naturalHeight * scale;
-        context.drawImage(image, -imageWidth / 2, -imageHeight / 2, imageWidth, imageHeight);
-        context.fillStyle = template.dark ? "rgba(5,12,10,0.44)" : "rgba(17,30,21,0.26)";
-        context.fillRect(-diameter / 2, diameter * 0.28, diameter, diameter * 0.22);
-        context.shadowColor = "transparent";
-        context.strokeStyle = "rgba(255,255,255,0.9)";
-        context.lineWidth = Math.max(2, width * 0.003);
-        context.beginPath();
-        context.arc(0, 0, diameter / 2 - context.lineWidth, 0, Math.PI * 2);
-        context.stroke();
-        context.fillStyle = "#fff";
-        context.font = `700 ${Math.max(12, Math.round(diameter * 0.075))}px "IBM Plex Sans", sans-serif`;
-        context.textAlign = "center";
-        context.textBaseline = "middle";
-        context.fillText(String(index + 1).padStart(2, "0"), 0, diameter * 0.39);
-      } else {
-        const drawX = -boxWidth / 2;
-        const drawY = -boxHeight / 2;
-        context.beginPath();
-        context.roundRect(drawX, drawY, boxWidth, boxHeight, radius);
-        context.fill();
-        context.clip();
-        const scale = Math.max(boxWidth / image.naturalWidth, boxHeight / image.naturalHeight);
-        const imageWidth = image.naturalWidth * scale;
-        const imageHeight = image.naturalHeight * scale;
-        context.drawImage(image, -imageWidth / 2, -imageHeight / 2, imageWidth, imageHeight);
-        const wash = context.createLinearGradient(0, boxHeight / 2, 0, boxHeight * 0.19);
-        wash.addColorStop(0, template.dark ? "rgba(5,12,10,0.68)" : "rgba(17,30,21,0.46)");
-        wash.addColorStop(1, "rgba(17,30,21,0)");
-        context.fillStyle = wash;
-        context.fillRect(drawX, drawY, boxWidth, boxHeight);
-        context.shadowColor = "transparent";
-        context.strokeStyle = "rgba(255,255,255,0.88)";
-        context.lineWidth = Math.max(1.5, width * 0.002);
-        context.beginPath();
-        context.roundRect(drawX + context.lineWidth / 2, drawY + context.lineWidth / 2, boxWidth - context.lineWidth, boxHeight - context.lineWidth, radius);
-        context.stroke();
-        context.fillStyle = "#fff";
-        context.font = `700 ${Math.max(12, Math.round(Math.min(boxWidth, boxHeight) * 0.09))}px "IBM Plex Sans", sans-serif`;
-        context.textAlign = "right";
-        context.textBaseline = "bottom";
-        context.fillText(String(index + 1).padStart(2, "0"), boxWidth / 2 - boxWidth * 0.06, boxHeight / 2 - boxHeight * 0.06);
-      }
+      context.shadowColor = "transparent";
+      context.lineWidth = Math.max(2, width * 0.002);
+      context.strokeStyle = template.dark ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.95)";
+      context.beginPath();
+      context.roundRect(drawX + context.lineWidth / 2, drawY + context.lineWidth / 2, boxWidth - context.lineWidth, boxHeight - context.lineWidth, radius);
+      context.stroke();
+
+      const badgeSize = Math.max(30, Math.min(boxWidth, boxHeight) * 0.16);
+      const badgeX = drawX + boxWidth * 0.07;
+      const badgeY = drawY + boxHeight * 0.07;
+      context.fillStyle = template.dark ? "rgba(7,16,13,0.78)" : "rgba(255,255,255,0.88)";
+      context.beginPath();
+      context.roundRect(badgeX, badgeY, badgeSize, badgeSize * 0.62, badgeSize * 0.24);
+      context.fill();
+      context.fillStyle = template.dark ? "#f5f4ed" : "#18251b";
+      context.font = `700 ${Math.max(12, Math.round(badgeSize * 0.34))}px "IBM Plex Sans", sans-serif`;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(String(index + 1).padStart(2, "0"), badgeX + badgeSize / 2, badgeY + badgeSize * 0.31);
       context.restore();
     }
 
-    function getCmsMarketingPhotoLayout(layout) {
-      const box = (x, y, w, h, options = {}) => ({ x, y, w, h, ...options });
+    function getCmsMarketingPhotoLayout(layout, width, height) {
+      const story = height / width > 1.5;
+      const top = story ? 0.25 : 0.22;
+      const rowGap = story ? 0.07 : 0.025;
+      const box = (x, y, w, rotation = 0) => ({
+        x,
+        y,
+        w,
+        h: w * width / height * (4 / 3),
+        rotation
+      });
+      const row3 = (y, w = 0.28, xs = [0.055, 0.36, 0.665], rotations = [0, 0, 0]) =>
+        xs.map((x, index) => box(x, y, w, rotations[index] || 0));
+      const standardHeight = 0.28 * width / height * (4 / 3);
+      const secondRow = top + standardHeight + rowGap;
+      const smallWidth = story ? 0.22 : 0.17;
+      const smallHeight = smallWidth * width / height * (4 / 3);
+      const smallGap = story ? 0.025 : 0.02;
+      const smallSecondRow = top + smallHeight + smallGap;
+      const smallThirdRow = smallSecondRow + smallHeight + smallGap;
+
       switch (layout) {
         case "bento":
-          return [box(0.055, 0.235, 0.51, 0.55), box(0.59, 0.235, 0.17, 0.17), box(0.78, 0.235, 0.165, 0.17), box(0.59, 0.425, 0.17, 0.17), box(0.78, 0.425, 0.165, 0.17), box(0.59, 0.615, 0.355, 0.17)];
+        case "spotlight": {
+          const heroWidth = 0.34;
+          const heroHeight = heroWidth * width / height * (4 / 3);
+          const stackHeight = smallHeight * 3 + smallGap * 2;
+          const heroY = top + (stackHeight - heroHeight) / 2;
+          const leftHero = layout === "bento";
+          const heroX = leftHero ? 0.055 : 0.605;
+          const thumbXs = leftHero ? [0.47, 0.70] : [0.07, 0.30];
+          const lastThumbX = leftHero ? 0.585 : 0.185;
+          const thumbnails = [
+            box(thumbXs[0], top, smallWidth), box(thumbXs[1], top, smallWidth),
+            box(thumbXs[0], smallSecondRow, smallWidth), box(thumbXs[1], smallSecondRow, smallWidth),
+            box(lastThumbX, smallThirdRow, smallWidth)
+          ];
+          return [box(heroX, heroY, heroWidth), ...thumbnails];
+        }
         case "editorial":
-          return [box(0.055, 0.245, 0.27, 0.165), box(0.055, 0.43, 0.27, 0.165), box(0.055, 0.615, 0.27, 0.165), box(0.35, 0.245, 0.595, 0.345), box(0.35, 0.61, 0.285, 0.17), box(0.655, 0.61, 0.29, 0.17)];
+          return [
+            box(0.06, top, 0.17), box(0.06, smallSecondRow, 0.17), box(0.06, smallThirdRow, 0.17),
+            box(0.60, top + (smallHeight * 3 + smallGap * 2 - 0.34 * width / height * (4 / 3)) / 2, 0.34),
+            box(0.29, top, 0.17), box(0.29, smallSecondRow, 0.17)
+          ];
         case "filmstrip":
-          return Array.from({ length: 6 }, (_, index) => box(0.045 + index * 0.153, 0.39, 0.14, 0.32));
-        case "orbit":
-          return [box(0.06, 0.25, 0.2, 0.17, { shape: "circle" }), box(0.4, 0.23, 0.2, 0.18, { shape: "circle" }), box(0.74, 0.25, 0.2, 0.17, { shape: "circle" }), box(0.06, 0.61, 0.2, 0.17, { shape: "circle" }), box(0.4, 0.63, 0.2, 0.17, { shape: "circle" }), box(0.74, 0.61, 0.2, 0.17, { shape: "circle" })];
-        case "masonry":
-          return [box(0.055, 0.235, 0.42, 0.17), box(0.055, 0.425, 0.42, 0.23), box(0.055, 0.675, 0.42, 0.12), box(0.515, 0.235, 0.43, 0.23), box(0.515, 0.485, 0.43, 0.18), box(0.515, 0.685, 0.43, 0.11)];
+          return row3(top, 0.28).concat(row3(secondRow, 0.28));
+        case "editorial-pair": {
+          const largeWidth = 0.34;
+          const lowerRow = top + largeWidth * width / height * (4 / 3) + rowGap;
+          return [
+            box(0.11, top, largeWidth), box(0.55, top, largeWidth),
+            ...[0.055, 0.28, 0.505, 0.73].map((x) => box(x, lowerRow, 0.16))
+          ];
+        }
+        case "masonry": {
+          const lowerRow = top + smallHeight + (story ? 0.06 : 0.045);
+          return [
+            ...[0.055, 0.28, 0.505, 0.73].map((x) => box(x, top, 0.16)),
+            box(0.16, lowerRow, 0.32), box(0.52, lowerRow, 0.32)
+          ];
+        }
         case "polaroid":
-          return [box(0.04, 0.27, 0.29, 0.2, { rotation: -0.045 }), box(0.355, 0.235, 0.29, 0.22, { rotation: 0.028 }), box(0.67, 0.28, 0.29, 0.19, { rotation: 0.045 }), box(0.055, 0.55, 0.29, 0.21, { rotation: 0.025 }), box(0.36, 0.535, 0.29, 0.22, { rotation: -0.035 }), box(0.675, 0.55, 0.29, 0.2, { rotation: 0.02 })];
+          return [
+            ...row3(top + 0.01, 0.26, [0.055, 0.37, 0.685], [-0.012, 0, 0.012]),
+            ...row3(top + 0.26 * width / height * (4 / 3) + rowGap, 0.26, [0.055, 0.37, 0.685], [0.01, -0.012, 0])
+          ];
         case "twin":
-          return [box(0.055, 0.25, 0.42, 0.16), box(0.525, 0.25, 0.42, 0.16), box(0.055, 0.435, 0.42, 0.16), box(0.525, 0.435, 0.42, 0.16), box(0.055, 0.62, 0.42, 0.16), box(0.525, 0.62, 0.42, 0.16)];
+          return [
+            box(0.20, top, smallWidth), box(0.62, top, smallWidth),
+            box(0.20, smallSecondRow, smallWidth), box(0.62, smallSecondRow, smallWidth),
+            box(0.20, smallThirdRow, smallWidth), box(0.62, smallThirdRow, smallWidth)
+          ];
         case "rail":
-          return Array.from({ length: 6 }, (_, index) => box(0.035 + index * 0.158, index % 2 ? 0.3 : 0.35, 0.14, index % 2 ? 0.38 : 0.44, { rotation: index % 2 ? 0.018 : -0.018 }));
-        case "magazine":
-          return [box(0.055, 0.25, 0.4, 0.225), box(0.475, 0.25, 0.2, 0.225), box(0.695, 0.25, 0.25, 0.225), box(0.055, 0.505, 0.25, 0.245), box(0.325, 0.505, 0.2, 0.245), box(0.545, 0.505, 0.4, 0.245)];
-        case "panorama":
-          return [box(0.055, 0.255, 0.43, 0.245), box(0.515, 0.255, 0.43, 0.245), ...Array.from({ length: 4 }, (_, index) => box(0.055 + index * 0.225, 0.53, 0.21, 0.235))];
-        case "window":
-          return [box(0.055, 0.245, 0.24, 0.2, { shape: "circle" }), box(0.705, 0.245, 0.24, 0.2, { shape: "circle" }), box(0.055, 0.59, 0.24, 0.2, { shape: "circle" }), box(0.705, 0.59, 0.24, 0.2, { shape: "circle" }), box(0.32, 0.245, 0.16, 0.2), box(0.52, 0.59, 0.16, 0.2)];
+          return [
+            ...row3(top, 0.26, [0.055, 0.37, 0.685]),
+            ...row3(secondRow, 0.26, [0.15, 0.37, 0.59])
+          ];
+        case "magazine": {
+          const smallRow = top;
+          const largeRow = smallRow + 0.22 * width / height * (4 / 3) + rowGap;
+          return [
+            ...row3(smallRow, 0.22, [0.055, 0.39, 0.725]),
+            ...row3(largeRow, 0.28)
+          ];
+        }
+        case "panorama": {
+          const smallRow = top;
+          const largeRow = smallRow + 0.18 * width / height * (4 / 3) + smallGap;
+          return [
+            ...row3(smallRow, 0.18, [0.055, 0.41, 0.765]),
+            ...row3(largeRow, 0.27, [0.055, 0.365, 0.675])
+          ];
+        }
+        case "window": {
+          const heroWidth = 0.34;
+          const heroY = top + 0.18;
+          const lowerY = top + standardHeight + 0.12;
+          return [
+            box(0.33, heroY, heroWidth),
+            ...row3(top, 0.16, [0.055, 0.42, 0.785]),
+            box(0.08, lowerY, 0.17),
+            box(0.75, lowerY, 0.17)
+          ];
+        }
         case "bubbles":
-          return [box(0.075, 0.25, 0.25, 0.2, { shape: "circle" }), box(0.375, 0.25, 0.25, 0.2, { shape: "circle" }), box(0.675, 0.25, 0.25, 0.2, { shape: "circle" }), box(0.075, 0.53, 0.25, 0.2, { shape: "circle" }), box(0.375, 0.53, 0.25, 0.2, { shape: "circle" }), box(0.675, 0.53, 0.25, 0.2, { shape: "circle" })];
-        case "spotlight":
-          return [box(0.39, 0.235, 0.555, 0.55), box(0.055, 0.235, 0.29, 0.1), box(0.055, 0.355, 0.29, 0.1), box(0.055, 0.475, 0.29, 0.1), box(0.055, 0.595, 0.29, 0.1), box(0.055, 0.715, 0.29, 0.07)];
+          return [
+            ...row3(top, 0.24, [0.055, 0.38, 0.705]),
+            ...row3(top + 0.24 * width / height * (4 / 3) + rowGap, 0.24, [0.17, 0.38, 0.59])
+          ];
         case "noir-orbit":
-          return [box(0.08, 0.25, 0.23, 0.2, { shape: "circle" }), box(0.385, 0.22, 0.23, 0.22, { shape: "circle" }), box(0.69, 0.25, 0.23, 0.2, { shape: "circle" }), box(0.08, 0.56, 0.23, 0.2, { shape: "circle" }), box(0.385, 0.59, 0.23, 0.18, { shape: "circle" }), box(0.69, 0.56, 0.23, 0.2, { shape: "circle" })];
+          return [
+            box(0.12, top, 0.18), box(0.70, top, 0.18),
+            box(0.12, smallSecondRow, 0.18), box(0.70, smallSecondRow, 0.18),
+            box(0.12, smallThirdRow, 0.18), box(0.70, smallThirdRow, 0.18)
+          ];
         case "diagonal":
-          return Array.from({ length: 6 }, (_, index) => box(0.04 + index * 0.13, 0.28 + index * 0.04, 0.24, 0.34, { rotation: (index % 2 ? 1 : -1) * 0.035 }));
+          return [
+            ...row3(top, 0.24, [0.055, 0.38, 0.705], [-0.012, 0.01, -0.008]),
+            ...row3(top + 0.24 * width / height * (4 / 3) + rowGap, 0.24, [0.15, 0.43, 0.71], [0.008, -0.01, 0.012])
+          ];
         case "midnight-grid":
-          return [box(0.055, 0.235, 0.28, 0.245), box(0.36, 0.235, 0.28, 0.245), box(0.665, 0.235, 0.28, 0.245), box(0.055, 0.535, 0.28, 0.245), box(0.36, 0.535, 0.28, 0.245), box(0.665, 0.535, 0.28, 0.245)];
+          return [
+            ...row3(top, 0.28, [0.055, 0.36, 0.665]),
+            ...row3(secondRow, 0.28, [0.055, 0.36, 0.665])
+          ];
         case "floating":
-          return [box(0.08, 0.25, 0.34, 0.24, { rotation: -0.025 }), box(0.52, 0.25, 0.38, 0.18, { rotation: 0.02 }), box(0.59, 0.47, 0.32, 0.25, { rotation: -0.02 }), box(0.08, 0.55, 0.3, 0.22, { rotation: 0.025 }), box(0.39, 0.48, 0.16, 0.18, { shape: "circle" }), box(0.4, 0.68, 0.15, 0.12, { shape: "circle" })];
+          return [
+            ...row3(top + 0.015, 0.25, [0.055, 0.375, 0.695], [-0.008, 0.008, -0.008]),
+            ...row3(top + 0.25 * width / height * (4 / 3) + rowGap, 0.25, [0.12, 0.375, 0.63], [0.008, -0.008, 0.008])
+          ];
         case "neon":
-          return [box(0.12, 0.23, 0.35, 0.17), box(0.53, 0.23, 0.35, 0.17), box(0.12, 0.43, 0.35, 0.17), box(0.53, 0.43, 0.35, 0.17), box(0.12, 0.63, 0.35, 0.17), box(0.53, 0.63, 0.35, 0.17)];
+          return [
+            box(0.20, top, smallWidth), box(0.42, top, smallWidth), box(0.64, top, smallWidth),
+            box(0.09, smallSecondRow, smallWidth), box(0.42, smallSecondRow, smallWidth), box(0.75, smallSecondRow, smallWidth)
+          ];
         case "columns":
-          return Array.from({ length: 6 }, (_, index) => box(0.055 + (index % 3) * 0.305, 0.245 + Math.floor(index / 3) * 0.28, 0.275, 0.24, { shape: "round" }));
+          return [
+            box(0.055, top, 0.26), box(0.37, top, 0.26), box(0.685, top, 0.26),
+            box(0.055, top + 0.26 * width / height * (4 / 3) + rowGap, 0.26),
+            box(0.37, top + 0.26 * width / height * (4 / 3) + rowGap, 0.26),
+            box(0.685, top + 0.26 * width / height * (4 / 3) + rowGap, 0.26)
+          ];
         case "glass-wall":
-          return [box(0.055, 0.235, 0.43, 0.18), box(0.515, 0.235, 0.43, 0.18), box(0.055, 0.445, 0.26, 0.33), box(0.345, 0.445, 0.31, 0.16), box(0.685, 0.445, 0.26, 0.33), box(0.345, 0.635, 0.31, 0.14)];
+          return [
+            ...row3(top, 0.27, [0.055, 0.365, 0.675], [-0.008, 0.008, -0.008]),
+            ...row3(top + 0.27 * width / height * (4 / 3) + rowGap, 0.27, [0.055, 0.365, 0.675], [0.008, -0.008, 0.008])
+          ];
         default:
-          return Array.from({ length: 6 }, (_, index) => box(0.055 + (index % 3) * 0.305, 0.24 + Math.floor(index / 3) * 0.28, 0.275, 0.24));
+          return row3(top).concat(row3(secondRow));
       }
     }
 
