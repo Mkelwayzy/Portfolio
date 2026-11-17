@@ -1815,7 +1815,7 @@
     }
 
     const CMS_MARKETING_FORMATS = {
-      post: { width: 1080, height: 1440, label: "Post · 1080 × 1440 px" },
+      post: { width: 1080, height: 1350, label: "Post · 1080 × 1350 px" },
       story: { width: 1080, height: 1920, label: "Story · 1080 × 1920 px" }
     };
     let cmsMarketingFormat = "post";
@@ -1870,6 +1870,9 @@
     }
 
     function getCmsMarketingLogoSource() {
+      if (cmsMarketingTemplate === "onlineEducation") {
+        return new URL("assets/marketing-logo.svg", document.baseURI).href;
+      }
       if (cmsConfig.customLogoDataUrl) return cmsConfig.customLogoDataUrl;
       const signature = document.getElementById("defaultSignatureSvg");
       if (!signature) return "";
@@ -2335,6 +2338,218 @@
       context.fillText(website, width / 2, height * 0.985, width * 0.6);
     }
 
+    function createCmsMarketingLogoVariant(logo, color) {
+      const variant = document.createElement("canvas");
+      variant.width = logo.naturalWidth || logo.width;
+      variant.height = logo.naturalHeight || logo.height;
+      const variantContext = variant.getContext("2d");
+      if (!variantContext) throw new Error("Your browser could not prepare the supplied brand logo.");
+      variantContext.drawImage(logo, 0, 0, variant.width, variant.height);
+      variantContext.globalCompositeOperation = "source-in";
+      variantContext.fillStyle = color;
+      variantContext.fillRect(0, 0, variant.width, variant.height);
+      return variant;
+    }
+
+    function drawCmsMarketingEducationHeadline(context, text, x, y, maxWidth, fontSize, color, maxLines = 3, serif = false) {
+      const isArabic = /[\u0600-\u06ff]/.test(text);
+      context.textAlign = isArabic ? "right" : "left";
+      context.direction = isArabic ? "rtl" : "ltr";
+      context.textBaseline = "top";
+      context.fillStyle = color;
+      let size = fontSize;
+      let lines;
+      do {
+        context.font = `700 ${size}px ${serif ? "Georgia, serif" : '"IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif'}`;
+        lines = getCmsMarketingLines(context, text, maxWidth);
+        if (lines.length <= maxLines || size <= 19) break;
+        size -= 2;
+      } while (size > 17);
+      lines.slice(0, maxLines).forEach((line, index) => {
+        context.fillText(line, x, y + index * size * 1.12, maxWidth);
+      });
+      return Math.min(lines.length, maxLines) * size * 1.12;
+    }
+
+    function drawCmsMarketingEducationLogo(context, logo, x, y, width, height) {
+      const scale = Math.min(width / (logo.naturalWidth || logo.width), height / (logo.naturalHeight || logo.height));
+      const drawnWidth = (logo.naturalWidth || logo.width) * scale;
+      const drawnHeight = (logo.naturalHeight || logo.height) * scale;
+      context.drawImage(logo, x, y + (height - drawnHeight) / 2, drawnWidth, drawnHeight);
+    }
+
+    function drawCmsMarketingEducationTile(context, image, logos, project, cta, x, y, width, height, index) {
+      const isGreen = index % 2 === 0;
+      const background = isGreen ? "#286b40" : "#f4efcf";
+      const foreground = isGreen ? "#f5edbd" : "#214c32";
+      const muted = isGreen ? "rgba(246,239,197,0.76)" : "rgba(33,76,50,0.7)";
+      const logo = isGreen ? logos.light : logos.dark;
+      const title = project.titleEn || project.titleAr || "Featured project";
+      const summary = project.summaryEn || project.summaryAr || project.solutionEn || project.solutionAr || project.categoryEn || "";
+      const logoX = x + width * 0.07;
+      const logoY = y + height * 0.045;
+      const logoWidth = width * 0.31;
+      const logoHeight = height * 0.07;
+
+      context.save();
+      context.beginPath();
+      context.roundRect(x, y, width, height, width * 0.035);
+      context.clip();
+      context.fillStyle = background;
+      context.fillRect(x, y, width, height);
+
+      if (index === 0) {
+        drawCmsMarketingImageCard(context, image, x, y, width, height, width * 0.035);
+        const shade = context.createLinearGradient(0, y, 0, y + height);
+        shade.addColorStop(0, "rgba(9,43,23,0.72)");
+        shade.addColorStop(0.42, "rgba(9,43,23,0.1)");
+        shade.addColorStop(1, "rgba(9,43,23,0.78)");
+        context.fillStyle = shade;
+        context.fillRect(x, y, width, height);
+        drawCmsMarketingEducationLogo(context, logo, logoX, logoY, logoWidth, logoHeight);
+        context.fillStyle = muted;
+        context.font = `600 ${Math.round(width * 0.045)}px "IBM Plex Sans", sans-serif`;
+        context.textAlign = "left";
+        context.direction = "ltr";
+        context.fillText((project.categoryEn || "FEATURED PROJECT").toUpperCase(), logoX, y + height * 0.48, width * 0.82);
+        drawCmsMarketingEducationHeadline(context, title, logoX, y + height * 0.55, width * 0.82, width * 0.095, foreground, 3, true);
+        context.fillStyle = "#e9c963";
+        context.font = `700 ${Math.round(width * 0.042)}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+        context.textAlign = "left";
+        context.fillText(cta, logoX, y + height * 0.9, width * 0.8);
+      } else {
+        drawCmsMarketingEducationLogo(context, logo, logoX, logoY, logoWidth, logoHeight);
+        if (index === 1) {
+          context.fillStyle = muted;
+          context.font = `700 ${Math.round(width * 0.19)}px Georgia, serif`;
+          context.textAlign = "center";
+          context.direction = "ltr";
+          context.fillText("01  02  03", x + width / 2, y + height * 0.24, width * 0.92);
+          context.fillStyle = "rgba(31,96,57,0.1)";
+          context.font = `700 ${Math.round(width * 0.35)}px Georgia, serif`;
+          context.fillText("LEARN", x + width / 2, y + height * 0.32, width * 0.95);
+          drawCmsMarketingEducationHeadline(context, title, x + width / 2, y + height * 0.57, width * 0.84, width * 0.09, foreground, 3, true);
+          context.fillStyle = muted;
+          context.font = `500 ${Math.round(width * 0.044)}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+          context.textAlign = "center";
+          context.fillText(summary, x + width / 2, y + height * 0.84, width * 0.82);
+        } else if (index === 2) {
+          drawCmsMarketingImageCard(context, image, x + width * 0.48, y + height * 0.22, width * 0.54, height * 0.78, width * 0.025);
+          context.fillStyle = "#e8c85d";
+          context.beginPath();
+          context.arc(x + width * 0.15, y + height * 0.47, width * 0.038, 0, Math.PI * 2);
+          context.fill();
+          context.fillStyle = muted;
+          context.font = `600 ${Math.round(width * 0.043)}px "IBM Plex Sans", sans-serif`;
+          context.textAlign = "left";
+          context.fillText("ONLINE", x + width * 0.07, y + height * 0.34, width * 0.4);
+          drawCmsMarketingEducationHeadline(context, title, x + width * 0.07, y + height * 0.43, width * 0.4, width * 0.09, foreground, 4, true);
+          context.fillStyle = foreground;
+          context.font = `700 ${Math.round(width * 0.038)}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+          context.textAlign = "left";
+          context.fillText(cta, x + width * 0.07, y + height * 0.87, width * 0.4);
+        } else if (index === 3) {
+          drawCmsMarketingWarpedImage(context, image, [
+            { x: x + width * 0.48, y: y + height * 0.32 },
+            { x: x + width * 1.03, y: y + height * 0.18 },
+            { x: x + width * 1.03, y: y + height * 1.04 },
+            { x: x + width * 0.48, y: y + height * 0.94 }
+          ]);
+          context.fillStyle = "#1f6039";
+          context.beginPath();
+          context.ellipse(x + width * 0.23, y + height * 0.64, width * 0.22, height * 0.35, -0.22, 0, Math.PI * 2);
+          context.fill();
+          drawCmsMarketingEducationHeadline(context, title, x + width * 0.08, y + height * 0.36, width * 0.5, width * 0.09, foreground, 4, true);
+          context.fillStyle = muted;
+          context.font = `500 ${Math.round(width * 0.043)}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+          context.textAlign = "left";
+          context.fillText(summary, x + width * 0.08, y + height * 0.72, width * 0.4);
+        } else if (index === 4) {
+          context.fillStyle = "rgba(245,237,189,0.1)";
+          context.font = `700 ${Math.round(width * 0.32)}px Georgia, serif`;
+          context.textAlign = "center";
+          context.direction = "ltr";
+          context.fillText("A+", x + width * 0.76, y + height * 0.34, width * 0.48);
+          drawCmsMarketingEducationHeadline(context, title, x + width / 2, y + height * 0.23, width * 0.82, width * 0.09, foreground, 3, true);
+          drawCmsMarketingImageCard(context, image, x + width * 0.08, y + height * 0.56, width * 0.84, height * 0.4, width * 0.025);
+          context.fillStyle = "#e9c963";
+          context.font = `600 ${Math.round(width * 0.038)}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+          context.textAlign = "left";
+          context.fillText(cta, x + width * 0.1, y + height * 0.91, width * 0.78);
+        } else {
+          drawCmsMarketingImageCard(context, image, x + width * 0.48, y + height * 0.22, width * 0.53, height * 0.78, width * 0.025);
+          context.fillStyle = "#dfc35f";
+          context.font = `italic 700 ${Math.round(width * 0.095)}px Georgia, serif`;
+          context.textAlign = "left";
+          context.fillText("01 → 02", x + width * 0.08, y + height * 0.32, width * 0.72);
+          drawCmsMarketingEducationHeadline(context, title, x + width * 0.08, y + height * 0.44, width * 0.4, width * 0.085, foreground, 4, true);
+          context.fillStyle = muted;
+          context.font = `500 ${Math.round(width * 0.04)}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+          context.textAlign = "left";
+          context.fillText(summary, x + width * 0.08, y + height * 0.76, width * 0.37);
+        }
+      }
+
+      if (index !== 0) {
+        context.fillStyle = index % 2 === 0 ? "#e8c85d" : "#1f6039";
+        context.beginPath();
+        context.arc(x + width * 0.91, y + height * 0.11, width * 0.025, 0, Math.PI * 2);
+        context.fill();
+      }
+      context.restore();
+    }
+
+    function drawCmsMarketingOnlineEducation(context, project, images, logo, width, height, cta, website) {
+      const background = "#07190c";
+      const margin = width * 0.09;
+      const gap = width * 0.01;
+      const gridTop = height * 0.09;
+      const gridBottom = height * 0.87;
+      const rowGap = height * 0.012;
+      const tileWidth = (width - margin * 2 - gap * 2) / 3;
+      const tileHeight = (gridBottom - gridTop - rowGap) / 2;
+      const logoVariants = {
+        light: createCmsMarketingLogoVariant(logo, "#f5edbd"),
+        dark: createCmsMarketingLogoVariant(logo, "#214c32")
+      };
+
+      context.fillStyle = background;
+      context.fillRect(0, 0, width, height);
+      context.fillStyle = "#f3edc8";
+      context.font = `500 ${Math.round(width * 0.018)}px "IBM Plex Sans", sans-serif`;
+      context.textAlign = "left";
+      context.textBaseline = "middle";
+      context.direction = "ltr";
+      context.fillText("IG, Covers, Facebook ADS", margin, height * 0.052, width * 0.48);
+      const projectLabel = `for ${project.titleEn || project.titleAr || "your project"}`;
+      context.font = `italic 500 ${Math.round(width * 0.018)}px Georgia, serif`;
+      context.textAlign = "right";
+      context.fillText(projectLabel, width - margin, height * 0.052, width * 0.48);
+
+      for (let index = 0; index < 6; index += 1) {
+        const row = Math.floor(index / 3);
+        const column = index % 3;
+        const x = margin + column * (tileWidth + gap);
+        const y = gridTop + row * (tileHeight + rowGap);
+        drawCmsMarketingEducationTile(context, images[index % images.length], logoVariants, project, cta, x, y, tileWidth, tileHeight, index);
+      }
+
+      context.fillStyle = "#f3edc8";
+      context.font = `500 ${Math.round(width * 0.017)}px "IBM Plex Sans", sans-serif`;
+      context.textAlign = "left";
+      context.textBaseline = "middle";
+      context.fillText("Design crafted", margin, height * 0.944, width * 0.28);
+      context.fillStyle = "rgba(243,237,200,0.68)";
+      context.font = `500 ${Math.round(width * 0.014)}px "IBM Plex Sans", sans-serif`;
+      context.textAlign = "center";
+      context.fillText(website, width / 2, height * 0.944, width * 0.4);
+      context.fillStyle = "#f3edc8";
+      context.textAlign = "right";
+      context.font = `500 ${Math.round(width * 0.017)}px "IBM Plex Sans", sans-serif`;
+      context.fillText(`by ${cmsConfig.customLogoText || cmsConfig.studioTagEn || "Studio"}`, width - margin, height * 0.944, width * 0.22);
+      drawCmsMarketingEducationLogo(context, logoVariants.light, width - margin - width * 0.1, height * 0.957, width * 0.1, height * 0.025);
+    }
+
     async function renderCmsMarketingPreview() {
       const canvas = document.getElementById("cmsMarketingCanvas");
       const status = document.getElementById("cmsMarketingStatus");
@@ -2384,6 +2599,8 @@
           drawCmsMarketingShowcase(context, project, images, logo, width, height, cta, website);
         } else if (cmsMarketingTemplate === "campaign") {
           drawCmsMarketingCampaign(context, project, images, logo, width, height, cta, website);
+        } else if (cmsMarketingTemplate === "onlineEducation") {
+          drawCmsMarketingOnlineEducation(context, project, images, logo, width, height, cta, website);
         } else {
           const cover = images[0];
           drawCmsMarketingCover(context, cover, width, height);
