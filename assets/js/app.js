@@ -1791,6 +1791,238 @@
         });
         filterCmsProjectList();
       }
+      renderCmsMarketingProjects();
+      renderCmsMarketingPreview();
+    }
+
+    const CMS_MARKETING_FORMATS = {
+      post: { width: 1080, height: 1440, label: "Post · 1080 × 1440 px" },
+      story: { width: 1920, height: 1080, label: "Story · 1920 × 1080 px" }
+    };
+    let cmsMarketingFormat = "post";
+    let cmsMarketingProjectId = null;
+    let cmsMarketingRenderVersion = 0;
+
+    function renderCmsMarketingProjects() {
+      const list = document.getElementById("cmsMarketingProjects");
+      const count = document.getElementById("cmsMarketingProjectsCount");
+      if (!list) return;
+      if (!portfolioProjects.length) {
+        list.innerHTML = `<p class="col-span-2 rounded-xl bg-white/70 p-4 text-xs text-slateText">Publish a project to create a social media design.</p>`;
+        if (count) count.textContent = "0 projects";
+        return;
+      }
+
+      if (!portfolioProjects.some((project) => project.id === cmsMarketingProjectId)) {
+        cmsMarketingProjectId = portfolioProjects[0].id;
+      }
+      if (count) count.textContent = `${portfolioProjects.length} projects`;
+      list.innerHTML = portfolioProjects.map((project) => {
+        const title = project.titleEn || project.titleAr || "Untitled project";
+        return `
+          <button type="button" class="cms-marketing-project${project.id === cmsMarketingProjectId ? " active" : ""}" data-marketing-project="${project.id}" role="listitem" aria-pressed="${project.id === cmsMarketingProjectId}">
+            <img src="${escapeCmsHtml(project.imageUrl || "")}" alt="" loading="lazy" decoding="async" />
+            <span>${escapeCmsHtml(title)}</span>
+          </button>
+        `;
+      }).join("");
+      list.querySelectorAll("[data-marketing-project]").forEach((button) => {
+        button.addEventListener("click", () => {
+          cmsMarketingProjectId = Number(button.dataset.marketingProject);
+          renderCmsMarketingProjects();
+          renderCmsMarketingPreview();
+        });
+      });
+    }
+
+    function loadCmsMarketingImage(source) {
+      return new Promise((resolve, reject) => {
+        if (!source) {
+          reject(new Error("This project does not have a cover image."));
+          return;
+        }
+        const image = new Image();
+        image.crossOrigin = "anonymous";
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("The project image could not be loaded. Check its URL and image-host CORS settings."));
+        image.src = source;
+      });
+    }
+
+    function getCmsMarketingLogoSource() {
+      if (cmsConfig.customLogoDataUrl) return cmsConfig.customLogoDataUrl;
+      const signature = document.getElementById("defaultSignatureSvg");
+      if (!signature) return "";
+      const svg = signature.cloneNode(true);
+      svg.setAttribute("width", "1160");
+      svg.setAttribute("height", "400");
+      svg.setAttribute("style", "fill:#111214");
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+    }
+
+    function getCmsMarketingLines(context, text, maxWidth) {
+      const lines = [];
+      let line = "";
+      for (const word of String(text || "").trim().split(/\s+/).filter(Boolean)) {
+        const candidate = line ? `${line} ${word}` : word;
+        if (line && context.measureText(candidate).width > maxWidth) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = candidate;
+        }
+      }
+      if (line) lines.push(line);
+      return lines;
+    }
+
+    function drawCmsMarketingCover(context, image, width, height) {
+      const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+      const imageWidth = image.naturalWidth * scale;
+      const imageHeight = image.naturalHeight * scale;
+      context.drawImage(image, (width - imageWidth) / 2, (height - imageHeight) / 2, imageWidth, imageHeight);
+      const gradient = context.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, "rgba(10,11,13,0.28)");
+      if (width > height) {
+        gradient.addColorStop(0.35, "rgba(10,11,13,0.4)");
+        gradient.addColorStop(0.72, "rgba(10,11,13,0.12)");
+      } else {
+        gradient.addColorStop(0.42, "rgba(10,11,13,0.12)");
+        gradient.addColorStop(1, "rgba(10,11,13,0.88)");
+      }
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, width, height);
+    }
+
+    async function renderCmsMarketingPreview() {
+      const canvas = document.getElementById("cmsMarketingCanvas");
+      const status = document.getElementById("cmsMarketingStatus");
+      const downloadButton = document.getElementById("cmsMarketingDownloadBtn");
+      const dimensions = document.getElementById("cmsMarketingDimensions");
+      if (!canvas) return;
+      const format = CMS_MARKETING_FORMATS[cmsMarketingFormat];
+      const project = portfolioProjects.find((item) => item.id === cmsMarketingProjectId) || portfolioProjects[0];
+      if (!project) {
+        if (status) {
+          status.textContent = "Publish a project before creating a social media design.";
+          status.classList.remove("hidden");
+        }
+        if (downloadButton) downloadButton.disabled = true;
+        return;
+      }
+
+      const renderVersion = ++cmsMarketingRenderVersion;
+      if (downloadButton) downloadButton.disabled = true;
+      if (status) status.classList.add("hidden");
+      if (dimensions) dimensions.textContent = format.label;
+      canvas.width = format.width;
+      canvas.height = format.height;
+
+      try {
+        if (document.fonts?.ready) await document.fonts.ready;
+        const [cover, logo] = await Promise.all([
+          loadCmsMarketingImage(project.imageUrl),
+          loadCmsMarketingImage(getCmsMarketingLogoSource())
+        ]);
+        if (renderVersion !== cmsMarketingRenderVersion) return;
+
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Your browser could not prepare the image canvas.");
+        const { width, height } = format;
+        const landscape = width > height;
+        const margin = Math.round(width * 0.075);
+        drawCmsMarketingCover(context, cover, width, height);
+
+        const logoBoxWidth = Math.round(width * (landscape ? 0.34 : 0.48));
+        const logoBoxHeight = Math.round(height * 0.09);
+        const logoX = margin;
+        const logoY = Math.round(height * 0.055);
+        context.fillStyle = "rgba(255,255,255,0.94)";
+        context.beginPath();
+        context.roundRect(logoX, logoY, logoBoxWidth, logoBoxHeight, logoBoxHeight / 2);
+        context.fill();
+        const logoPadding = Math.round(logoBoxHeight * 0.19);
+        const logoWidth = logoBoxWidth * 0.4;
+        const logoHeight = logoBoxHeight - logoPadding * 2;
+        const logoScale = Math.min(logoWidth / logo.naturalWidth, logoHeight / logo.naturalHeight);
+        const drawnLogoWidth = logo.naturalWidth * logoScale;
+        const drawnLogoHeight = logo.naturalHeight * logoScale;
+        context.drawImage(
+          logo,
+          logoX + logoPadding,
+          logoY + (logoBoxHeight - drawnLogoHeight) / 2,
+          drawnLogoWidth,
+          drawnLogoHeight
+        );
+        context.fillStyle = "#111214";
+        context.font = `700 ${Math.round(logoBoxHeight * 0.19)}px "IBM Plex Sans", sans-serif`;
+        context.textAlign = "left";
+        context.textBaseline = "middle";
+        context.fillText(cmsConfig.customLogoText || cmsConfig.studioTagEn || "Mostafa Khaled Studio", logoX + logoBoxWidth * 0.46, logoY + logoBoxHeight / 2, logoBoxWidth * 0.49);
+
+        const textX = margin;
+        const textWidth = Math.round(width * (landscape ? 0.54 : 0.84));
+        const category = project.categoryEn || "Selected project";
+        const title = project.titleEn || project.titleAr || "Featured project";
+        const textTop = Math.round(height * (landscape ? 0.48 : 0.55));
+        context.textAlign = "left";
+        context.textBaseline = "top";
+        context.direction = "ltr";
+        context.fillStyle = "rgba(255,255,255,0.78)";
+        context.font = `600 ${Math.round(width * 0.022)}px "IBM Plex Sans", sans-serif`;
+        context.fillText(category.toUpperCase(), textX, textTop);
+
+        let titleFontSize = Math.round(width * (landscape ? 0.064 : 0.075));
+        let titleLines;
+        do {
+          context.font = `700 ${titleFontSize}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+          titleLines = getCmsMarketingLines(context, title, textWidth);
+          if (titleLines.length <= 3 || titleFontSize <= 40) break;
+          titleFontSize -= 5;
+        } while (titleFontSize > 35);
+
+        const titleY = textTop + Math.round(height * 0.045);
+        const lineHeight = Math.round(titleFontSize * 1.17);
+        context.fillStyle = "#fff";
+        titleLines.slice(0, 3).forEach((line, index) => {
+          context.fillText(line, textX, titleY + index * lineHeight, textWidth);
+        });
+
+        const cta = document.getElementById("cmsMarketingCta")?.value.trim() || "اكتشف المزيد من مشاريعي";
+        const ctaY = Math.min(height - Math.round(height * 0.16), titleY + Math.min(titleLines.length, 3) * lineHeight + Math.round(height * 0.035));
+        const ctaFontSize = Math.round(width * (landscape ? 0.023 : 0.028));
+        context.font = `600 ${ctaFontSize}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+        const isArabicCta = /[\u0600-\u06ff]/.test(cta);
+        const ctaTextWidth = context.measureText(cta).width;
+        const ctaWidth = Math.min(textWidth, ctaTextWidth + ctaFontSize * 2.2);
+        const ctaHeight = ctaFontSize * 2.6;
+        context.fillStyle = "#fff";
+        context.beginPath();
+        context.roundRect(textX, ctaY, ctaWidth, ctaHeight, ctaHeight / 2);
+        context.fill();
+        context.fillStyle = "#111214";
+        context.textAlign = isArabicCta ? "right" : "left";
+        context.direction = isArabicCta ? "rtl" : "ltr";
+        context.textBaseline = "middle";
+        context.fillText(cta, isArabicCta ? textX + ctaWidth - ctaFontSize : textX + ctaFontSize, ctaY + ctaHeight / 2, ctaWidth - ctaFontSize * 2);
+
+        const website = new URL(document.querySelector('link[rel="canonical"]')?.href || window.location.href).hostname;
+        context.fillStyle = "rgba(255,255,255,0.82)";
+        context.font = `500 ${Math.round(width * 0.019)}px "IBM Plex Sans", sans-serif`;
+        context.textAlign = "left";
+        context.direction = "ltr";
+        context.textBaseline = "alphabetic";
+        context.fillText(website, margin, height - Math.round(height * 0.055));
+        if (downloadButton) downloadButton.disabled = false;
+      } catch (error) {
+        if (renderVersion !== cmsMarketingRenderVersion) return;
+        console.error("Unable to render the social media design.", error);
+        if (status) {
+          status.textContent = `Preview unavailable: ${error.message || "The project image or logo could not be loaded."}`;
+          status.classList.remove("hidden");
+        }
+        if (downloadButton) downloadButton.disabled = true;
+      }
     }
 
     // ==================== SMART COOKIE & VISITOR INTEREST ENGINE ====================
@@ -4093,8 +4325,63 @@
           document.querySelectorAll(".cms-tab-panel").forEach((panel) => panel.classList.add("hidden"));
           const activePanel = document.getElementById(`cmsTab${targetTab.charAt(0).toUpperCase() + targetTab.slice(1)}`);
           if (activePanel) activePanel.classList.remove("hidden");
+          if (targetTab === "marketing") {
+            renderCmsMarketingProjects();
+            renderCmsMarketingPreview();
+          }
         });
       });
+
+      document.querySelectorAll("[data-marketing-format]").forEach((button) => {
+        button.addEventListener("click", () => {
+          cmsMarketingFormat = button.dataset.marketingFormat;
+          document.querySelectorAll("[data-marketing-format]").forEach((formatButton) => {
+            formatButton.classList.toggle("active", formatButton === button);
+            formatButton.setAttribute("aria-pressed", String(formatButton === button));
+          });
+          renderCmsMarketingPreview();
+        });
+      });
+
+      const marketingCta = document.getElementById("cmsMarketingCta");
+      if (marketingCta) marketingCta.addEventListener("input", renderCmsMarketingPreview);
+
+      const marketingDownloadButton = document.getElementById("cmsMarketingDownloadBtn");
+      if (marketingDownloadButton) {
+        marketingDownloadButton.addEventListener("click", () => {
+          const canvas = document.getElementById("cmsMarketingCanvas");
+          const status = document.getElementById("cmsMarketingStatus");
+          if (!canvas || marketingDownloadButton.disabled) return;
+          marketingDownloadButton.disabled = true;
+          const handleDownloadError = (message) => {
+            if (status) {
+              status.textContent = message;
+              status.classList.remove("hidden");
+            }
+            marketingDownloadButton.disabled = false;
+          };
+          try {
+            canvas.toBlob((blob) => {
+              if (!blob) {
+                handleDownloadError("The PNG could not be created. Reload the preview and try again.");
+                return;
+              }
+              const project = portfolioProjects.find((item) => item.id === cmsMarketingProjectId) || portfolioProjects[0];
+              const safeTitle = (project?.titleEn || "project").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
+              const link = document.createElement("a");
+              const objectUrl = URL.createObjectURL(blob);
+              link.href = objectUrl;
+              link.download = `${safeTitle || "project"}-${cmsMarketingFormat}.png`;
+              link.click();
+              window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+              marketingDownloadButton.disabled = false;
+            }, "image/png");
+          } catch (error) {
+            console.error("Unable to export the social media PNG.", error);
+            handleDownloadError(`PNG export failed: ${error.message || "The canvas may contain an image that does not allow cross-origin export."}`);
+          }
+        });
+      }
 
       // Project Image File Upload to Data URL
       const projImgFile = document.getElementById("cmsProjImgFile");

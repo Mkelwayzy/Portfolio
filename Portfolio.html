@@ -444,6 +444,9 @@
           <button type="button" data-cms-tab="identity" class="cms-tab-btn text-slateText font-semibold" aria-pressed="false">
             <span class="cms-tab-number">07</span><span class="cms-tab-label">Brand Identity</span>
           </button>
+          <button type="button" data-cms-tab="marketing" class="cms-tab-btn text-slateText font-semibold" aria-pressed="false">
+            <span class="cms-tab-number">08</span><span class="cms-tab-label">Marketing / التسويق</span>
+          </button>
         </nav>
 
         <div class="cms-dashboard-content">
@@ -721,6 +724,51 @@
             <input id="cmsProjectSearch" type="search" autocomplete="off" placeholder="Search name, country, year, software…" class="mb-2 w-full rounded-xl px-3.5 py-2.5 text-xs text-obsidian" />
             <p id="cmsProjectSearchCount" role="status" aria-live="polite" class="mb-3 text-[10px] text-slateText"></p>
             <div id="cmsProjectsList" class="space-y-3 max-h-[960px] overflow-y-auto pe-1"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 8: SOCIAL MEDIA MARKETING EXPORTS -->
+      <div id="cmsTabMarketing" class="cms-tab-panel hidden space-y-6">
+        <div class="glass-card rounded-[28px] p-6 sm:p-8">
+          <div class="mb-6">
+            <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-slateText">SOCIAL MEDIA STUDIO</span>
+            <h3 class="mt-1 text-xl font-bold text-obsidian sm:text-2xl">Marketing / التسويق</h3>
+            <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slateText">اختَر مشروعًا منشورًا، جهّز تصميمًا يحمل الشعار ورابط الموقع ورسالة تشجيعية، ثم حمّله كصورة PNG للنشر.</p>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
+            <section class="xl:col-span-5" aria-labelledby="cmsMarketingProjectsTitle">
+              <div class="mb-3 flex items-center justify-between gap-3">
+                <h4 id="cmsMarketingProjectsTitle" class="text-sm font-bold text-obsidian">مشاريعك المنشورة</h4>
+                <span id="cmsMarketingProjectsCount" class="rounded-full bg-white/80 px-3 py-1 text-[10px] font-semibold text-slateText"></span>
+              </div>
+              <div id="cmsMarketingProjects" class="cms-marketing-projects" role="list"></div>
+            </section>
+
+            <section class="xl:col-span-7" aria-labelledby="cmsMarketingPreviewTitle">
+              <div class="mb-3 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h4 id="cmsMarketingPreviewTitle" class="text-sm font-bold text-obsidian">معاينة التصميم</h4>
+                  <p id="cmsMarketingDimensions" class="mt-1 text-[11px] text-slateText">Post · 1080 × 1440 px</p>
+                </div>
+                <div class="flex flex-wrap gap-2" role="group" aria-label="Social media image format">
+                  <button type="button" data-marketing-format="post" class="cms-marketing-format active">Post · 1080 × 1440</button>
+                  <button type="button" data-marketing-format="story" class="cms-marketing-format">Story · 1920 × 1080</button>
+                </div>
+              </div>
+
+              <label for="cmsMarketingCta" class="mb-1.5 block text-[11px] font-semibold text-obsidian">العبارة التشجيعية</label>
+              <input id="cmsMarketingCta" type="text" maxlength="80" value="اكتشف المزيد من مشاريعي" class="mb-4 w-full rounded-xl px-3.5 py-2.5 text-xs text-obsidian" />
+              <div class="cms-marketing-preview glass-card">
+                <canvas id="cmsMarketingCanvas" width="1080" height="1440" role="img" aria-label="Social media design preview"></canvas>
+                <p id="cmsMarketingStatus" role="status" aria-live="polite" class="hidden"></p>
+              </div>
+              <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <p class="text-[10px] text-slateText">The artwork includes the project, brand mark, website address, and your call to action.</p>
+                <button id="cmsMarketingDownloadBtn" type="button" class="rounded-full bg-obsidian px-5 py-3 text-xs font-bold text-white shadow-sm transition hover:opacity-90 disabled:cursor-wait disabled:opacity-50">Download PNG</button>
+              </div>
+            </section>
           </div>
         </div>
       </div>
