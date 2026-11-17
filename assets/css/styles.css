@@ -700,7 +700,8 @@
     .project-media-pdf {
       border: 0;
     }
-    .project-media-item > figcaption {
+    .project-media-item > figcaption,
+    .project-image-item > figcaption {
       position: absolute;
       right: 0;
       bottom: 0;
@@ -714,7 +715,8 @@
       line-height: 1.4;
       overflow-wrap: anywhere;
     }
-    .project-media-item > figcaption span {
+    .project-media-item > figcaption span,
+    .project-image-item > figcaption span {
       flex: 0 0 auto;
       font-weight: 700;
     }

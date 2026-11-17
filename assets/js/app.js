@@ -3624,8 +3624,8 @@
           if (willOpen && !iframe.src) iframe.src = iframe.dataset.pdfSrc;
         });
       });
-      // Gallery Shots (Supports Multi-Size Editorial Grid Blocks & Captions)
-      document.getElementById("gallerySubHeading").textContent = isAr ? "معرض الصور والتفاصيل متعدد المقاسات" : "Multi-Size Visual Showcase & Details";
+      // Published project media uses the same three-column portrait grid.
+      document.getElementById("gallerySubHeading").textContent = isAr ? "معرض صور المشروع" : "Project Gallery";
       document.getElementById("galleryHeading").textContent = isAr ? "لقطات ومخرجات المشروع" : "Project Visual Frames";
       document.getElementById("inquireProjectBtnLbl").textContent = isAr ? "اطلب مشروعاً مشابهاً" : "Request Similar Project";
       const galleryContainer = document.getElementById("modalProjectGallery");
@@ -3640,47 +3640,25 @@
           }));
 
       const visibleBlocks = activeBlocks.filter((block) => typeof block?.url === "string" && block.url);
-      if (proj.freeformGallery === true) {
-        const galleryRows = Math.max(12, ...visibleBlocks.map((block, index) => {
-          const layout = normalizeCmsMediaLayout(block, index);
-          return Math.ceil(layout.y + layout.height);
-        }));
-        galleryContainer.className = "project-media-canvas";
-        galleryContainer.style.setProperty("--project-gallery-rows", String(galleryRows));
-        galleryContainer.style.aspectRatio = `12 / ${galleryRows}`;
-        galleryContainer.innerHTML = visibleBlocks.map((block, index) => {
-          const caption = isAr ? (block.captionAr || block.captionEn) : (block.captionEn || block.captionAr);
-          const layout = normalizeCmsMediaLayout(block, index);
-          const type = block.type || "image";
-          const mediaMarkup = type === "video"
-            ? `<video src="${escapeCmsHtml(block.url)}" class="project-media-content" controls playsinline preload="metadata" aria-label="${escapeCmsHtml(block.name || (isAr ? "فيديو المشروع" : "Project video"))}"></video>`
-            : type === "pdf"
-              ? `<iframe src="${escapeCmsHtml(block.url)}#toolbar=0&navpanes=0&view=FitH" class="project-media-content project-media-pdf" title="${escapeCmsHtml(block.name || (isAr ? "ملف PDF للمشروع" : "Project PDF"))}" loading="lazy"></iframe>`
-              : `<img src="${escapeCmsHtml(block.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" style="object-fit:${layout.fit};object-position:${layout.cropX}% ${layout.cropY}%;transform:scale(${layout.cropZoom})" />`;
-          return `
-            <figure class="project-media-item group${type === "image" ? " is-zoomable" : ""}" ${type === "image" ? `data-gallery-image-index="${index}" role="button" tabindex="0" aria-label="${isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size"} ${index + 1}"` : ""} style="left:${(layout.x / 12) * 100}%;top:${(layout.y / galleryRows) * 100}%;width:${(layout.width / 12) * 100}%;height:${(layout.height / galleryRows) * 100}%;z-index:${index + 1}">
-              ${mediaMarkup}
-              ${caption ? `<figcaption><span>0${index + 1}.</span>${escapeCmsHtml(caption)}</figcaption>` : ""}
-            </figure>
-          `;
-        }).join("");
-      } else {
-        galleryContainer.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 items-start gap-5";
-        galleryContainer.removeAttribute("style");
-        galleryContainer.innerHTML = visibleBlocks.map((block, index) => {
-          const caption = isAr ? (block.captionAr || block.captionEn) : (block.captionEn || block.captionAr);
-          const aspect = normalizeCmsMediaAspect(block.aspect);
-          const imageClass = aspect === "aspect-auto" ? "w-full h-auto object-contain" : "w-full h-full object-cover";
-          return `
-            <figure class="min-w-0 flex flex-col overflow-hidden rounded-2xl bg-white/55 border border-white/85 shadow-sm group cursor-pointer" data-gallery-image-index="${index}" role="button" tabindex="0" aria-label="${isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size"} ${index + 1}">
-              <div class="overflow-hidden bg-[#E5E6E8] ${aspect} w-full">
-                <img src="${escapeCmsHtml(block.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" class="${imageClass} transition-transform duration-500 group-hover:scale-[1.03]" />
-              </div>
-              ${caption ? `<figcaption class="border-t border-white/80 bg-white/75 px-4 py-3 text-xs font-medium leading-relaxed text-[#2A2C30] backdrop-blur-md"><span class="me-1.5 inline-block font-bold text-[#111214]">0${index + 1}.</span>${escapeCmsHtml(caption)}</figcaption>` : ""}
-            </figure>
-          `;
-        }).join("");
-      }
+      galleryContainer.className = "project-images-grid grid grid-cols-3 items-start gap-4";
+      galleryContainer.removeAttribute("style");
+      galleryContainer.innerHTML = visibleBlocks.map((block, index) => {
+        const caption = isAr ? (block.captionAr || block.captionEn) : (block.captionEn || block.captionAr);
+        const layout = normalizeCmsMediaLayout(block, index);
+        const type = block.type || "image";
+        const imageLabel = isAr ? "عرض الصورة بالحجم الكامل" : "View image at full size";
+        const mediaMarkup = type === "video"
+          ? `<video src="${escapeCmsHtml(block.url)}" class="project-media-content" controls playsinline preload="metadata" aria-label="${escapeCmsHtml(block.name || (isAr ? "فيديو المشروع" : "Project video"))}"></video>`
+          : type === "pdf"
+            ? `<iframe src="${escapeCmsHtml(block.url)}#toolbar=0&navpanes=0&view=FitH" class="project-media-content project-media-pdf" title="${escapeCmsHtml(block.name || (isAr ? "ملف PDF للمشروع" : "Project PDF"))}" loading="lazy"></iframe>`
+            : `<img src="${escapeCmsHtml(block.url)}" alt="${escapeCmsHtml(isAr ? proj.titleAr : proj.titleEn)} - ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" style="object-fit:${layout.fit};object-position:${layout.cropX}% ${layout.cropY}%;transform:scale(${layout.cropZoom})" />`;
+        return `
+          <figure class="project-image-item relative group${type === "image" ? " is-zoomable cursor-zoom-in" : ""}" ${type === "image" ? `data-gallery-image-index="${index}" role="button" tabindex="0" aria-label="${imageLabel} ${index + 1}"` : ""}>
+            ${mediaMarkup}
+            ${caption ? `<figcaption><span>0${index + 1}.</span>${escapeCmsHtml(caption)}</figcaption>` : ""}
+          </figure>
+        `;
+      }).join("");
       galleryContainer.querySelectorAll("[data-gallery-image-index]").forEach((figure) => {
         const showFullImage = () => {
           const block = visibleBlocks[Number(figure.dataset.galleryImageIndex)];
