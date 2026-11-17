@@ -1818,8 +1818,30 @@
       post: { width: 1080, height: 1350, label: "Post · 1080 × 1350 px" },
       story: { width: 1080, height: 1920, label: "Story · 1080 × 1920 px" }
     };
+    const CMS_MARKETING_TEMPLATES = [
+      { id: "01", name: "Glass Bento", mood: "Light", dark: false, layout: "bento", accent: "#326b46", title: "top-left" },
+      { id: "02", name: "Editorial Split", mood: "Light", dark: false, layout: "editorial", accent: "#bd9b49", title: "top-right" },
+      { id: "03", name: "Filmstrip", mood: "Light", dark: false, layout: "filmstrip", accent: "#3d7754", title: "top-center" },
+      { id: "04", name: "Orbit Gallery", mood: "Light", dark: false, layout: "orbit", accent: "#c5a74e", title: "center" },
+      { id: "05", name: "Masonry", mood: "Light", dark: false, layout: "masonry", accent: "#2c6947", title: "bottom-left" },
+      { id: "06", name: "Polaroid Studio", mood: "Light", dark: false, layout: "polaroid", accent: "#c5a65b", title: "top-left" },
+      { id: "07", name: "Twin Gallery", mood: "Light", dark: false, layout: "twin", accent: "#397452", title: "top-center" },
+      { id: "08", name: "Portrait Rail", mood: "Light", dark: false, layout: "rail", accent: "#b79847", title: "top-left" },
+      { id: "09", name: "Magazine Grid", mood: "Light", dark: false, layout: "magazine", accent: "#3d7850", title: "center" },
+      { id: "10", name: "Panorama", mood: "Light", dark: false, layout: "panorama", accent: "#c4a24d", title: "top-right" },
+      { id: "11", name: "Window Gallery", mood: "Light", dark: false, layout: "window", accent: "#306a48", title: "center" },
+      { id: "12", name: "Bubble Mosaic", mood: "Light", dark: false, layout: "bubbles", accent: "#b99b51", title: "top-center" },
+      { id: "13", name: "Emerald Spotlight", mood: "Dark", dark: true, layout: "spotlight", accent: "#83d69c", title: "top-right" },
+      { id: "14", name: "Noir Orbit", mood: "Dark", dark: true, layout: "noir-orbit", accent: "#c3a95f", title: "center" },
+      { id: "15", name: "Diagonal Motion", mood: "Dark", dark: true, layout: "diagonal", accent: "#8ce0a4", title: "top-left" },
+      { id: "16", name: "Midnight Tiles", mood: "Dark", dark: true, layout: "midnight-grid", accent: "#cdb05f", title: "center" },
+      { id: "17", name: "Floating Stack", mood: "Dark", dark: true, layout: "floating", accent: "#7ed798", title: "bottom-left" },
+      { id: "18", name: "Neon Gallery", mood: "Dark", dark: true, layout: "neon", accent: "#d0b264", title: "top-center" },
+      { id: "19", name: "Luxe Columns", mood: "Dark", dark: true, layout: "columns", accent: "#85d69c", title: "top-left" },
+      { id: "20", name: "Glass Wall", mood: "Dark", dark: true, layout: "glass-wall", accent: "#d0b264", title: "top-right" }
+    ];
     let cmsMarketingFormat = "post";
-    let cmsMarketingTemplate = "classic";
+    let cmsMarketingTemplate = CMS_MARKETING_TEMPLATES[0].id;
     let cmsMarketingProjectId = null;
     let cmsMarketingRenderVersion = 0;
 
@@ -1855,6 +1877,27 @@
       });
     }
 
+    function renderCmsMarketingTemplateOptions() {
+      const container = document.getElementById("cmsMarketingTemplates");
+      if (!container) return;
+      container.innerHTML = CMS_MARKETING_TEMPLATES.map((template) => `
+        <button type="button" class="cms-marketing-template${template.id === cmsMarketingTemplate ? " active" : ""}" data-marketing-template="${template.id}" aria-pressed="${template.id === cmsMarketingTemplate}" aria-label="Template ${template.id}: ${template.name}, ${template.mood}">
+          <span class="cms-marketing-template-number">${template.id}</span>
+          <span class="cms-marketing-template-copy"><strong>${template.name}</strong><small>${template.mood}</small></span>
+        </button>
+      `).join("");
+      container.querySelectorAll("[data-marketing-template]").forEach((button) => {
+        button.addEventListener("click", () => {
+          cmsMarketingTemplate = button.dataset.marketingTemplate;
+          container.querySelectorAll("[data-marketing-template]").forEach((templateButton) => {
+            templateButton.classList.toggle("active", templateButton === button);
+            templateButton.setAttribute("aria-pressed", String(templateButton === button));
+          });
+          renderCmsMarketingPreview();
+        });
+      });
+    }
+
     function loadCmsMarketingImage(source) {
       return new Promise((resolve, reject) => {
         if (!source) {
@@ -1870,17 +1913,7 @@
     }
 
     function getCmsMarketingLogoSource() {
-      if (cmsMarketingTemplate === "onlineEducation") {
-        return new URL("assets/marketing-logo.svg", document.baseURI).href;
-      }
-      if (cmsConfig.customLogoDataUrl) return cmsConfig.customLogoDataUrl;
-      const signature = document.getElementById("defaultSignatureSvg");
-      if (!signature) return "";
-      const svg = signature.cloneNode(true);
-      svg.setAttribute("width", "1160");
-      svg.setAttribute("height", "400");
-      svg.setAttribute("style", "fill:#111214");
-      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+      return new URL("assets/marketing-logo.svg", document.baseURI).href;
     }
 
     function getCmsMarketingLines(context, text, maxWidth) {
@@ -1924,7 +1957,7 @@
           ? project.mediaBlocks.filter((block) => block?.type === "image").map((block) => block.url)
           : [])
       ];
-      return [...new Set([project.imageUrl, ...gallerySources].filter((source) => typeof source === "string" && source))].slice(0, 8);
+      return [...new Set([project.imageUrl, ...gallerySources].filter((source) => typeof source === "string" && source))].slice(0, 6);
     }
 
     function drawCmsMarketingImageCard(context, image, x, y, width, height, radius = 18) {
@@ -2550,6 +2583,259 @@
       drawCmsMarketingEducationLogo(context, logoVariants.light, width - margin - width * 0.1, height * 0.957, width * 0.1, height * 0.025);
     }
 
+    function drawCmsMarketingGlassPanel(context, x, y, width, height, radius, dark, opacity = 0.74) {
+      const blurCanvas = document.createElement("canvas");
+      blurCanvas.width = Math.max(1, Math.ceil(width));
+      blurCanvas.height = Math.max(1, Math.ceil(height));
+      const blurContext = blurCanvas.getContext("2d");
+      context.save();
+      context.beginPath();
+      context.roundRect(x, y, width, height, radius);
+      context.clip();
+      if (blurContext) {
+        blurContext.filter = `blur(${Math.max(4, Math.round(Math.min(width, height) * 0.08))}px)`;
+        blurContext.drawImage(context.canvas, x, y, width, height, 0, 0, blurCanvas.width, blurCanvas.height);
+        context.drawImage(blurCanvas, x, y, width, height);
+      }
+      context.fillStyle = dark ? `rgba(9,15,20,${opacity})` : `rgba(255,255,255,${opacity})`;
+      context.fillRect(x, y, width, height);
+      context.strokeStyle = dark ? "rgba(255,255,255,0.34)" : "rgba(255,255,255,0.88)";
+      context.lineWidth = Math.max(1.5, width * 0.002);
+      context.beginPath();
+      context.roundRect(x, y, width, height, radius);
+      context.stroke();
+      context.restore();
+    }
+
+    function drawCmsMarketingPremiumPhoto(context, image, box, index, template, width, height) {
+      const x = box.x * width;
+      const y = box.y * height;
+      const boxWidth = box.w * width;
+      const boxHeight = box.h * height;
+      const rotation = box.rotation || 0;
+      const radius = Math.max(12, Math.min(boxWidth, boxHeight) * 0.08);
+
+      context.save();
+      context.translate(x + boxWidth / 2, y + boxHeight / 2);
+      context.rotate(rotation);
+      context.shadowColor = template.dark ? "rgba(0,0,0,0.5)" : "rgba(26,41,31,0.2)";
+      context.shadowBlur = Math.min(width, height) * 0.022;
+      context.shadowOffsetY = Math.min(width, height) * 0.01;
+      context.fillStyle = template.dark ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.9)";
+
+      if (box.shape === "circle") {
+        const diameter = Math.min(boxWidth, boxHeight);
+        context.beginPath();
+        context.arc(0, 0, diameter / 2, 0, Math.PI * 2);
+        context.fill();
+        context.clip();
+        const scale = Math.max(diameter / image.naturalWidth, diameter / image.naturalHeight);
+        const imageWidth = image.naturalWidth * scale;
+        const imageHeight = image.naturalHeight * scale;
+        context.drawImage(image, -imageWidth / 2, -imageHeight / 2, imageWidth, imageHeight);
+        context.fillStyle = template.dark ? "rgba(5,12,10,0.44)" : "rgba(17,30,21,0.26)";
+        context.fillRect(-diameter / 2, diameter * 0.28, diameter, diameter * 0.22);
+        context.shadowColor = "transparent";
+        context.strokeStyle = "rgba(255,255,255,0.9)";
+        context.lineWidth = Math.max(2, width * 0.003);
+        context.beginPath();
+        context.arc(0, 0, diameter / 2 - context.lineWidth, 0, Math.PI * 2);
+        context.stroke();
+        context.fillStyle = "#fff";
+        context.font = `700 ${Math.max(12, Math.round(diameter * 0.075))}px "IBM Plex Sans", sans-serif`;
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText(String(index + 1).padStart(2, "0"), 0, diameter * 0.39);
+      } else {
+        const drawX = -boxWidth / 2;
+        const drawY = -boxHeight / 2;
+        context.beginPath();
+        context.roundRect(drawX, drawY, boxWidth, boxHeight, radius);
+        context.fill();
+        context.clip();
+        const scale = Math.max(boxWidth / image.naturalWidth, boxHeight / image.naturalHeight);
+        const imageWidth = image.naturalWidth * scale;
+        const imageHeight = image.naturalHeight * scale;
+        context.drawImage(image, -imageWidth / 2, -imageHeight / 2, imageWidth, imageHeight);
+        const wash = context.createLinearGradient(0, boxHeight / 2, 0, boxHeight * 0.19);
+        wash.addColorStop(0, template.dark ? "rgba(5,12,10,0.68)" : "rgba(17,30,21,0.46)");
+        wash.addColorStop(1, "rgba(17,30,21,0)");
+        context.fillStyle = wash;
+        context.fillRect(drawX, drawY, boxWidth, boxHeight);
+        context.shadowColor = "transparent";
+        context.strokeStyle = "rgba(255,255,255,0.88)";
+        context.lineWidth = Math.max(1.5, width * 0.002);
+        context.beginPath();
+        context.roundRect(drawX + context.lineWidth / 2, drawY + context.lineWidth / 2, boxWidth - context.lineWidth, boxHeight - context.lineWidth, radius);
+        context.stroke();
+        context.fillStyle = "#fff";
+        context.font = `700 ${Math.max(12, Math.round(Math.min(boxWidth, boxHeight) * 0.09))}px "IBM Plex Sans", sans-serif`;
+        context.textAlign = "right";
+        context.textBaseline = "bottom";
+        context.fillText(String(index + 1).padStart(2, "0"), boxWidth / 2 - boxWidth * 0.06, boxHeight / 2 - boxHeight * 0.06);
+      }
+      context.restore();
+    }
+
+    function getCmsMarketingPhotoLayout(layout) {
+      const box = (x, y, w, h, options = {}) => ({ x, y, w, h, ...options });
+      switch (layout) {
+        case "bento":
+          return [box(0.055, 0.235, 0.51, 0.55), box(0.59, 0.235, 0.17, 0.17), box(0.78, 0.235, 0.165, 0.17), box(0.59, 0.425, 0.17, 0.17), box(0.78, 0.425, 0.165, 0.17), box(0.59, 0.615, 0.355, 0.17)];
+        case "editorial":
+          return [box(0.055, 0.245, 0.27, 0.165), box(0.055, 0.43, 0.27, 0.165), box(0.055, 0.615, 0.27, 0.165), box(0.35, 0.245, 0.595, 0.345), box(0.35, 0.61, 0.285, 0.17), box(0.655, 0.61, 0.29, 0.17)];
+        case "filmstrip":
+          return Array.from({ length: 6 }, (_, index) => box(0.045 + index * 0.153, 0.39, 0.14, 0.32));
+        case "orbit":
+          return [box(0.06, 0.25, 0.2, 0.17, { shape: "circle" }), box(0.4, 0.23, 0.2, 0.18, { shape: "circle" }), box(0.74, 0.25, 0.2, 0.17, { shape: "circle" }), box(0.06, 0.61, 0.2, 0.17, { shape: "circle" }), box(0.4, 0.63, 0.2, 0.17, { shape: "circle" }), box(0.74, 0.61, 0.2, 0.17, { shape: "circle" })];
+        case "masonry":
+          return [box(0.055, 0.235, 0.42, 0.17), box(0.055, 0.425, 0.42, 0.23), box(0.055, 0.675, 0.42, 0.12), box(0.515, 0.235, 0.43, 0.23), box(0.515, 0.485, 0.43, 0.18), box(0.515, 0.685, 0.43, 0.11)];
+        case "polaroid":
+          return [box(0.04, 0.27, 0.29, 0.2, { rotation: -0.045 }), box(0.355, 0.235, 0.29, 0.22, { rotation: 0.028 }), box(0.67, 0.28, 0.29, 0.19, { rotation: 0.045 }), box(0.055, 0.55, 0.29, 0.21, { rotation: 0.025 }), box(0.36, 0.535, 0.29, 0.22, { rotation: -0.035 }), box(0.675, 0.55, 0.29, 0.2, { rotation: 0.02 })];
+        case "twin":
+          return [box(0.055, 0.25, 0.42, 0.16), box(0.525, 0.25, 0.42, 0.16), box(0.055, 0.435, 0.42, 0.16), box(0.525, 0.435, 0.42, 0.16), box(0.055, 0.62, 0.42, 0.16), box(0.525, 0.62, 0.42, 0.16)];
+        case "rail":
+          return Array.from({ length: 6 }, (_, index) => box(0.035 + index * 0.158, index % 2 ? 0.3 : 0.35, 0.14, index % 2 ? 0.38 : 0.44, { rotation: index % 2 ? 0.018 : -0.018 }));
+        case "magazine":
+          return [box(0.055, 0.25, 0.4, 0.225), box(0.475, 0.25, 0.2, 0.225), box(0.695, 0.25, 0.25, 0.225), box(0.055, 0.505, 0.25, 0.245), box(0.325, 0.505, 0.2, 0.245), box(0.545, 0.505, 0.4, 0.245)];
+        case "panorama":
+          return [box(0.055, 0.255, 0.43, 0.245), box(0.515, 0.255, 0.43, 0.245), ...Array.from({ length: 4 }, (_, index) => box(0.055 + index * 0.225, 0.53, 0.21, 0.235))];
+        case "window":
+          return [box(0.055, 0.245, 0.24, 0.2, { shape: "circle" }), box(0.705, 0.245, 0.24, 0.2, { shape: "circle" }), box(0.055, 0.59, 0.24, 0.2, { shape: "circle" }), box(0.705, 0.59, 0.24, 0.2, { shape: "circle" }), box(0.32, 0.245, 0.16, 0.2), box(0.52, 0.59, 0.16, 0.2)];
+        case "bubbles":
+          return [box(0.075, 0.25, 0.25, 0.2, { shape: "circle" }), box(0.375, 0.25, 0.25, 0.2, { shape: "circle" }), box(0.675, 0.25, 0.25, 0.2, { shape: "circle" }), box(0.075, 0.53, 0.25, 0.2, { shape: "circle" }), box(0.375, 0.53, 0.25, 0.2, { shape: "circle" }), box(0.675, 0.53, 0.25, 0.2, { shape: "circle" })];
+        case "spotlight":
+          return [box(0.39, 0.235, 0.555, 0.55), box(0.055, 0.235, 0.29, 0.1), box(0.055, 0.355, 0.29, 0.1), box(0.055, 0.475, 0.29, 0.1), box(0.055, 0.595, 0.29, 0.1), box(0.055, 0.715, 0.29, 0.07)];
+        case "noir-orbit":
+          return [box(0.08, 0.25, 0.23, 0.2, { shape: "circle" }), box(0.385, 0.22, 0.23, 0.22, { shape: "circle" }), box(0.69, 0.25, 0.23, 0.2, { shape: "circle" }), box(0.08, 0.56, 0.23, 0.2, { shape: "circle" }), box(0.385, 0.59, 0.23, 0.18, { shape: "circle" }), box(0.69, 0.56, 0.23, 0.2, { shape: "circle" })];
+        case "diagonal":
+          return Array.from({ length: 6 }, (_, index) => box(0.04 + index * 0.13, 0.28 + index * 0.04, 0.24, 0.34, { rotation: (index % 2 ? 1 : -1) * 0.035 }));
+        case "midnight-grid":
+          return [box(0.055, 0.235, 0.28, 0.245), box(0.36, 0.235, 0.28, 0.245), box(0.665, 0.235, 0.28, 0.245), box(0.055, 0.535, 0.28, 0.245), box(0.36, 0.535, 0.28, 0.245), box(0.665, 0.535, 0.28, 0.245)];
+        case "floating":
+          return [box(0.08, 0.25, 0.34, 0.24, { rotation: -0.025 }), box(0.52, 0.25, 0.38, 0.18, { rotation: 0.02 }), box(0.59, 0.47, 0.32, 0.25, { rotation: -0.02 }), box(0.08, 0.55, 0.3, 0.22, { rotation: 0.025 }), box(0.39, 0.48, 0.16, 0.18, { shape: "circle" }), box(0.4, 0.68, 0.15, 0.12, { shape: "circle" })];
+        case "neon":
+          return [box(0.12, 0.23, 0.35, 0.17), box(0.53, 0.23, 0.35, 0.17), box(0.12, 0.43, 0.35, 0.17), box(0.53, 0.43, 0.35, 0.17), box(0.12, 0.63, 0.35, 0.17), box(0.53, 0.63, 0.35, 0.17)];
+        case "columns":
+          return Array.from({ length: 6 }, (_, index) => box(0.055 + (index % 3) * 0.305, 0.245 + Math.floor(index / 3) * 0.28, 0.275, 0.24, { shape: "round" }));
+        case "glass-wall":
+          return [box(0.055, 0.235, 0.43, 0.18), box(0.515, 0.235, 0.43, 0.18), box(0.055, 0.445, 0.26, 0.33), box(0.345, 0.445, 0.31, 0.16), box(0.685, 0.445, 0.26, 0.33), box(0.345, 0.635, 0.31, 0.14)];
+        default:
+          return Array.from({ length: 6 }, (_, index) => box(0.055 + (index % 3) * 0.305, 0.24 + Math.floor(index / 3) * 0.28, 0.275, 0.24));
+      }
+    }
+
+    function getCmsMarketingTitleBox(titlePosition) {
+      const boxes = {
+        "top-left": { x: 0.055, y: 0.055, w: 0.77, h: 0.15, align: "left" },
+        "top-right": { x: 0.22, y: 0.055, w: 0.725, h: 0.15, align: "right" },
+        "top-center": { x: 0.09, y: 0.055, w: 0.82, h: 0.15, align: "center" },
+        center: { x: 0.14, y: 0.415, w: 0.72, h: 0.19, align: "center" },
+        "bottom-left": { x: 0.055, y: 0.645, w: 0.78, h: 0.15, align: "left" }
+      };
+      return boxes[titlePosition] || boxes["top-left"];
+    }
+
+    function drawCmsMarketingPremiumTitle(context, title, cta, template, box, width, height) {
+      const x = box.x * width;
+      const y = box.y * height;
+      const boxWidth = box.w * width;
+      const boxHeight = box.h * height;
+      drawCmsMarketingGlassPanel(context, x, y, boxWidth, boxHeight, Math.max(18, width * 0.025), template.dark, 0.77);
+      context.save();
+      context.textAlign = box.align;
+      context.textBaseline = "top";
+      context.direction = /[\u0600-\u06FF]/.test(title) ? "rtl" : "ltr";
+      let fontSize = Math.round(width * 0.076);
+      let lines = [];
+      do {
+        context.font = `700 ${fontSize}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+        lines = getCmsMarketingLines(context, title, boxWidth * 0.86);
+        if (lines.length > 2) fontSize -= 3;
+      } while (lines.length > 2 && fontSize > width * 0.043);
+      const lineHeight = fontSize * 1.03;
+      const titleHeight = Math.min(boxHeight * 0.72, lineHeight * Math.min(lines.length, 2));
+      const textX = box.align === "left" ? x + boxWidth * 0.07 : box.align === "right" ? x + boxWidth * 0.93 : x + boxWidth / 2;
+      const titleY = y + Math.max(10, (boxHeight - titleHeight - boxHeight * 0.2) / 2);
+      context.fillStyle = template.dark ? "#f5f4ed" : "#18251b";
+      lines.slice(0, 2).forEach((line, index) => context.fillText(line, textX, titleY + index * lineHeight, boxWidth * 0.86));
+      context.direction = /[\u0600-\u06FF]/.test(cta) ? "rtl" : "ltr";
+      context.fillStyle = template.dark ? "rgba(245,244,237,0.82)" : "rgba(24,37,27,0.72)";
+      context.font = `600 ${Math.max(14, Math.round(width * 0.018))}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+      context.textBaseline = "bottom";
+      const ctaX = box.align === "left" ? x + boxWidth * 0.07 : box.align === "right" ? x + boxWidth * 0.93 : x + boxWidth / 2;
+      context.fillText(cta, ctaX, y + boxHeight * 0.91, boxWidth * 0.86);
+      context.restore();
+    }
+
+    function drawCmsMarketingPremiumFooter(context, logo, template, width, height) {
+      const x = width * 0.055;
+      const y = height * 0.85;
+      const panelWidth = width * 0.89;
+      const panelHeight = height * 0.105;
+      drawCmsMarketingGlassPanel(context, x, y, panelWidth, panelHeight, Math.max(18, width * 0.025), template.dark, 0.78);
+
+      const logoBoxWidth = panelWidth * 0.27;
+      const logoBoxHeight = panelHeight * 0.58;
+      const scale = Math.min(logoBoxWidth / logo.naturalWidth, logoBoxHeight / logo.naturalHeight);
+      const drawnWidth = logo.naturalWidth * scale;
+      const drawnHeight = logo.naturalHeight * scale;
+      context.save();
+      context.filter = template.dark ? "grayscale(1) brightness(0) invert(1)" : "none";
+      context.drawImage(logo, x + panelWidth * 0.045, y + (panelHeight - drawnHeight) / 2, drawnWidth, drawnHeight);
+      context.restore();
+
+      const contactX = x + panelWidth * 0.36;
+      const contactWidth = panelWidth * 0.6;
+      const fontSize = Math.max(15, Math.round(width * 0.018));
+      context.save();
+      context.textAlign = "left";
+      context.textBaseline = "middle";
+      context.direction = "ltr";
+      context.fillStyle = template.dark ? "#f4f4ed" : "#18251b";
+      context.font = `700 ${fontSize}px "IBM Plex Sans", sans-serif`;
+      context.fillText("WhatsApp  +01002779252", contactX, y + panelHeight * 0.39, contactWidth);
+      context.fillStyle = template.dark ? "rgba(244,244,237,0.82)" : "rgba(24,37,27,0.76)";
+      context.font = `600 ${fontSize}px "IBM Plex Sans", sans-serif`;
+      context.fillText("Email  MKelwayzy@gmail.com", contactX, y + panelHeight * 0.69, contactWidth);
+      context.restore();
+    }
+
+    function drawCmsMarketingPremiumTemplate(context, project, images, logo, width, height, cta, template) {
+      const dark = template.dark;
+      const background = context.createLinearGradient(0, 0, width, height);
+      background.addColorStop(0, dark ? "#07100d" : "#f2f1e9");
+      background.addColorStop(0.55, dark ? "#10221a" : "#e5ecdf");
+      background.addColorStop(1, dark ? "#080d13" : "#f8f6ef");
+      context.fillStyle = background;
+      context.fillRect(0, 0, width, height);
+
+      const glow = context.createRadialGradient(width * 0.5, height * 0.47, width * 0.04, width * 0.5, height * 0.47, height * 0.68);
+      glow.addColorStop(0, `${template.accent}22`);
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      context.fillStyle = glow;
+      context.fillRect(0, 0, width, height);
+
+      context.save();
+      context.strokeStyle = dark ? `${template.accent}44` : `${template.accent}2e`;
+      context.lineWidth = Math.max(1, width * 0.0015);
+      context.beginPath();
+      context.arc(width * 0.92, height * 0.12, width * 0.2, 0, Math.PI * 2);
+      context.stroke();
+      context.beginPath();
+      context.arc(width * 0.08, height * 0.78, width * 0.14, 0, Math.PI * 2);
+      context.stroke();
+      context.restore();
+
+      getCmsMarketingPhotoLayout(template.layout).forEach((box, index) => {
+        drawCmsMarketingPremiumPhoto(context, images[index], box, index, template, width, height);
+      });
+
+      const title = project.titleEn || project.titleAr || "Featured project";
+      drawCmsMarketingPremiumTitle(context, title, cta, template, getCmsMarketingTitleBox(template.title), width, height);
+      drawCmsMarketingPremiumFooter(context, logo, template, width, height);
+    }
+
     async function renderCmsMarketingPreview() {
       const canvas = document.getElementById("cmsMarketingCanvas");
       const status = document.getElementById("cmsMarketingStatus");
@@ -2579,111 +2865,21 @@
 
       try {
         if (document.fonts?.ready) await document.fonts.ready;
-        const additionalImageSources = cmsMarketingTemplate === "classic" ? [] : getCmsMarketingImageSources(project).slice(1);
-        const [logo, cover, ...galleryImages] = await Promise.all([
+        const imageSources = getCmsMarketingImageSources(project);
+        if (!imageSources.length) throw new Error("This project does not have any marketing images.");
+        const [logo, ...loadedImages] = await Promise.all([
           loadCmsMarketingImage(getCmsMarketingLogoSource()),
-          loadCmsMarketingImage(project.imageUrl),
-          ...additionalImageSources.map(loadCmsMarketingImage)
+          ...imageSources.map(loadCmsMarketingImage)
         ]);
         if (renderVersion !== cmsMarketingRenderVersion) return;
 
         const context = canvas.getContext("2d");
         if (!context) throw new Error("Your browser could not prepare the image canvas.");
-        const images = [cover, ...galleryImages];
+        const images = Array.from({ length: 6 }, (_, index) => loadedImages[index % loadedImages.length]);
         const { width, height } = format;
-        const landscape = width > height;
-        const margin = Math.round(width * 0.075);
         const cta = document.getElementById("cmsMarketingCta")?.value.trim() || "اكتشف المزيد من مشاريعي";
-        const website = new URL(document.querySelector('link[rel="canonical"]')?.href || window.location.href).hostname;
-        if (cmsMarketingTemplate === "showcase") {
-          drawCmsMarketingShowcase(context, project, images, logo, width, height, cta, website);
-        } else if (cmsMarketingTemplate === "campaign") {
-          drawCmsMarketingCampaign(context, project, images, logo, width, height, cta, website);
-        } else if (cmsMarketingTemplate === "onlineEducation") {
-          drawCmsMarketingOnlineEducation(context, project, images, logo, width, height, cta, website);
-        } else {
-          const cover = images[0];
-          drawCmsMarketingCover(context, cover, width, height);
-
-          const logoBoxWidth = Math.round(width * (landscape ? 0.34 : 0.48));
-          const logoBoxHeight = Math.round(height * 0.09);
-          const logoX = margin;
-          const logoY = Math.round(height * 0.055);
-          context.fillStyle = "rgba(255,255,255,0.94)";
-          context.beginPath();
-          context.roundRect(logoX, logoY, logoBoxWidth, logoBoxHeight, logoBoxHeight / 2);
-          context.fill();
-          const logoPadding = Math.round(logoBoxHeight * 0.19);
-          const logoWidth = logoBoxWidth * 0.4;
-          const logoHeight = logoBoxHeight - logoPadding * 2;
-          const logoScale = Math.min(logoWidth / logo.naturalWidth, logoHeight / logo.naturalHeight);
-          const drawnLogoWidth = logo.naturalWidth * logoScale;
-          const drawnLogoHeight = logo.naturalHeight * logoScale;
-          context.drawImage(
-            logo,
-            logoX + logoPadding,
-            logoY + (logoBoxHeight - drawnLogoHeight) / 2,
-            drawnLogoWidth,
-            drawnLogoHeight
-          );
-          context.fillStyle = "#111214";
-          context.font = `700 ${Math.round(logoBoxHeight * 0.19)}px "IBM Plex Sans", sans-serif`;
-          context.textAlign = "left";
-          context.textBaseline = "middle";
-          context.fillText(cmsConfig.customLogoText || cmsConfig.studioTagEn || "Mostafa Khaled Studio", logoX + logoBoxWidth * 0.46, logoY + logoBoxHeight / 2, logoBoxWidth * 0.49);
-
-          const textX = margin;
-          const textWidth = Math.round(width * (landscape ? 0.54 : 0.84));
-          const category = project.categoryEn || "Selected project";
-          const title = project.titleEn || project.titleAr || "Featured project";
-          const textTop = Math.round(height * (landscape ? 0.48 : 0.55));
-          context.textAlign = "left";
-          context.textBaseline = "top";
-          context.direction = "ltr";
-          context.fillStyle = "rgba(255,255,255,0.78)";
-          context.font = `600 ${Math.round(width * 0.022)}px "IBM Plex Sans", sans-serif`;
-          context.fillText(category.toUpperCase(), textX, textTop);
-
-          let titleFontSize = Math.round(width * (landscape ? 0.064 : 0.075));
-          let titleLines;
-          do {
-            context.font = `700 ${titleFontSize}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
-            titleLines = getCmsMarketingLines(context, title, textWidth);
-            if (titleLines.length <= 3 || titleFontSize <= 40) break;
-            titleFontSize -= 5;
-          } while (titleFontSize > 35);
-
-          const titleY = textTop + Math.round(height * 0.045);
-          const lineHeight = Math.round(titleFontSize * 1.17);
-          context.fillStyle = "#fff";
-          titleLines.slice(0, 3).forEach((line, index) => {
-            context.fillText(line, textX, titleY + index * lineHeight, textWidth);
-          });
-
-          const ctaY = Math.min(height - Math.round(height * 0.16), titleY + Math.min(titleLines.length, 3) * lineHeight + Math.round(height * 0.035));
-          const ctaFontSize = Math.round(width * (landscape ? 0.023 : 0.028));
-          context.font = `600 ${ctaFontSize}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
-          const isArabicCta = /[\u0600-\u06ff]/.test(cta);
-          const ctaTextWidth = context.measureText(cta).width;
-          const ctaWidth = Math.min(textWidth, ctaTextWidth + ctaFontSize * 2.2);
-          const ctaHeight = ctaFontSize * 2.6;
-          context.fillStyle = "#fff";
-          context.beginPath();
-          context.roundRect(textX, ctaY, ctaWidth, ctaHeight, ctaHeight / 2);
-          context.fill();
-          context.fillStyle = "#111214";
-          context.textAlign = isArabicCta ? "right" : "left";
-          context.direction = isArabicCta ? "rtl" : "ltr";
-          context.textBaseline = "middle";
-          context.fillText(cta, isArabicCta ? textX + ctaWidth - ctaFontSize : textX + ctaFontSize, ctaY + ctaHeight / 2, ctaWidth - ctaFontSize * 2);
-
-          context.fillStyle = "rgba(255,255,255,0.82)";
-          context.font = `500 ${Math.round(width * 0.019)}px "IBM Plex Sans", sans-serif`;
-          context.textAlign = "left";
-          context.direction = "ltr";
-          context.textBaseline = "alphabetic";
-          context.fillText(website, margin, height - Math.round(height * 0.055));
-        }
+        const template = CMS_MARKETING_TEMPLATES.find((item) => item.id === cmsMarketingTemplate) || CMS_MARKETING_TEMPLATES[0];
+        drawCmsMarketingPremiumTemplate(context, project, images, logo, width, height, cta, template);
         if (downloadButton) downloadButton.disabled = false;
       } catch (error) {
         if (renderVersion !== cmsMarketingRenderVersion) return;
@@ -5122,16 +5318,7 @@
         });
       });
 
-      document.querySelectorAll("[data-marketing-template]").forEach((button) => {
-        button.addEventListener("click", () => {
-          cmsMarketingTemplate = button.dataset.marketingTemplate;
-          document.querySelectorAll("[data-marketing-template]").forEach((templateButton) => {
-            templateButton.classList.toggle("active", templateButton === button);
-            templateButton.setAttribute("aria-pressed", String(templateButton === button));
-          });
-          renderCmsMarketingPreview();
-        });
-      });
+      renderCmsMarketingTemplateOptions();
 
       document.querySelectorAll("[data-marketing-format]").forEach((button) => {
         button.addEventListener("click", () => {
