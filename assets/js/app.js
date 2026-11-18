@@ -4353,6 +4353,7 @@
     let dragMoved = false;
     let isStageHovered = false;
     let pointerDownCardId = null;
+    let previousCompactViewport = null;
 
     // ==================== CAROUSEL & PROJECT BROWSING ====================
     function getNextProjectId() {
@@ -4442,27 +4443,29 @@
       const isHomeVisible = homeView && !homeView.classList.contains("hidden");
 
       if (isHomeVisible && cardElements.length > 0) {
-        if (!isDragging && !isStageHovered) targetIndex += 0.0022;
+        const vw = window.innerWidth;
+        const isCompactViewport = vw <= 639;
+        if (previousCompactViewport !== isCompactViewport) {
+          if (isCompactViewport) targetIndex = Math.round(targetIndex);
+          virtualIndex = targetIndex;
+          previousCompactViewport = isCompactViewport;
+        }
+        if (!isDragging && !isStageHovered && !isCompactViewport) targetIndex += 0.0022;
         virtualIndex += (targetIndex - virtualIndex) * 0.08;
         const total = portfolioProjects.length;
-        const vw = window.innerWidth;
 
-        // Strong cylindrical concave perspective: small recessed center, large angled sides
-        const isCompactViewport = vw <= 639;
-        const cardWidth = isCompactViewport ? Math.min(236, Math.max(190, vw * 0.62)) : 300;
-        const radius = isCompactViewport
-          ? Math.max(cardWidth * 1.55, vw * 0.9)
-          : Math.max(660, vw * 0.46);
-        const centerRecess = isCompactViewport ? radius * 0.55 : 460;
-        const minChordAngle = 2 * Math.asin(cardWidth / (2 * radius));
-        const angleStep = minChordAngle + 0.022;
+        const cardWidth = isCompactViewport ? Math.min(260, Math.max(220, vw * 0.68)) : 300;
+        const radius = isCompactViewport ? 0 : Math.max(660, vw * 0.46);
+        const centerRecess = 460;
+        const minChordAngle = isCompactViewport ? 0 : 2 * Math.asin(cardWidth / (2 * radius));
+        const angleStep = isCompactViewport ? 0 : minChordAngle + 0.022;
 
         for (let i = 0; i < total; i++) {
           const card = cardElements[i];
           const d = shortestDelta(i, virtualIndex, total);
           const absD = Math.abs(d);
 
-          if (absD > 4.2) {
+          if (absD > (isCompactViewport ? 0.9 : 4.2)) {
             card.style.opacity = "0";
             card.style.pointerEvents = "none";
             continue;
@@ -4472,13 +4475,14 @@
           card.style.pointerEvents = "auto";
 
           const theta = d * angleStep;
-          const xPos = Math.sin(theta) * radius;
-          // Deep center recess (-460px) and strong forward sweep on sides
-          const zPos = (1 - Math.cos(theta)) * radius - centerRecess;
-          const rotateYDeg = (-theta * 180) / Math.PI;
+          const xPos = isCompactViewport ? d * (cardWidth + 28) : Math.sin(theta) * radius;
+          const zPos = isCompactViewport ? -absD * 10 : (1 - Math.cos(theta)) * radius - centerRecess;
+          const rotateYDeg = isCompactViewport ? -d * 4 : (-theta * 180) / Math.PI;
 
           card.style.transform = `translate3d(${xPos.toFixed(2)}px, 0px, ${zPos.toFixed(2)}px) rotateY(${rotateYDeg.toFixed(2)}deg)`;
-          card.style.zIndex = Math.round(100 + (1 - Math.cos(theta)) * 200);
+          card.style.zIndex = isCompactViewport
+            ? Math.round(100 - absD * 10)
+            : Math.round(100 + (1 - Math.cos(theta)) * 200);
         }
       }
       requestAnimationFrame(renderCarouselFrame);
@@ -5229,6 +5233,8 @@
       }
       if (contactLabel) contactLabel.textContent = isAr ? "تواصل الآن" : "Contact Now";
       if (pdfLabel) pdfLabel.textContent = isAr ? "تحميل البورتفوليو PDF" : "Download PDF";
+      document.getElementById("carouselPrevBtn")?.setAttribute("aria-label", isAr ? "المشروع السابق" : "Previous project");
+      document.getElementById("carouselNextBtn")?.setAttribute("aria-label", isAr ? "المشروع التالي" : "Next project");
       updateCmsCoverPreviewCard();
 
       const navLabels = {
@@ -5575,6 +5581,7 @@
               return;
             }
           }
+          if (window.innerWidth <= 639 && dragMoved) targetIndex = Math.round(targetIndex);
           pointerDownCardId = null;
           isDragging = false;
           setTimeout(() => { dragMoved = false; }, 50);
@@ -5611,11 +5618,19 @@
               return;
             }
           }
+          if (window.innerWidth <= 639 && dragMoved) targetIndex = Math.round(targetIndex);
           pointerDownCardId = null;
           isDragging = false;
           setTimeout(() => { dragMoved = false; }, 50);
         });
       }
+
+      document.getElementById("carouselPrevBtn")?.addEventListener("click", () => {
+        targetIndex = Math.round(targetIndex) - 1;
+      });
+      document.getElementById("carouselNextBtn")?.addEventListener("click", () => {
+        targetIndex = Math.round(targetIndex) + 1;
+      });
 
       document.querySelectorAll(".nav-pill-btn").forEach((btn) => {
         btn.addEventListener("click", () => switchPage(btn.getAttribute("data-page")));

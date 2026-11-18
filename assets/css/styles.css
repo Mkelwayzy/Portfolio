@@ -1099,6 +1099,7 @@
     min-height: 540px;
     padding-top: 112px !important;
     padding-bottom: max(14px, env(safe-area-inset-bottom)) !important;
+    justify-content: space-evenly !important;
   }
 
   #heroEditorialTitle {
@@ -1111,17 +1112,63 @@
 
   .panoramic-ribbon-wrapper {
     height: 42vh;
-    height: clamp(280px, 42svh, 340px);
+    height: clamp(310px, 44svh, 370px);
     margin-top: 0;
     margin-bottom: 0;
-    perspective: 520px;
+    perspective: 900px;
     touch-action: pan-y;
   }
 
   .carousel-card {
-    width: clamp(190px, 62vw, 236px);
+    width: clamp(220px, 68vw, 260px);
     height: auto;
     aspect-ratio: 300 / 410;
+  }
+
+  .carousel-nav-btn {
+    position: absolute;
+    top: 50%;
+    z-index: 300;
+    display: flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.76);
+    color: #111214;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transform: translateY(-50%);
+  }
+
+  .carousel-nav-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .carousel-nav-prev {
+    left: 8px;
+  }
+
+  .carousel-nav-next {
+    right: 8px;
+  }
+
+  [dir="rtl"] .carousel-nav-prev {
+    right: 8px;
+    left: auto;
+  }
+
+  [dir="rtl"] .carousel-nav-next {
+    right: auto;
+    left: 8px;
+  }
+
+  [dir="rtl"] .carousel-nav-btn svg {
+    transform: rotate(180deg);
   }
 
   #homeBottomBar {
@@ -1158,6 +1205,11 @@
   #downloadPdfBtn {
     width: 100%;
     justify-content: center;
+    gap: 6px;
+    padding-right: 8px;
+    padding-left: 8px;
+    font-size: 11px;
+    white-space: nowrap;
   }
 
   .project-images-grid,
@@ -1173,13 +1225,6 @@
   }
 }
 
-@media (max-width: 380px) {
-  #contactBtnLabel,
-  #pdfBtnLabel {
-    display: none;
-  }
-}
-
 @media (max-width: 639px) and (orientation: landscape) {
   #homePortfolioView {
     height: auto !important;
@@ -1189,6 +1234,6 @@
   }
 
   #homePortfolioView .panoramic-ribbon-wrapper {
-    height: 280px;
+    height: 300px;
   }
 }
