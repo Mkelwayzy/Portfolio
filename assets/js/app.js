@@ -4448,8 +4448,12 @@
         const vw = window.innerWidth;
 
         // Strong cylindrical concave perspective: small recessed center, large angled sides
-        const radius = Math.max(660, vw * 0.46);
-        const cardWidth = 300;
+        const isCompactViewport = vw <= 639;
+        const cardWidth = isCompactViewport ? Math.min(236, Math.max(190, vw * 0.62)) : 300;
+        const radius = isCompactViewport
+          ? Math.max(cardWidth * 1.55, vw * 0.9)
+          : Math.max(660, vw * 0.46);
+        const centerRecess = isCompactViewport ? radius * 0.55 : 460;
         const minChordAngle = 2 * Math.asin(cardWidth / (2 * radius));
         const angleStep = minChordAngle + 0.022;
 
@@ -4470,7 +4474,7 @@
           const theta = d * angleStep;
           const xPos = Math.sin(theta) * radius;
           // Deep center recess (-460px) and strong forward sweep on sides
-          const zPos = (1 - Math.cos(theta)) * radius - 460;
+          const zPos = (1 - Math.cos(theta)) * radius - centerRecess;
           const rotateYDeg = (-theta * 180) / Math.PI;
 
           card.style.transform = `translate3d(${xPos.toFixed(2)}px, 0px, ${zPos.toFixed(2)}px) rotateY(${rotateYDeg.toFixed(2)}deg)`;
@@ -4787,9 +4791,11 @@
         if (isActive) {
           btn.classList.add("active", "bg-[#111214]", "text-white", "font-semibold", "shadow-sm");
           btn.classList.remove("text-[#5A5C60]", "font-medium");
+          btn.setAttribute("aria-current", "page");
         } else {
           btn.classList.remove("active", "bg-[#111214]", "text-white", "font-semibold", "shadow-sm");
           btn.classList.add("text-[#5A5C60]", "font-medium");
+          btn.removeAttribute("aria-current");
         }
       });
 

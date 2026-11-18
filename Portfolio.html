@@ -109,6 +109,13 @@
           </svg>
         </button>
       </div>
+
+      <nav aria-label="Mobile navigation" class="mobile-page-nav sm:hidden glass-pill">
+        <button type="button" data-page="home" class="nav-pill-btn active" aria-current="page">All Work</button>
+        <button type="button" data-page="resume" class="nav-pill-btn">Resume</button>
+        <button type="button" data-page="partners" class="nav-pill-btn">Partners</button>
+        <button type="button" data-page="about" class="nav-pill-btn">About me</button>
+      </nav>
     </div>
   </header>
 
@@ -132,7 +139,7 @@
     </section>
 
     <!-- Bottom Bar: Left Contact, Center Smart Cookies Bar & Right PDF Action -->
-    <div class="w-full max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12 -mt-6 z-40 flex items-center justify-between gap-4 shrink-0 pointer-events-none">
+    <div id="homeBottomBar" class="w-full max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12 -mt-6 z-40 flex items-center justify-between gap-4 shrink-0 pointer-events-none">
       <!-- Left: Contact Now Action Pill -->
       <button id="contactNowBtn" type="button" aria-label="Contact Now" class="glass-pill h-11 px-5 rounded-full flex items-center gap-2 text-xs sm:text-sm font-semibold text-obsidian shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 shrink-0 pointer-events-auto">
         <svg class="w-4 h-4 text-obsidian" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

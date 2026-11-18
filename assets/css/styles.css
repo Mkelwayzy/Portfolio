@@ -1044,3 +1044,151 @@
   height: 100% !important;
   object-fit: cover !important;
 }
+
+@media (max-width: 639px) {
+  #defaultSignatureSvg {
+    height: 44px;
+  }
+
+  #customLogoImg {
+    height: 40px;
+  }
+
+  .mobile-page-nav {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 16px;
+    right: 16px;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 5px;
+    border-radius: 18px;
+    pointer-events: auto;
+  }
+
+  .mobile-page-nav .nav-pill-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 4px;
+    border-radius: 13px;
+    color: #5A5C60;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    transition: background-color 0.18s ease, color 0.18s ease;
+  }
+
+  .mobile-page-nav .nav-pill-btn.active {
+    background: #111214;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+
+  .mobile-page-nav .nav-pill-btn:focus-visible {
+    outline: 2px solid rgba(17, 18, 20, 0.65);
+    outline-offset: 1px;
+  }
+
+  #homePortfolioView {
+    height: 100vh !important;
+    height: 100svh !important;
+    min-height: 540px;
+    padding-top: 112px !important;
+    padding-bottom: max(14px, env(safe-area-inset-bottom)) !important;
+  }
+
+  #heroEditorialTitle {
+    font-size: clamp(25px, 8vw, 31.2px);
+  }
+
+  #homePortfolioView > section:first-child {
+    transform: translateY(0) !important;
+  }
+
+  .panoramic-ribbon-wrapper {
+    height: 42vh;
+    height: clamp(280px, 42svh, 340px);
+    margin-top: 0;
+    margin-bottom: 0;
+    perspective: 520px;
+    touch-action: pan-y;
+  }
+
+  .carousel-card {
+    width: clamp(190px, 62vw, 236px);
+    height: auto;
+    aspect-ratio: 300 / 410;
+  }
+
+  #homeBottomBar {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 0;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  #cookiePromptWrapper {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  #cookiePreferenceCard {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  #cookieInterestChips {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  #contactNowBtn,
+  #downloadPdfBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .project-images-grid,
+  #modalProjectGallery.project-gallery-new-grid,
+  #cmsMediaBlocksContainer.is-new-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  #modalProjectSlugPill {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 380px) {
+  #contactBtnLabel,
+  #pdfBtnLabel {
+    display: none;
+  }
+}
+
+@media (max-width: 639px) and (orientation: landscape) {
+  #homePortfolioView {
+    height: auto !important;
+    min-height: 100svh;
+    overflow: visible;
+    gap: 24px;
+  }
+
+  #homePortfolioView .panoramic-ribbon-wrapper {
+    height: 280px;
+  }
+}
