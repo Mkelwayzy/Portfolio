@@ -1056,7 +1056,7 @@
 
   .mobile-page-nav {
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + 16px);
     left: 16px;
     right: 16px;
     z-index: 99999;
@@ -1097,9 +1097,16 @@
     height: 100vh !important;
     height: 100svh !important;
     min-height: 540px;
-    padding-top: 112px !important;
+    padding-top: 126px !important;
     padding-bottom: max(14px, env(safe-area-inset-bottom)) !important;
     justify-content: space-evenly !important;
+  }
+
+  #resumeView,
+  #partnersView,
+  #aboutView,
+  #projectPageView {
+    padding-top: 140px !important;
   }
 
   #heroEditorialTitle {
