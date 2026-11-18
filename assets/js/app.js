@@ -22,13 +22,54 @@
       { value: "Oman", arabic: "عُمان" }
     ];
     const supabaseConfig = window.PORTFOLIO_SUPABASE_CONFIG;
-    const supabaseClient = window.supabase?.createClient && supabaseConfig?.url && supabaseConfig?.publishableKey
+    let supabaseClient = window.supabase?.createClient && supabaseConfig?.url && supabaseConfig?.publishableKey
       ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.publishableKey)
       : null;
+    const optionalScriptLoads = new Map();
+    let supabaseInitializationPromise = null;
     let isAdminAuthenticated = false;
     let cmsRemoteStateLoaded = false;
     let cmsRemoteStateExists = false;
     let lastCmsSaveError = "";
+
+    function loadOptionalScript(src) {
+      if (optionalScriptLoads.has(src)) return optionalScriptLoads.get(src);
+      const promise = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = src;
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error(`Unable to load ${src}.`));
+        document.head.appendChild(script);
+      }).catch((error) => {
+        optionalScriptLoads.delete(src);
+        throw error;
+      });
+      optionalScriptLoads.set(src, promise);
+      return promise;
+    }
+
+    function initializeSupabaseClient() {
+      if (supabaseClient) return Promise.resolve(supabaseClient);
+      if (!supabaseConfig?.url || !supabaseConfig?.publishableKey) {
+        return Promise.reject(new Error("Supabase is not configured."));
+      }
+      if (!supabaseInitializationPromise) {
+        supabaseInitializationPromise = loadOptionalScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2")
+          .then(() => {
+            if (!window.supabase?.createClient) {
+              throw new Error("The Supabase client library did not initialize.");
+            }
+            supabaseClient = window.supabase.createClient(supabaseConfig.url, supabaseConfig.publishableKey);
+            return supabaseClient;
+          })
+          .catch((error) => {
+            supabaseInitializationPromise = null;
+            throw error;
+          });
+      }
+      return supabaseInitializationPromise;
+    }
 
     const defaultCmsConfig = {
       studioTagEn: "Mostafa Khaled Studio",
@@ -218,7 +259,10 @@
         throw new Error("Sign in as an authorized administrator before uploading project files.");
       }
       if (!window.tus?.Upload) {
-        throw new Error("The resumable upload component could not load. Check your connection and reload the page.");
+        await loadOptionalScript("https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js");
+      }
+      if (!window.tus?.Upload) {
+        throw new Error("The resumable upload component did not initialize.");
       }
       const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
       if (sessionError) throw sessionError;
@@ -381,15 +425,17 @@
       }
     }
 
-    async function loadCmsState() {
-      cmsRemoteStateLoaded = false;
+    function loadCmsLocalState() {
       try {
         const raw = localStorage.getItem(CMS_STORAGE_KEY);
         if (raw) applyCmsState(JSON.parse(raw));
       } catch (error) {
         console.error("Unable to load the previous local portfolio cache.", error);
       }
+    }
 
+    async function loadCmsState() {
+      cmsRemoteStateLoaded = false;
       if (!supabaseClient) {
         console.error("Supabase is unavailable; portfolio content is limited to this browser's saved cache.");
         showCmsToast("Supabase is unavailable. Showing default or previously cached content.");
@@ -4368,6 +4414,26 @@
       return d;
     }
 
+    function getProjectImageSources(source) {
+      try {
+        const url = new URL(source, window.location.href);
+        if (url.hostname !== "images.unsplash.com") return { src: source, srcset: "" };
+        const atWidth = (width) => {
+          const sizedUrl = new URL(url);
+          sizedUrl.searchParams.set("auto", "format");
+          sizedUrl.searchParams.set("w", String(width));
+          sizedUrl.searchParams.set("q", "75");
+          return sizedUrl.toString();
+        };
+        return {
+          src: atWidth(720),
+          srcset: [480, 720, 960].map((width) => `${atWidth(width)} ${width}w`).join(", ")
+        };
+      } catch {
+        return { src: source, srcset: "" };
+      }
+    }
+
     function buildCarouselCards() {
       const stage = document.getElementById("carouselStage");
       if (!stage) return;
@@ -4382,12 +4448,13 @@
         card.dataset.projectId = String(proj.id);
         const title = currentLang === "ar" ? proj.titleAr : proj.titleEn;
         const cat = currentLang === "ar" ? proj.categoryAr : proj.categoryEn;
+        const imageSources = getProjectImageSources(proj.imageUrl || "");
         const isRecommended = getProjectMatchScore(proj) > 0;
         const recLabel = currentLang === "ar" ? "★ مقترح لك" : "★ For You";
 
         card.innerHTML = `
           <div class="card-inner">
-            <img src="${proj.imageUrl}" alt="${title}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" fetchpriority="${index === 0 ? "high" : "auto"}" />
+            <img alt="${title}" loading="lazy" decoding="async" />
             ${isRecommended ? `
               <div class="absolute top-3.5 start-3.5 px-2.5 py-1 rounded-full bg-[#111214]/85 backdrop-blur-md border border-white/30 text-[10px] font-bold text-white shadow-sm pointer-events-none">
                 ${recLabel}
@@ -4403,6 +4470,12 @@
             </div>
           </div>
         `;
+        const image = card.querySelector("img");
+        if (image) {
+          image.dataset.imageSrc = imageSources.src;
+          image.dataset.imageSrcset = imageSources.srcset;
+          image.sizes = "(max-width: 639px) 68vw, 300px";
+        }
 
         card.addEventListener("pointerdown", () => {
           pointerDownCardId = proj.id;
@@ -4473,6 +4546,13 @@
 
           card.style.opacity = "1";
           card.style.pointerEvents = "auto";
+
+          const image = card.querySelector("img");
+          if (image && !image.getAttribute("src") && image.dataset.imageSrc) {
+            if (image.dataset.imageSrcset) image.srcset = image.dataset.imageSrcset;
+            image.fetchPriority = absD < 0.5 ? "high" : "auto";
+            image.setAttribute("src", image.dataset.imageSrc);
+          }
 
           const theta = d * angleStep;
           const xPos = isCompactViewport ? d * (cardWidth + 28) : Math.sin(theta) * radius;
@@ -5260,10 +5340,12 @@
     }
 
     // ==================== PDF EXPORT ====================
-    function exportPortfolioPDF() {
+    async function exportPortfolioPDF() {
       if (!window.jspdf) {
-        openContactModal();
-        return;
+        await loadOptionalScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+      }
+      if (!window.jspdf) {
+        throw new Error("The PDF export library did not initialize.");
       }
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -5507,9 +5589,8 @@
     }
 
     // ==================== EVENT BINDINGS & ROUTING ====================
-    document.addEventListener("DOMContentLoaded", async () => {
-      await restoreAdminSession();
-      await loadCmsState();
+    document.addEventListener("DOMContentLoaded", () => {
+      loadCmsLocalState();
       populateCmsProjectYearOptions();
       applyCmsThemeAndContact();
 
@@ -5671,7 +5752,14 @@
       }
       if (closeContactBtn) closeContactBtn.addEventListener("click", closeContactModal);
       if (closeProjectBtn) closeProjectBtn.addEventListener("click", closeProjectPage);
-      if (pdfBtn) pdfBtn.addEventListener("click", exportPortfolioPDF);
+      if (pdfBtn) {
+        pdfBtn.addEventListener("click", () => {
+          exportPortfolioPDF().catch((error) => {
+            console.error("Unable to export the portfolio PDF.", error);
+            openContactModal();
+          });
+        });
+      }
       if (projectCoverImage) {
         projectCoverImage.classList.add("cursor-zoom-in");
         projectCoverImage.addEventListener("click", () => openProjectImageLightbox(projectCoverImage.src, projectCoverImage.alt));
@@ -5704,11 +5792,16 @@
           const password = document.getElementById("adminLoginPassword").value;
           const errEl = document.getElementById("adminLoginError");
           if (!supabaseClient) {
-            if (errEl) {
-              errEl.textContent = "Supabase is unavailable. Check the project configuration and reload.";
-              errEl.classList.remove("hidden");
+            try {
+              await initializeSupabaseClient();
+            } catch (error) {
+              console.error("Unable to initialize Supabase for administrator sign-in.", error);
+              if (errEl) {
+                errEl.textContent = "Supabase is unavailable. Check your connection and try again.";
+                errEl.classList.remove("hidden");
+              }
+              return;
             }
-            return;
           }
           let data;
           let error;
@@ -6477,10 +6570,28 @@
         if (hash.startsWith("#project/")) {
           const id = parseInt(hash.replace("#project/", ""), 10);
           if (!isNaN(id)) openProjectPage(id);
-        } else if (hash === "#resume" || hash === "#partners" || hash === "#about" || hash === "#admin") {
+        } else if (hash === "#resume" || hash === "#partners" || hash === "#about") {
           switchPage(hash.replace("#", ""));
+        } else if (hash === "#admin" && supabaseClient) {
+          switchPage("admin");
         }
       };
       handleInitialRoute();
       window.addEventListener("hashchange", handleInitialRoute);
+
+      const loadRemotePortfolio = async () => {
+        await initializeSupabaseClient();
+        await restoreAdminSession();
+        const contentLoaded = await loadCmsState();
+        applyCmsThemeAndContact();
+        if (contentLoaded) applyLanguageUI();
+        if (window.location.hash === "#admin") {
+          if (isAdminAuthenticated) switchPage("admin");
+          else openAdminLoginModal();
+        }
+      };
+      loadRemotePortfolio().catch((error) => {
+        console.error("Unable to initialize online portfolio services.", error);
+        showCmsToast("Online services are unavailable. Showing default or previously cached content.");
+      });
     });
