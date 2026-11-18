@@ -18,6 +18,9 @@
   <meta name="twitter:description" content="Brand identity, 3D product visualization, and CGI by Mostafa Khaled." />
   <link rel="preconnect" href="https://anvadgrhanqewgxygisg.supabase.co" crossorigin />
   <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
+  <style>
+    #siteLoader { position: fixed; inset: 0; z-index: 20000; display: grid; place-items: center; background: #D9DADB; color: #111214; }
+  </style>
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -29,13 +32,13 @@
       "knowsAbout": ["Brand identity", "3D design", "Product visualization", "CGI"]
     }
   </script>
-  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   <noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"></noscript>
   <script>
-    tailwind.config = {
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
       theme: {
         extend: {
           fontFamily: {
@@ -47,9 +50,18 @@
       }
     };
   </script>
+  <script src="https://cdn.tailwindcss.com" defer></script>
   <link rel="stylesheet" href="./assets/css/styles.css" />
 </head>
 <body class="architectural-grid min-h-screen flex flex-col justify-between selection:bg-obsidian selection:text-white">
+  <div id="siteLoader" class="site-loader" role="status" aria-live="polite" aria-label="Preparing your portfolio / جارٍ تجهيز معرض الأعمال">
+    <div class="site-loader-content">
+      <span class="site-loader-mark" aria-hidden="true"><span></span></span>
+      <p class="site-loader-name">Mostafa Khaled</p>
+      <p class="site-loader-caption">CREATIVE PORTFOLIO</p>
+      <span class="site-loader-track" aria-hidden="true"><span></span></span>
+    </div>
+  </div>
 
   <!-- ==================== TOP NAVIGATION HEADER ==================== -->
   <header class="fixed top-0 inset-x-0 z-[9999] py-4 pointer-events-none">

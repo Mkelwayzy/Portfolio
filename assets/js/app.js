@@ -32,6 +32,13 @@
     let cmsRemoteStateExists = false;
     let lastCmsSaveError = "";
 
+    function hideSiteLoader() {
+      const loader = document.getElementById("siteLoader");
+      if (!loader) return;
+      loader.classList.add("is-hidden");
+      window.setTimeout(() => loader.remove(), 300);
+    }
+
     function loadOptionalScript(src) {
       if (optionalScriptLoads.has(src)) return optionalScriptLoads.get(src);
       const promise = new Promise((resolve, reject) => {
@@ -6594,4 +6601,5 @@
         console.error("Unable to initialize online portfolio services.", error);
         showCmsToast("Online services are unavailable. Showing default or previously cached content.");
       });
+      hideSiteLoader();
     });
