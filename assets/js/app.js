@@ -1818,30 +1818,9 @@
       post: { width: 1080, height: 1350, label: "Post · 1080 × 1350 px" },
       story: { width: 1080, height: 1920, label: "Story · 1080 × 1920 px" }
     };
-    const CMS_MARKETING_TEMPLATES = [
-      { id: "01", name: "شاشة العرض", mood: "فاتح", dark: false, scene: "monitor-front", layout: "screen" },
-      { id: "02", name: "شاشة بزاوية", mood: "فاتح", dark: false, scene: "monitor-left", layout: "screen" },
-      { id: "03", name: "عرض اللابتوب", mood: "فاتح", dark: false, scene: "laptop-left", layout: "screen" },
-      { id: "04", name: "لوحة الأعمال", mood: "فاتح", dark: false, scene: "wall", layout: "grid" },
-      { id: "05", name: "اللوحة التحريرية", mood: "فاتح", dark: false, scene: "tablet", layout: "screen" },
-      { id: "06", name: "واجهة الهاتف", mood: "فاتح", dark: false, scene: "phone", layout: "phone" },
-      { id: "07", name: "معرض مزدوج", mood: "فاتح", dark: false, scene: "wall", layout: "paired" },
-      { id: "08", name: "شاشة واسعة", mood: "فاتح", dark: false, scene: "monitor-right", layout: "screen" },
-      { id: "09", name: "عرض متدرج", mood: "فاتح", dark: false, scene: "wall", layout: "staggered" },
-      { id: "10", name: "مجموعة المنشورات", mood: "فاتح", dark: false, scene: "wall", layout: "triptych" },
-      { id: "11", name: "شاشة الجهاز اللوحي", mood: "فاتح", dark: false, scene: "tablet-tall", layout: "screen" },
-      { id: "12", name: "صفحتان متقابلتان", mood: "فاتح", dark: false, scene: "wall", layout: "editorial" },
-      { id: "13", name: "الشاشة الداكنة", mood: "داكن", dark: true, scene: "monitor-front", layout: "screen" },
-      { id: "14", name: "استوديو اللابتوب", mood: "داكن", dark: true, scene: "laptop-right", layout: "screen" },
-      { id: "15", name: "حائط البطاقات", mood: "داكن", dark: true, scene: "wall", layout: "grid-dark" },
-      { id: "16", name: "الهاتف الداكن", mood: "داكن", dark: true, scene: "phone", layout: "phone" },
-      { id: "17", name: "عرض الشاشة المائل", mood: "داكن", dark: true, scene: "monitor-left", layout: "screen" },
-      { id: "18", name: "لوحة الاستوديو", mood: "داكن", dark: true, scene: "wall", layout: "paired" },
-      { id: "19", name: "شاشة عمودية", mood: "داكن", dark: true, scene: "tablet-tall", layout: "screen" },
-      { id: "20", name: "اللوحة الليلية", mood: "داكن", dark: true, scene: "wall", layout: "editorial" }
-    ];
+    const CMS_MARKETING_TEMPLATES = [];
     let cmsMarketingFormat = "post";
-    let cmsMarketingTemplate = CMS_MARKETING_TEMPLATES[0].id;
+    let cmsMarketingTemplate = null;
     let cmsMarketingProjectId = null;
     let cmsMarketingRenderVersion = 0;
 
@@ -1880,6 +1859,10 @@
     function renderCmsMarketingTemplateOptions() {
       const container = document.getElementById("cmsMarketingTemplates");
       if (!container) return;
+      if (!CMS_MARKETING_TEMPLATES.length) {
+        container.innerHTML = "";
+        return;
+      }
       container.innerHTML = CMS_MARKETING_TEMPLATES.map((template) => `
         <button type="button" class="cms-marketing-template${template.id === cmsMarketingTemplate ? " active" : ""}" data-marketing-template="${template.id}" aria-pressed="${template.id === cmsMarketingTemplate}" aria-label="Template ${template.id}: ${template.name}, ${template.mood}">
           <span class="cms-marketing-template-number">${template.id}</span>
@@ -3305,6 +3288,18 @@
       if (!canvas) return;
       const format = CMS_MARKETING_FORMATS[cmsMarketingFormat];
       const renderVersion = ++cmsMarketingRenderVersion;
+      if (!CMS_MARKETING_TEMPLATES.length) {
+        canvas.width = format.width;
+        canvas.height = format.height;
+        canvas.getContext("2d")?.clearRect(0, 0, format.width, format.height);
+        if (dimensions) dimensions.textContent = format.label;
+        if (status) {
+          status.textContent = "تمت إزالة جميع القوالب. لن تتوفر المعاينة أو التنزيل حتى إضافة قوالب جديدة.";
+          status.classList.remove("hidden");
+        }
+        if (downloadButton) downloadButton.disabled = true;
+        return;
+      }
       const project = portfolioProjects.find((item) => item.id === cmsMarketingProjectId) || portfolioProjects[0];
       if (!project) {
         canvas.width = format.width;
