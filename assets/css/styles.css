@@ -1182,6 +1182,11 @@
 }
 
 @media (max-width: 639px) {
+  body > header {
+    top: env(safe-area-inset-top);
+    padding-top: 12px;
+  }
+
   #defaultSignatureSvg {
     height: 44px;
   }
@@ -1195,26 +1200,47 @@
     top: calc(100% + 16px);
     left: 16px;
     right: 16px;
+    max-width: calc(100vw - 32px);
     z-index: 99999;
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 6px;
     padding: 5px;
+    overflow-x: auto;
     border-radius: 18px;
     pointer-events: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+  }
+
+  .mobile-page-nav::-webkit-scrollbar,
+  .cms-dashboard-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .mobile-page-nav .nav-pill-btn {
-    flex: 1 1 0;
+    min-height: 44px;
+    flex: 0 0 auto;
     min-width: 0;
-    padding: 8px 4px;
+    padding: 10px 12px;
     border-radius: 13px;
     color: #5A5C60;
     font-size: 10px;
     font-weight: 500;
     line-height: 1.2;
     white-space: nowrap;
+    scroll-snap-align: center;
     transition: background-color 0.18s ease, color 0.18s ease;
+  }
+
+  #headerUtilityControls {
+    min-height: 44px;
+  }
+
+  #headerUtilityControls #langToggleBtn,
+  #headerUtilityControls #headerAccountBtn {
+    min-height: 40px;
   }
 
   .mobile-page-nav .nav-pill-btn.active {
@@ -1230,11 +1256,13 @@
   }
 
   #homePortfolioView {
-    height: 100vh !important;
-    height: 100svh !important;
-    min-height: 540px;
-    padding-top: 126px !important;
-    padding-bottom: max(14px, env(safe-area-inset-bottom)) !important;
+    height: auto !important;
+    min-height: 100vh;
+    min-height: 100svh;
+    overflow: visible;
+    gap: clamp(18px, 3svh, 30px);
+    padding-top: max(132px, calc(env(safe-area-inset-top) + 116px)) !important;
+    padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
     justify-content: space-evenly !important;
   }
 
@@ -1242,7 +1270,8 @@
   #partnersView,
   #aboutView,
   #projectPageView {
-    padding-top: 140px !important;
+    padding-top: max(148px, calc(env(safe-area-inset-top) + 132px)) !important;
+    padding-bottom: max(72px, calc(env(safe-area-inset-bottom) + 56px)) !important;
   }
 
   #heroEditorialTitle {
@@ -1277,8 +1306,8 @@
     top: 50%;
     z-index: 300;
     display: flex;
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     align-items: center;
     justify-content: center;
     border: 1px solid rgba(255, 255, 255, 0.9);
@@ -1370,17 +1399,64 @@
     max-width: 100%;
     overflow-wrap: anywhere;
   }
+
+  #projectPageView .project-images-grid,
+  #projectPageView #modalProjectGallery.project-gallery-new-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 14px !important;
+  }
+
+  #adminDashboardView {
+    padding-top: max(7px, env(safe-area-inset-top));
+    padding-bottom: max(7px, env(safe-area-inset-bottom));
+  }
+
+  .cms-dashboard-nav {
+    scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+  }
+
+  .cms-tab-btn {
+    min-height: 44px;
+    scroll-snap-align: start;
+  }
+
+  #adminDashboardView input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="range"]),
+  #adminDashboardView textarea,
+  #adminDashboardView select {
+    min-height: 44px;
+    font-size: 16px !important;
+  }
+
+  #adminDashboardView textarea {
+    min-height: 112px;
+  }
 }
 
 @media (max-width: 639px) and (orientation: landscape) {
   #homePortfolioView {
-    height: auto !important;
-    min-height: 100svh;
-    overflow: visible;
-    gap: 24px;
+    gap: 18px;
   }
 
   #homePortfolioView .panoramic-ribbon-wrapper {
-    height: 300px;
+    height: clamp(250px, 56svh, 340px);
+  }
+}
+
+@media (max-width: 380px) {
+  #contactBtnLabel,
+  #pdfBtnLabel {
+    font-size: 10px;
+  }
+
+  #homeBottomBar {
+    gap: 6px;
+  }
+
+  #contactNowBtn,
+  #downloadPdfBtn {
+    font-size: 10px;
   }
 }

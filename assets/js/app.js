@@ -4911,6 +4911,13 @@
           btn.classList.add("text-[#5A5C60]", "font-medium");
           btn.removeAttribute("aria-current");
         }
+        if (isActive && btn.closest(".mobile-page-nav")) {
+          btn.scrollIntoView({
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+            block: "nearest",
+            inline: "center"
+          });
+        }
       });
 
       if (pageName === "project" && projectId !== null) {
