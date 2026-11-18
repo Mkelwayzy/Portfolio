@@ -1819,26 +1819,26 @@
       story: { width: 1080, height: 1920, label: "Story · 1080 × 1920 px" }
     };
     const CMS_MARKETING_TEMPLATES = [
-      { id: "01", name: "Glass Bento", mood: "Light", dark: false, layout: "bento", accent: "#326b46", title: "top-left" },
-      { id: "02", name: "Editorial Split", mood: "Light", dark: false, layout: "editorial", accent: "#bd9b49", title: "top-right" },
-      { id: "03", name: "Filmstrip", mood: "Light", dark: false, layout: "filmstrip", accent: "#3d7754", title: "top-center" },
-      { id: "04", name: "Editorial Pair", mood: "Light", dark: false, layout: "editorial-pair", accent: "#c5a74e", title: "top-center" },
-      { id: "05", name: "Masonry", mood: "Light", dark: false, layout: "masonry", accent: "#2c6947", title: "top-right" },
-      { id: "06", name: "Polaroid Studio", mood: "Light", dark: false, layout: "polaroid", accent: "#c5a65b", title: "top-left" },
-      { id: "07", name: "Twin Gallery", mood: "Light", dark: false, layout: "twin", accent: "#397452", title: "top-center" },
-      { id: "08", name: "Staggered Gallery", mood: "Light", dark: false, layout: "rail", accent: "#b79847", title: "top-left" },
-      { id: "09", name: "Magazine Grid", mood: "Light", dark: false, layout: "magazine", accent: "#3d7850", title: "top-right" },
-      { id: "10", name: "Panorama", mood: "Light", dark: false, layout: "panorama", accent: "#c4a24d", title: "top-right" },
-      { id: "11", name: "Window Gallery", mood: "Light", dark: false, layout: "window", accent: "#306a48", title: "top-center" },
-      { id: "12", name: "Offset Mosaic", mood: "Light", dark: false, layout: "bubbles", accent: "#b99b51", title: "top-center" },
-      { id: "13", name: "Emerald Spotlight", mood: "Dark", dark: true, layout: "spotlight", accent: "#83d69c", title: "top-right" },
-      { id: "14", name: "Noir Columns", mood: "Dark", dark: true, layout: "noir-orbit", accent: "#c3a95f", title: "top-center" },
-      { id: "15", name: "Diagonal Motion", mood: "Dark", dark: true, layout: "diagonal", accent: "#8ce0a4", title: "top-left" },
-      { id: "16", name: "Midnight Tiles", mood: "Dark", dark: true, layout: "midnight-grid", accent: "#cdb05f", title: "top-center" },
-      { id: "17", name: "Floating Stack", mood: "Dark", dark: true, layout: "floating", accent: "#7ed798", title: "top-left" },
-      { id: "18", name: "Neon Gallery", mood: "Dark", dark: true, layout: "neon", accent: "#d0b264", title: "top-center" },
-      { id: "19", name: "Luxe Columns", mood: "Dark", dark: true, layout: "columns", accent: "#85d69c", title: "top-left" },
-      { id: "20", name: "Glass Wall", mood: "Dark", dark: true, layout: "glass-wall", accent: "#d0b264", title: "top-right" }
+      { id: "01", name: "شاشة العرض", mood: "فاتح", dark: false, scene: "monitor-front", layout: "screen" },
+      { id: "02", name: "شاشة بزاوية", mood: "فاتح", dark: false, scene: "monitor-left", layout: "screen" },
+      { id: "03", name: "عرض اللابتوب", mood: "فاتح", dark: false, scene: "laptop-left", layout: "screen" },
+      { id: "04", name: "لوحة الأعمال", mood: "فاتح", dark: false, scene: "wall", layout: "grid" },
+      { id: "05", name: "اللوحة التحريرية", mood: "فاتح", dark: false, scene: "tablet", layout: "screen" },
+      { id: "06", name: "واجهة الهاتف", mood: "فاتح", dark: false, scene: "phone", layout: "phone" },
+      { id: "07", name: "معرض مزدوج", mood: "فاتح", dark: false, scene: "wall", layout: "paired" },
+      { id: "08", name: "شاشة واسعة", mood: "فاتح", dark: false, scene: "monitor-right", layout: "screen" },
+      { id: "09", name: "عرض متدرج", mood: "فاتح", dark: false, scene: "wall", layout: "staggered" },
+      { id: "10", name: "مجموعة المنشورات", mood: "فاتح", dark: false, scene: "wall", layout: "triptych" },
+      { id: "11", name: "شاشة الجهاز اللوحي", mood: "فاتح", dark: false, scene: "tablet-tall", layout: "screen" },
+      { id: "12", name: "صفحتان متقابلتان", mood: "فاتح", dark: false, scene: "wall", layout: "editorial" },
+      { id: "13", name: "الشاشة الداكنة", mood: "داكن", dark: true, scene: "monitor-front", layout: "screen" },
+      { id: "14", name: "استوديو اللابتوب", mood: "داكن", dark: true, scene: "laptop-right", layout: "screen" },
+      { id: "15", name: "حائط البطاقات", mood: "داكن", dark: true, scene: "wall", layout: "grid-dark" },
+      { id: "16", name: "الهاتف الداكن", mood: "داكن", dark: true, scene: "phone", layout: "phone" },
+      { id: "17", name: "عرض الشاشة المائل", mood: "داكن", dark: true, scene: "monitor-left", layout: "screen" },
+      { id: "18", name: "لوحة الاستوديو", mood: "داكن", dark: true, scene: "wall", layout: "paired" },
+      { id: "19", name: "شاشة عمودية", mood: "داكن", dark: true, scene: "tablet-tall", layout: "screen" },
+      { id: "20", name: "اللوحة الليلية", mood: "داكن", dark: true, scene: "wall", layout: "editorial" }
     ];
     let cmsMarketingFormat = "post";
     let cmsMarketingTemplate = CMS_MARKETING_TEMPLATES[0].id;
@@ -2597,7 +2597,7 @@
         blurContext.drawImage(context.canvas, x, y, width, height, 0, 0, blurCanvas.width, blurCanvas.height);
         context.drawImage(blurCanvas, x, y, width, height);
       }
-      context.fillStyle = dark ? `rgba(9,15,20,${opacity})` : `rgba(255,255,255,${opacity})`;
+      context.fillStyle = dark ? `rgba(55,56,58,${opacity})` : `rgba(255,255,255,${opacity})`;
       context.fillRect(x, y, width, height);
       context.strokeStyle = dark ? "rgba(255,255,255,0.34)" : "rgba(255,255,255,0.88)";
       context.lineWidth = Math.max(1.5, width * 0.002);
@@ -2921,6 +2921,382 @@
       drawCmsMarketingPremiumFooter(context, logo, template, width, height);
     }
 
+    function drawCmsMarketingPolygonPath(context, points) {
+      context.beginPath();
+      context.moveTo(points[0].x, points[0].y);
+      points.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+      context.closePath();
+    }
+
+    function getCmsMarketingInsetQuad(points, amount) {
+      const center = points.reduce(
+        (sum, point) => ({ x: sum.x + point.x / points.length, y: sum.y + point.y / points.length }),
+        { x: 0, y: 0 }
+      );
+      return points.map((point) => ({
+        x: point.x + (center.x - point.x) * amount,
+        y: point.y + (center.y - point.y) * amount
+      }));
+    }
+
+    function getCmsMarketingQuadPoint(points, x, y) {
+      const [topLeft, topRight, bottomRight, bottomLeft] = points;
+      return {
+        x: topLeft.x * (1 - x) * (1 - y) + topRight.x * x * (1 - y) + bottomRight.x * x * y + bottomLeft.x * (1 - x) * y,
+        y: topLeft.y * (1 - x) * (1 - y) + topRight.y * x * (1 - y) + bottomRight.y * x * y + bottomLeft.y * (1 - x) * y
+      };
+    }
+
+    function createCmsMarketingPosterCard(image, dark) {
+      const card = document.createElement("canvas");
+      card.width = 360;
+      card.height = 480;
+      const context = card.getContext("2d");
+      if (!context) throw new Error("Your browser could not prepare a project image card.");
+      const radius = 14;
+      context.fillStyle = dark ? "#e5e5e3" : "#ffffff";
+      context.beginPath();
+      context.roundRect(0, 0, card.width, card.height, radius);
+      context.fill();
+      context.save();
+      context.beginPath();
+      context.roundRect(5, 5, card.width - 10, card.height - 10, radius - 4);
+      context.clip();
+      const scale = Math.max(card.width / image.naturalWidth, card.height / image.naturalHeight);
+      const imageWidth = image.naturalWidth * scale;
+      const imageHeight = image.naturalHeight * scale;
+      context.drawImage(image, (card.width - imageWidth) / 2, (card.height - imageHeight) / 2, imageWidth, imageHeight);
+      context.restore();
+      return card;
+    }
+
+    function getCmsMarketingStageColors(dark) {
+      return dark
+        ? { background: "#333436", panel: "#414244", frame: "#151617", frameLight: "#515254", glass: "rgba(57,58,60,0.82)", text: "#f0f0ef", muted: "#d0d0ce", shadow: "rgba(0,0,0,0.35)" }
+        : { background: "#eeedeb", panel: "#f5f4f2", frame: "#292a2c", frameLight: "#515254", glass: "rgba(255,255,255,0.72)", text: "#292a2c", muted: "#555658", shadow: "rgba(39,40,42,0.18)" };
+    }
+
+    function drawCmsMarketingCanvasBackground(context, width, height, dark) {
+      const colors = getCmsMarketingStageColors(dark);
+      context.fillStyle = colors.background;
+      context.fillRect(0, 0, width, height);
+      const glow = context.createRadialGradient(width * 0.5, height * 0.49, width * 0.04, width * 0.5, height * 0.49, height * 0.7);
+      glow.addColorStop(0, dark ? "rgba(255,255,255,0.065)" : "rgba(255,255,255,0.75)");
+      glow.addColorStop(1, dark ? "rgba(255,255,255,0)" : "rgba(255,255,255,0)");
+      context.fillStyle = glow;
+      context.fillRect(0, 0, width, height);
+    }
+
+    function getCmsMarketingCardBoxes(layout, width, height) {
+      const story = height > width * 1.5;
+      const box = (x, y, cardWidth, rotation = 0) => ({
+        x,
+        y,
+        w: cardWidth,
+        h: cardWidth * width / height * (4 / 3),
+        rotation
+      });
+      if (layout === "paired" || layout === "editorial") {
+        const cardWidth = story ? 0.225 : 0.18;
+        const cardHeight = cardWidth * width / height * (4 / 3);
+        const gapY = story ? 0.018 : 0.02;
+        const xPositions = layout === "paired" ? [0.17, 0.605] : [0.12, 0.67];
+        return Array.from({ length: 6 }, (_, index) =>
+          box(xPositions[index % 2], 0.205 + Math.floor(index / 2) * (cardHeight + gapY), cardWidth)
+        );
+      }
+
+      const cardWidth = story ? 0.29 : 0.245;
+      const cardHeight = cardWidth * width / height * (4 / 3);
+      const gapY = story ? 0.025 : 0.025;
+      const defaultX = story ? [0.055, 0.36, 0.665] : [0.07, 0.3775, 0.685];
+      const gridTop = story ? 0.255 : 0.205;
+      let positions = [];
+      if (layout === "staggered") {
+        positions = [
+          [0.055, gridTop], [0.3775, gridTop + 0.02], [0.70, gridTop],
+          [0.15, gridTop + cardHeight + gapY], [0.3775, gridTop + cardHeight + gapY + 0.02], [0.605, gridTop + cardHeight + gapY]
+        ];
+      } else {
+        positions = Array.from({ length: 6 }, (_, index) => [
+          defaultX[index % 3],
+          gridTop + Math.floor(index / 3) * (cardHeight + gapY)
+        ]);
+      }
+      if (layout === "triptych") {
+        positions = [
+          [0.055, gridTop], [0.3775, gridTop], [0.70, gridTop],
+          [0.055, gridTop + cardHeight + gapY], [0.3775, gridTop + cardHeight + gapY], [0.70, gridTop + cardHeight + gapY]
+        ];
+      }
+      return positions.map(([x, y]) => box(x, y, cardWidth));
+    }
+
+    function drawCmsMarketingFlatCards(context, images, template, width, height) {
+      const colors = getCmsMarketingStageColors(template.dark);
+      const boxes = getCmsMarketingCardBoxes(template.layout, width, height);
+      const panelTop = height * (height > width * 1.5 ? 0.185 : 0.17);
+      const panelBottom = height * (height > width * 1.5 ? 0.825 : 0.82);
+      context.save();
+      context.shadowColor = colors.shadow;
+      context.shadowBlur = width * 0.026;
+      context.shadowOffsetY = height * 0.012;
+      context.fillStyle = colors.panel;
+      context.beginPath();
+      context.roundRect(width * 0.035, panelTop, width * 0.93, panelBottom - panelTop, width * 0.035);
+      context.fill();
+      context.restore();
+
+      boxes.forEach((box, index) => {
+        const card = createCmsMarketingPosterCard(images[index], template.dark);
+        const x = box.x * width;
+        const y = box.y * height;
+        const cardWidth = box.w * width;
+        const cardHeight = box.h * height;
+        context.save();
+        context.translate(x + cardWidth / 2, y + cardHeight / 2);
+        context.rotate(box.rotation || 0);
+        context.shadowColor = colors.shadow;
+        context.shadowBlur = width * 0.018;
+        context.shadowOffsetY = height * 0.009;
+        context.drawImage(card, -cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
+        context.restore();
+      });
+    }
+
+    function getCmsMarketingScreenQuad(scene, width, height) {
+      if (scene === "phone") {
+        const phoneWidth = width * 0.48;
+        const phoneHeight = height * 0.56;
+        const x = (width - phoneWidth) / 2;
+        const y = height * 0.205;
+        return [
+          { x, y }, { x: x + phoneWidth, y: y + height * 0.015 },
+          { x: x + phoneWidth * 0.985, y: y + phoneHeight }, { x: x + width * 0.015, y: y + phoneHeight - height * 0.012 }
+        ];
+      }
+      if (scene === "tablet" || scene === "tablet-tall") {
+        const tabletWidth = scene === "tablet-tall" ? width * 0.60 : width * 0.84;
+        const tabletHeight = height * (scene === "tablet-tall" ? 0.59 : 0.52);
+        const x = (width - tabletWidth) / 2;
+        const y = height * 0.21;
+        return [
+          { x: x + width * 0.012, y }, { x: x + tabletWidth, y: y + height * 0.008 },
+          { x: x + tabletWidth - width * 0.01, y: y + tabletHeight }, { x, y: y + tabletHeight - height * 0.012 }
+        ];
+      }
+      const x = width * 0.07;
+      const y = height * 0.205;
+      const screenWidth = width * 0.86;
+      const screenHeight = height * (height > width * 1.5 ? 0.54 : 0.52);
+      if (scene === "monitor-left" || scene === "laptop-left") {
+        return [
+          { x: x + width * 0.055, y: y + height * 0.025 }, { x: x + screenWidth, y },
+          { x: x + screenWidth - width * 0.055, y: y + screenHeight }, { x, y: y + screenHeight - height * 0.025 }
+        ];
+      }
+      if (scene === "monitor-right" || scene === "laptop-right") {
+        return [
+          { x, y }, { x: x + screenWidth - width * 0.055, y: y + height * 0.025 },
+          { x: x + screenWidth, y: y + screenHeight - height * 0.025 }, { x: x + width * 0.055, y: y + screenHeight }
+        ];
+      }
+      return [
+        { x, y }, { x: x + screenWidth, y },
+        { x: x + screenWidth, y: y + screenHeight }, { x, y: y + screenHeight }
+      ];
+    }
+
+    function drawCmsMarketingScreenMockup(context, images, template, width, height) {
+      const colors = getCmsMarketingStageColors(template.dark);
+      const outer = getCmsMarketingScreenQuad(template.scene, width, height);
+      context.save();
+      context.shadowColor = colors.shadow;
+      context.shadowBlur = width * 0.035;
+      context.shadowOffsetY = height * 0.014;
+      drawCmsMarketingPolygonPath(context, outer);
+      context.fillStyle = colors.frame;
+      context.fill();
+      context.restore();
+
+      const inner = getCmsMarketingInsetQuad(outer, template.scene === "phone" ? 0.055 : 0.025);
+      drawCmsMarketingPolygonPath(context, inner);
+      context.fillStyle = "#e7e6e4";
+      context.fill();
+      if (template.scene === "phone") {
+        const topCenter = getCmsMarketingQuadPoint(inner, 0.5, 0.035);
+        context.fillStyle = colors.frame;
+        context.beginPath();
+        context.roundRect(topCenter.x - width * 0.035, topCenter.y - height * 0.004, width * 0.07, height * 0.008, height * 0.004);
+        context.fill();
+      }
+
+      const screenBounds = {
+        width: Math.hypot(inner[1].x - inner[0].x, inner[1].y - inner[0].y),
+        height: Math.hypot(inner[3].x - inner[0].x, inner[3].y - inner[0].y)
+      };
+      let cardWidth;
+      let columns = 3;
+      let rows = 2;
+      if (template.scene === "phone") {
+        columns = 2;
+        rows = 3;
+        cardWidth = Math.min(screenBounds.width * 0.34, screenBounds.height * 0.155);
+      } else {
+        cardWidth = Math.min(screenBounds.width * 0.275, screenBounds.height * 0.295);
+      }
+      const cardHeight = cardWidth * 4 / 3;
+      const horizontalGap = (screenBounds.width - columns * cardWidth) / (columns + 1);
+      const verticalGap = (screenBounds.height - rows * cardHeight) / (rows + 1);
+      images.forEach((image, index) => {
+        const card = createCmsMarketingPosterCard(image, template.dark);
+        const column = index % columns;
+        const row = Math.floor(index / columns);
+        const left = horizontalGap + column * (cardWidth + horizontalGap);
+        const top = verticalGap + row * (cardHeight + verticalGap);
+        const cardPoints = [
+          getCmsMarketingQuadPoint(inner, left / screenBounds.width, top / screenBounds.height),
+          getCmsMarketingQuadPoint(inner, (left + cardWidth) / screenBounds.width, top / screenBounds.height),
+          getCmsMarketingQuadPoint(inner, (left + cardWidth) / screenBounds.width, (top + cardHeight) / screenBounds.height),
+          getCmsMarketingQuadPoint(inner, left / screenBounds.width, (top + cardHeight) / screenBounds.height)
+        ];
+        context.save();
+        context.shadowColor = colors.shadow;
+        context.shadowBlur = width * 0.006;
+        drawCmsMarketingWarpedImage(context, card, cardPoints);
+        context.restore();
+      });
+
+      const centerX = outer.reduce((sum, point) => sum + point.x, 0) / outer.length;
+      const bottomY = Math.max(...outer.map((point) => point.y));
+      if (template.scene.startsWith("laptop")) {
+        const baseWidth = width * 0.9;
+        const baseY = bottomY + height * 0.018;
+        drawCmsMarketingPolygonPath(context, [
+          { x: centerX - baseWidth * 0.47, y: baseY },
+          { x: centerX + baseWidth * 0.47, y: baseY },
+          { x: centerX + baseWidth * 0.5, y: baseY + height * 0.035 },
+          { x: centerX - baseWidth * 0.5, y: baseY + height * 0.035 }
+        ]);
+        context.fillStyle = colors.frameLight;
+        context.fill();
+        context.save();
+        context.fillStyle = colors.frame;
+        const keyRows = 4;
+        const keyColumns = 28;
+        const keyWidth = width * 0.012;
+        const keyGap = width * 0.007;
+        const keyHeight = height * 0.003;
+        const keyboardWidth = keyColumns * keyWidth + (keyColumns - 1) * keyGap;
+        const keyboardLeft = centerX - keyboardWidth / 2;
+        for (let row = 0; row < keyRows; row += 1) {
+          for (let column = 0; column < keyColumns; column += 1) {
+            context.beginPath();
+            context.roundRect(
+              keyboardLeft + column * (keyWidth + keyGap),
+              baseY + height * 0.005 + row * height * 0.006,
+              keyWidth,
+              keyHeight,
+              keyHeight / 3
+            );
+            context.fill();
+          }
+        }
+        context.strokeStyle = colors.frame;
+        context.lineWidth = Math.max(1, width * 0.001);
+        context.beginPath();
+        context.roundRect(centerX - width * 0.09, baseY + height * 0.031, width * 0.18, height * 0.002, height * 0.001);
+        context.stroke();
+        context.restore();
+      } else if (template.scene.startsWith("monitor")) {
+        const standTop = bottomY;
+        const standBottom = Math.min(height * 0.82, standTop + height * 0.075);
+        drawCmsMarketingPolygonPath(context, [
+          { x: centerX - width * 0.075, y: standTop },
+          { x: centerX + width * 0.075, y: standTop },
+          { x: centerX + width * 0.045, y: standBottom },
+          { x: centerX - width * 0.045, y: standBottom }
+        ]);
+        context.fillStyle = colors.frameLight;
+        context.fill();
+        context.beginPath();
+        context.roundRect(centerX - width * 0.2, standBottom, width * 0.4, height * 0.018, height * 0.009);
+        context.fill();
+      }
+    }
+
+    function drawCmsMarketingBrandHeader(context, project, template, width, height) {
+      const colors = getCmsMarketingStageColors(template.dark);
+      const title = project.titleEn || project.titleAr || "Project";
+      const isArabic = /[\u0600-\u06FF]/.test(title);
+      const padding = width * 0.075;
+      let fontSize = Math.round(width * 0.075);
+      const maxWidth = width - padding * 2;
+      context.save();
+      let lines;
+      do {
+        context.font = `700 ${fontSize}px "IBM Plex Sans", "IBM Plex Sans Arabic", sans-serif`;
+        lines = getCmsMarketingLines(context, title, maxWidth);
+        if (lines.length > 2) fontSize -= 2;
+      } while (lines.length > 2 && fontSize > width * 0.042);
+      context.fillStyle = colors.text;
+      context.textAlign = isArabic ? "right" : "left";
+      context.direction = isArabic ? "rtl" : "ltr";
+      context.textBaseline = "top";
+      const lineHeight = fontSize * 1.04;
+      lines.slice(0, 2).forEach((line, index) => {
+        context.fillText(line, isArabic ? width - padding : padding, height * 0.055 + index * lineHeight, maxWidth);
+      });
+      context.restore();
+    }
+
+    function drawCmsMarketingBrandFooter(context, logo, template, width, height) {
+      const colors = getCmsMarketingStageColors(template.dark);
+      const x = width * 0.065;
+      const y = height * 0.86;
+      const panelWidth = width * 0.87;
+      const panelHeight = height * 0.095;
+      const radius = width * 0.028;
+
+      drawCmsMarketingGlassPanel(context, x, y, panelWidth, panelHeight, radius, template.dark, 0.7);
+
+      const logoBoxWidth = panelWidth * 0.25;
+      const logoBoxHeight = panelHeight * 0.52;
+      const logoScale = Math.min(logoBoxWidth / logo.naturalWidth, logoBoxHeight / logo.naturalHeight);
+      const logoWidth = logo.naturalWidth * logoScale;
+      const logoHeight = logo.naturalHeight * logoScale;
+      context.save();
+      context.filter = template.dark ? "grayscale(1) brightness(0) invert(1)" : "grayscale(1) brightness(0.22)";
+      context.drawImage(logo, x + panelWidth * 0.045, y + (panelHeight - logoHeight) / 2, logoWidth, logoHeight);
+      context.restore();
+
+      const contactX = x + panelWidth * 0.33;
+      const contactWidth = panelWidth * 0.62;
+      const fontSize = Math.max(15, Math.round(width * 0.017));
+      context.save();
+      context.textAlign = "left";
+      context.textBaseline = "middle";
+      context.direction = "ltr";
+      context.fillStyle = colors.text;
+      context.font = `600 ${fontSize}px "IBM Plex Sans", sans-serif`;
+      context.fillText("WhatsApp  +01002779252", contactX, y + panelHeight * 0.37, contactWidth);
+      context.fillStyle = colors.muted;
+      context.font = `500 ${fontSize}px "IBM Plex Sans", sans-serif`;
+      context.fillText("Email  MKelwayzy@gmail.com", contactX, y + panelHeight * 0.68, contactWidth);
+      context.restore();
+    }
+
+    function drawCmsMarketingReferenceTemplate(context, project, images, logo, width, height, template) {
+      drawCmsMarketingCanvasBackground(context, width, height, template.dark);
+      drawCmsMarketingBrandHeader(context, project, template, width, height);
+      if (template.scene === "wall") {
+        drawCmsMarketingFlatCards(context, images, template, width, height);
+      } else {
+        drawCmsMarketingScreenMockup(context, images, template, width, height);
+      }
+      drawCmsMarketingBrandFooter(context, logo, template, width, height);
+    }
+
     async function renderCmsMarketingPreview() {
       const canvas = document.getElementById("cmsMarketingCanvas");
       const status = document.getElementById("cmsMarketingStatus");
@@ -2962,9 +3338,8 @@
         if (!context) throw new Error("Your browser could not prepare the image canvas.");
         const images = Array.from({ length: 6 }, (_, index) => loadedImages[index % loadedImages.length]);
         const { width, height } = format;
-        const cta = document.getElementById("cmsMarketingCta")?.value.trim() || "اكتشف المزيد من مشاريعي";
         const template = CMS_MARKETING_TEMPLATES.find((item) => item.id === cmsMarketingTemplate) || CMS_MARKETING_TEMPLATES[0];
-        drawCmsMarketingPremiumTemplate(context, project, images, logo, width, height, cta, template);
+        drawCmsMarketingReferenceTemplate(context, project, images, logo, width, height, template);
         if (downloadButton) downloadButton.disabled = false;
       } catch (error) {
         if (renderVersion !== cmsMarketingRenderVersion) return;
@@ -5415,9 +5790,6 @@
           renderCmsMarketingPreview();
         });
       });
-
-      const marketingCta = document.getElementById("cmsMarketingCta");
-      if (marketingCta) marketingCta.addEventListener("input", renderCmsMarketingPreview);
 
       const marketingDownloadButton = document.getElementById("cmsMarketingDownloadBtn");
       if (marketingDownloadButton) {
