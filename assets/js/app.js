@@ -30,6 +30,8 @@
     let isAdminAuthenticated = false;
     let cmsRemoteStateLoaded = false;
     let cmsRemoteStateExists = false;
+    let cmsPortfolioContentReady = false;
+    let cmsProjectsLoadState = "pending";
     let lastCmsSaveError = "";
 
     function hideSiteLoader() {
@@ -144,6 +146,8 @@
       if (Array.isArray(parsed.projects) && parsed.projects.length > 0) {
         const validProjects = parsed.projects.filter((project) => project && typeof project === "object" && !Array.isArray(project));
         if (validProjects.length > 0) {
+          cmsPortfolioContentReady = true;
+          cmsProjectsLoadState = "ready";
           const nextAvailableId = validProjects.reduce((max, project) => {
             const id = Number(project.id);
             return Number.isSafeInteger(id) && id > 0 ? Math.max(max, id) : max;
@@ -445,7 +449,8 @@
       cmsRemoteStateLoaded = false;
       if (!supabaseClient) {
         console.error("Supabase is unavailable; portfolio content is limited to this browser's saved cache.");
-        showCmsToast("Supabase is unavailable. Showing default or previously cached content.");
+        cmsProjectsLoadState = cmsPortfolioContentReady ? "ready" : "error";
+        showCmsToast("Supabase is unavailable. Showing cached projects when available.");
         return false;
       }
 
@@ -460,6 +465,7 @@
         cmsRemoteStateExists = Boolean(data);
         if (data?.content) {
           const stateChanges = applyCmsState(data.content);
+          cmsProjectsLoadState = cmsPortfolioContentReady ? "ready" : "empty";
           if (stateChanges.repairedProjectIds) {
             console.warn("Duplicate or invalid project IDs were reassigned to keep project records distinct.");
           }
@@ -478,11 +484,14 @@
               showCmsToast("Duplicate project IDs were corrected for display; sign in to publish the correction.");
             }
           }
+        } else {
+          cmsProjectsLoadState = cmsPortfolioContentReady ? "ready" : "empty";
         }
         return true;
       } catch (error) {
+        cmsProjectsLoadState = cmsPortfolioContentReady ? "ready" : "error";
         console.error("Unable to load portfolio content from Supabase.", error);
-        showCmsToast("Online content could not be loaded. Showing default or previously cached content.");
+        showCmsToast("Online content could not be loaded. Showing cached content when available.");
         return false;
       }
     }
@@ -4383,6 +4392,8 @@
     function restoreCmsContentDefaults() {
       const defaults = JSON.parse(JSON.stringify(defaultCmsContentData));
       portfolioProjects = defaults.projects;
+      cmsPortfolioContentReady = true;
+      cmsProjectsLoadState = "ready";
       experienceData = defaults.experience;
       softwareList = defaults.software;
       educationData = defaults.education;
@@ -4446,6 +4457,17 @@
       if (!stage) return;
       stage.innerHTML = "";
       cardElements = [];
+      if (!cmsPortfolioContentReady) {
+        const isAr = currentLang === "ar";
+        const messages = {
+          pending: isAr ? "جارٍ تحميل مشاريعك…" : "Loading your projects…",
+          empty: isAr ? "لا توجد مشاريع منشورة بعد." : "No projects are published yet.",
+          error: isAr ? "تعذر تحميل المشاريع. تحقق من اتصالك." : "Projects could not be loaded. Check your connection."
+        };
+        const isPending = cmsProjectsLoadState === "pending";
+        stage.innerHTML = `<div class="carousel-empty-state" role="status">${isPending ? '<span class="carousel-empty-state-mark" aria-hidden="true"></span>' : ""}<p>${messages[cmsProjectsLoadState] || messages.pending}</p></div>`;
+        return;
+      }
 
       portfolioProjects.forEach((proj, index) => {
         const card = document.createElement("article");
@@ -4852,6 +4874,7 @@
     }
 
     function switchPage(pageName, projectId = null) {
+      if (pageName === "project" && !cmsPortfolioContentReady) return;
       if (pageName === "admin" && !isAdminAuthenticated) {
         openAdminLoginModal();
         return;
@@ -6576,7 +6599,7 @@
         const hash = window.location.hash;
         if (hash.startsWith("#project/")) {
           const id = parseInt(hash.replace("#project/", ""), 10);
-          if (!isNaN(id)) openProjectPage(id);
+          if (cmsPortfolioContentReady && !isNaN(id)) openProjectPage(id);
         } else if (hash === "#resume" || hash === "#partners" || hash === "#about") {
           switchPage(hash.replace("#", ""));
         } else if (hash === "#admin" && supabaseClient) {
@@ -6592,14 +6615,26 @@
         const contentLoaded = await loadCmsState();
         applyCmsThemeAndContact();
         if (contentLoaded) applyLanguageUI();
+        else buildCarouselCards();
+        if (cmsPortfolioContentReady) handleInitialRoute();
+        else if (window.location.hash.startsWith("#project/")) {
+          history.replaceState(null, "", "#home");
+        }
         if (window.location.hash === "#admin") {
           if (isAdminAuthenticated) switchPage("admin");
           else openAdminLoginModal();
         }
+        hideSiteLoader();
       };
       loadRemotePortfolio().catch((error) => {
         console.error("Unable to initialize online portfolio services.", error);
-        showCmsToast("Online services are unavailable. Showing default or previously cached content.");
+        cmsProjectsLoadState = cmsPortfolioContentReady ? "ready" : "error";
+        if (!cmsPortfolioContentReady) buildCarouselCards();
+        showCmsToast("Online services are unavailable. Showing cached projects when available.");
+        if (window.location.hash.startsWith("#project/") && !cmsPortfolioContentReady) {
+          history.replaceState(null, "", "#home");
+        }
+        hideSiteLoader();
       });
-      hideSiteLoader();
+      if (cmsPortfolioContentReady) hideSiteLoader();
     });
