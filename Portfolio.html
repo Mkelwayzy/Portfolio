@@ -36,6 +36,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   <noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"></noscript>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <meta name="theme-color" content="#D9DADB" />
   <script>
     window.tailwind = window.tailwind || {};
     window.tailwind.config = {
@@ -52,6 +54,7 @@
   </script>
   <script src="https://cdn.tailwindcss.com" defer></script>
   <link rel="stylesheet" href="./assets/css/styles.css" />
+  <link rel="stylesheet" href="./assets/css/upgrade.css" />
 </head>
 <body class="architectural-grid min-h-screen flex flex-col justify-between selection:bg-obsidian selection:text-white">
   <div id="siteLoader" class="site-loader" role="status" aria-live="polite" aria-label="Preparing your portfolio / جارٍ تجهيز معرض الأعمال">
@@ -1117,5 +1120,6 @@
 
   <script src="./assets/js/supabase-config.js"></script>
   <script src="./assets/js/app.js"></script>
+  <script src="./assets/js/upgrade.js"></script>
 </body>
 </html>

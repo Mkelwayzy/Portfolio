@@ -1,0 +1,18 @@
+{
+  "name": "Mostafa Khaled — Creative Portfolio",
+  "short_name": "MK Portfolio",
+  "start_url": "./Portfolio.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#D9DADB",
+  "theme_color": "#111214",
+  "description": "Brand identity, 3D product visualization, CGI and creative direction.",
+  "icons": [
+    {
+      "src": "./assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

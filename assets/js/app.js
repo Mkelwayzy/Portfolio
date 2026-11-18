@@ -5246,7 +5246,7 @@
       document.getElementById("relatedProjectsSub").textContent = dominant
         ? (isAr ? `مقترح بناءً على اهتمامك بـ ${getInterestDisplayName(dominant, true)}` : `Tailored to Your ${getInterestDisplayName(dominant, false)} Interest`)
         : (isAr ? "اكتشف المزيد" : "Explore More");
-      document.getElementById("relatedProjectsHeading").textContent = isAr ? "مشاريع مقاربة وذات صلة" : "Similar & Related Projects";
+      document.getElementById("relatedProjectsHeading").textContent = isAr ? "قد يعجبك أيضًا" : "You May Also Like";
       document.getElementById("viewAllWorksBtnLbl").textContent = isAr ? "عرض كل المشاريع" : "View All Projects";
 
       const currentKeywords = `${proj.categoryEn} ${proj.location}`.toLowerCase().split(/[\s&,]+/);
@@ -5626,6 +5626,17 @@
     }
 
     // ==================== EVENT BINDINGS & ROUTING ====================
+    window.PortfolioDataBridge = {
+      getProjects: () => portfolioProjects,
+      getConfig: () => cmsConfig,
+      getLanguage: () => currentLang,
+      openProject: (projectId) => openProjectPage(projectId),
+      openContact: () => openContactModal(),
+      switchPage: (pageName) => switchPage(pageName),
+      getSupabase: () => supabaseClient,
+      isAdmin: () => isAdminAuthenticated
+    };
+
     document.addEventListener("DOMContentLoaded", () => {
       loadCmsLocalState();
       populateCmsProjectYearOptions();
@@ -5779,7 +5790,10 @@
       const projectImageLightbox = document.getElementById("projectImageLightbox");
       const closeProjectImageLightboxBtn = document.getElementById("closeProjectImageLightboxBtn");
 
-      if (contactBtn) contactBtn.addEventListener("click", openContactModal);
+      if (contactBtn) contactBtn.addEventListener("click", () => {
+        if (window.openProjectContactForm) window.openProjectContactForm();
+        else openContactModal();
+      });
       if (headerAccountBtn) {
         headerAccountBtn.addEventListener("click", (e) => {
           e.preventDefault();

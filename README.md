@@ -22,6 +22,22 @@ Then open `http://localhost:8000/`.
 
 The page loads Tailwind CSS, IBM Plex fonts, jsPDF, and Supabase JS from external CDNs, so those features require an internet connection.
 
+## Progressive portfolio enhancements
+
+The upgrade adds:
+
+- Dark/light/system theme switching and `Ctrl/Cmd + K` command palette.
+- Bilingual project search and stronger “You May Also Like” recommendations.
+- PWA manifest and update-aware service worker.
+- Dynamic availability, contact inquiry, and multi-step project brief experiences.
+- Custom project selection and text-based PDF export.
+- Privacy-conscious first-party analytics events and an admin analytics/inquiries tab.
+- A subtle keyboard Easter egg (`M`, then `K`).
+
+Run the latest [`supabase/setup.sql`](./supabase/setup.sql) in the configured Supabase project. The SQL creates `portfolio_availability`, `portfolio_inquiries`, and `portfolio_analytics_events` with public/admin row-level policies. Existing Supabase administrator accounts remain allowlisted through `portfolio_admins`.
+
+Public form submissions do not store personal files. The brief form validates and reports reference filenames and stores the brief text and filename list securely in `portfolio_inquiries`; private file transfer requires an additional signed-upload Edge Function and private Storage bucket before file contents can be accepted.
+
 The carousel prioritizes its first cover image and lazily loads the remaining project, gallery, and related-project images. The portfolio also supplies bilingual page titles/descriptions, a custom favicon, and baseline Open Graph, Twitter, canonical, and Person structured metadata. Project details still use the existing hash routes, so they do not have independently crawlable URLs or server-rendered social previews.
 
 ## Content and publishing
